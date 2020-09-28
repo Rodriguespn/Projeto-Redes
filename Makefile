@@ -12,15 +12,19 @@ LDFLAGS= -lm
 all: clean AS PD User FS
 
 AS:
+	@echo Compiling Authentication System...
 	$(LD) $(CFLAGS) $(LDFLAGS) -o AS AS.c
 
-PD:
+PD: 
+	@echo Compiling Personal Device...
 	$(LD) $(CFLAGS) $(LDFLAGS) -o PD PD.c
 
 User:
+	@echo Compiling User...
 	$(LD) $(CFLAGS) $(LDFLAGS) -o User User.c
 
 FS:
+	@echo Compiling File System...
 	$(LD) $(CFLAGS) $(LDFLAGS) -o FS FS.c
 
 clean:
