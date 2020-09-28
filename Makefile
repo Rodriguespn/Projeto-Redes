@@ -13,20 +13,20 @@ all: clean AS PD User FS
 
 AS:
 	@echo Compiling Authentication System...
-	$(LD) $(CFLAGS) $(LDFLAGS) -o AS AS.c
+	$(LD) $(CFLAGS) $(LDFLAGS) -o as as.c
 
 PD: 
 	@echo Compiling Personal Device...
-	$(LD) $(CFLAGS) $(LDFLAGS) -o PD PD.c
+	$(LD) $(CFLAGS) $(LDFLAGS) -o pd pd.c
 
 User:
 	@echo Compiling User...
-	$(LD) $(CFLAGS) $(LDFLAGS) -o User User.c
+	$(LD) $(CFLAGS) $(LDFLAGS) -o user user.c
 
 FS:
 	@echo Compiling File System...
-	$(LD) $(CFLAGS) $(LDFLAGS) -o FS FS.c
+	$(LD) $(CFLAGS) $(LDFLAGS) -o fs fs.c
 
 clean:
 	@echo Cleaning...
-	rm -f *.o AS FS User PD
+	rm -f *.o as fs user pd
