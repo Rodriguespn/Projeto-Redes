@@ -2,7 +2,7 @@
 # Redes de Computadores, DEI/IST/ULisboa 2020-21
 
 LD   = gcc
-CFLAGS = -g -Wall -std=gnu99 -I../
+CFLAGS = -g -Wall -Wextra -std=gnu99 -I../
 LDFLAGS= -lm
 
 # A phony target is one that is not really the name of a file
@@ -11,19 +11,18 @@ LDFLAGS= -lm
 
 all: clean AS PD User FS
 
-AS: AS.o
+AS:
 	$(LD) $(CFLAGS) $(LDFLAGS) -o AS AS.c
 
-PD: PD.o
+PD:
 	$(LD) $(CFLAGS) $(LDFLAGS) -o PD PD.c
 
-User: User.o
+User:
 	$(LD) $(CFLAGS) $(LDFLAGS) -o User User.c
 
-FS: FS.o
+FS:
 	$(LD) $(CFLAGS) $(LDFLAGS) -o FS FS.c
 
 clean:
 	@echo Cleaning...
 	rm -f *.o AS FS User PD
-
