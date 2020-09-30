@@ -8,6 +8,10 @@ Projeto de redes 2020/21
 - User  (Gastão)
 - FS    (Vicente)
 
+### Comando para aceder ao AS dos profs
+- $ nc -u tejo.tecnico.ulisboa.pt 58011 (UDP)
+- $ nc -t tejo.tecnico.ulisboa.pt 58011 (TCP)
+  
 ### Comandos Makefile
 - $ make AS -> compila o ficheiro as.c
 - $ make FS -> compila o ficheiro fs.c
