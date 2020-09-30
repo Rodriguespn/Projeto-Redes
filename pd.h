@@ -12,10 +12,6 @@
 #include <netdb.h>
 #include "project_constants.h"
 
-#define IP "tejo.tecnico.ulisboa.pt"
-#define SIZE 128
-#define ERROR -1
-
 void usage();
 int wrong_arguments(int argc);
 void parse_d_flag(const char* argv[], int size);
