@@ -33,7 +33,7 @@ int main(int argc, char const *argv[]) {
     //UDP socket
     //IPv4
     //UDP socket
-    errcode = getaddrinfo(IP, "58001", &hints, &res);
+    errcode = getaddrinfo(IP, asport, &hints, &res);
     if(errcode != 0) // error 
         exit(EXIT_FAILURE);
 
@@ -47,7 +47,7 @@ int main(int argc, char const *argv[]) {
     n= recvfrom (fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
     if(n == ERROR) //error
         exit(EXIT_FAILURE);
-    write(1, "echo: ", 6); 
+    write(1, "response: ", 6); 
     write(1, buffer, n);
     freeaddrinfo(res);
 
