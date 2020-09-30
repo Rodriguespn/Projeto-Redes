@@ -1,5 +1,7 @@
 #include "pd.h"
 
+// the buffers where
+// PDIP, PDport, ASIP, ASport are stored
 char *pdip, *pdport, *asip, *asport;
 
 int main(int argc, char const *argv[]) {
@@ -10,11 +12,13 @@ int main(int argc, char const *argv[]) {
     struct sockaddr_in addr;
     char buffer[SIZE];
     
+    // checks if the number of arguments is correct
     if (wrong_arguments(argc)) {
         usage();
         exit(EXIT_FAILURE);
     }
 
+    // parses the argv arguments
     parse_arguments(argv, argc);
 
     printf("PDIP=%s\n", pdip);
@@ -22,41 +26,84 @@ int main(int argc, char const *argv[]) {
     printf("ASIP=%s\n", asip);
     printf("ASport=%s\n", asport);
     
+    // sets the socket
     fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd == ERROR) //error
+    if (fd == ERROR) {
+        //error
+        fprintf(stderr, "Error: socket returned null");
         exit(EXIT_FAILURE);
+    }
     
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
     
-    //UDP socket
-    //IPv4
-    //UDP socket
+    // gets the address info
     errcode = getaddrinfo(IP, asport, &hints, &res);
-    if(errcode != 0) // error 
+    if(errcode != 0) {
+        //error
+        fprintf(stderr, "Error: getaddrinfo returned %d error code", errcode);
         exit(EXIT_FAILURE);
+    }
 
-    fscanf(stdin, "%s", buffer);
+    // reads a line from the stdin
+    char c;
+    for (int i = 0; (c=getchar())!='\n'; i++) {
+        buffer[i] = c;
+    }
 
-    n = sendto(fd, buffer, 7, 0, res -> ai_addr, res -> ai_addrlen);
-    if (n == ERROR) //error
+    // puts PDIP and PDport at the end of register request 
+    strcat(buffer, " ");
+    strcat(buffer, pdip);
+    strcat(buffer, " ");
+    strcat(buffer, pdport);
+    strcat(buffer, "\n");
+
+    printf("%s", buffer);
+
+    // sends REG command
+    n = sendto(fd, buffer, strlen(buffer), 0, res -> ai_addr, res -> ai_addrlen);
+    if (n == ERROR) {
+        //error
+        fprintf(stderr, "Error: sendto returned %d error code", ERROR);
         exit(EXIT_FAILURE);
+    }
 
     addrlen = sizeof(addr);
     n= recvfrom (fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
-    if(n == ERROR) //error
+    if(n == ERROR) {
+        //error
+        fprintf(stderr, "Error: recvfrom returned %d error code", ERROR);
         exit(EXIT_FAILURE);
-    write(1, "response: ", 6); 
+    }
+
+    write(1, "response: ", 10); 
     write(1, buffer, n);
+
+    // sends EXIT command
+    n = sendto(fd, "EXIT\n", strlen(buffer), 0, res -> ai_addr, res -> ai_addrlen);
+    if (n == ERROR) {
+        //error
+        fprintf(stderr, "Error: sendto returned %d error code", ERROR);
+        exit(EXIT_FAILURE);
+    }
+
+    addrlen = sizeof(addr);
+    n= recvfrom (fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
+    if(n == ERROR) {
+        //error
+        fprintf(stderr, "Error: recvfrom returned %d error code", ERROR);
+        exit(EXIT_FAILURE);
+    }
+
     freeaddrinfo(res);
 
     close (fd);
 
-   free(pdip);
-   free(pdport);
-   free(asip);
-   free(asport);
+    free(pdip);
+    free(pdport);
+    free(asip);
+    free(asport);
 
     exit(EXIT_SUCCESS);
 }
