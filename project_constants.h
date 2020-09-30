@@ -1,0 +1,6 @@
+#ifndef PROJECT_CONSTANTS_H
+#define PROJECT_CONSTANTS_H
+
+#define GN 38
+
+#endif /* PROJECT_CONSTANTS_H */
