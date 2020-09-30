@@ -1,6 +1,6 @@
 # Projeto-Redes
 Projeto de redes 2020/21
---
+-----
 
 ### Primeira Reunião (Divisão):
 - AS
@@ -8,6 +8,15 @@ Projeto de redes 2020/21
 - User  (Gastão)
 - FS    (Vicente)
 
+### Comandos Makefile
+- $ make AS -> compila o ficheiro as.c
+- $ make FS -> compila o ficheiro fs.c
+- $ make User -> compila o ficheiro user.c
+- $ make PD -> compila o ficheiro pd.c
+- $ make all -> compila o todos os ficheiros
+- $ make clean -> apaga todos os executaveis da diretoria
+
+### Alguns comandos utéis para o Git
 git clone [url]
 --------------
 para clonar um repositorio git
