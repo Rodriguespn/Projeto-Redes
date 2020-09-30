@@ -8,6 +8,15 @@ Projeto de redes 2020/21
 - User  (Gastão)
 - FS    (Vicente)
 
+## Comandos Makefile
+- $ make -> compila todos os ficheiros
+- $ make all -> compila todos os ficheiros
+- $ make AS -> compila o ficheiro as.c
+- $ make FS -> compila o ficheiro fs.c
+- $ make User -> compila o ficheiro user.c
+- $ make PD -> compila o ficheiro pd.c
+- $ make clean -> remove todos os ficheiros executaveis
+
 git clone [url]
 --------------
 para clonar um repositorio git
