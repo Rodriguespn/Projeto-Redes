@@ -81,7 +81,7 @@ int main(int argc, char const *argv[]) {
     write(1, buffer, n);
 
     // sends EXIT command
-    n = sendto(fd, "EXIT\n", strlen(buffer), 0, res -> ai_addr, res -> ai_addrlen);
+    n = sendto(fd, "UNR\n", strlen(buffer), 0, res -> ai_addr, res -> ai_addrlen);
     if (n == ERROR) {
         //error
         fprintf(stderr, "Error: sendto returned %d error code", ERROR);
