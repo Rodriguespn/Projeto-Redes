@@ -2,6 +2,9 @@
 Projeto de redes 2020/21
 -----
 
+### Dúvidas
+Os pedidos feito pelo utilizador na linha de comandos são comm letra minúscula e os enviados para o server com letra maiúscula?
+
 ### Primeira Reunião (Divisão):
 - AS
 - PD    (Pedro)
