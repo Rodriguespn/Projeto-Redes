@@ -21,6 +21,7 @@ enum {false, true};
 #define FS_PORT "-q"
 #define VERBOSE "-v"
 
+
 /* COMMUNICATION PROTOCOLS SPECIFICATION */
 // error
 #define PROTOCOL_ERROR      "ERR"
