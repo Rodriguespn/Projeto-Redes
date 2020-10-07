@@ -3,10 +3,22 @@ Projeto de redes 2020/21
 -----
 
 ### Dúvidas
-Os pedidos feito pelo utilizador na linha de comandos são comm letra minúscula e os enviados para o server com letra maiúscula? (com letra minuscula)
+~~Os pedidos feito pelo utilizador na linha de comandos são comm letra minúscula e os enviados para o server com letra maiúscula? (com letra minuscula)~~
+
+### ToDos
+Gastão:
+- 
+
+Pedro:
+- Validação do comando do stdin
+- Mensagem de erro
+- Encapsulamento das ações da função main
+
+Vicente:
+- 
 
 ### Primeira Reunião (Divisão):
-- AS
+- AS    (Pedro)
 - PD    (Pedro)
 - User  (Gastão)
 - FS    (Vicente)
@@ -63,7 +75,6 @@ lista historico de versoes para o branch atual
 git show [commit]
 --------------
 mostra as mudancas de conteudos do commit
-
 
 git branch
 --------------
