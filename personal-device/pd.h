@@ -10,7 +10,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include "project_constants.h"
+#include "../constants.h"
 
 void usage();
 int wrong_arguments(int argc);
