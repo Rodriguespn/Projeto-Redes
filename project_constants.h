@@ -3,15 +3,15 @@
 
 enum {false, true};
 
-#define ERROR -1
-#define GN 38 // Group number
+#define ERROR   -1
+#define GN      38 // Group number
 
 /* APENAS PARA TESTES */
-#define SIZE 128
-#define IP "tejo.tecnico.ulisboa.pt" 
+#define SIZE    128
+#define IP      "tejo.tecnico.ulisboa.pt" 
 
-#define PDPORT 57000 // Personal Device default IP
-#define ASPORT 58000 // Authentication System default IP
+#define PDPORT  57000 // Personal Device default Port
+#define ASPORT  58000 // Authentication System default Port
 
 /* COMMAND LINE FLAGS */
 #define PD_PORT "-d"
@@ -28,8 +28,8 @@ enum {false, true};
 #define AS_VALIDATION_ERROR "INV"
 
 // status
-#define OK      "OK"
-#define NOT_OK  "NOK"
+#define OK                  "OK"
+#define NOT_OK              "NOK"
 
 // PD-AS Protocol
 #define REGISTRATION        "REG"
