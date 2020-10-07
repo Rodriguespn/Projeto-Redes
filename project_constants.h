@@ -3,8 +3,8 @@
 
 enum {false, true};
 
-#define ERROR -1
-#define GN 38 // Group number
+#define ERROR   -1
+#define GN      38 // Group number
 
 /* APENAS PARA TESTES */
 #define SIZE 128
@@ -27,8 +27,8 @@ enum {false, true};
 #define AS_VALIDATION_ERROR "INV"
 
 // status
-#define OK      "OK"
-#define NOT_OK  "NOK"
+#define OK                  "OK"
+#define NOT_OK              "NOK"
 
 // PD-AS Protocol
 #define REGISTRATION        "REG"
