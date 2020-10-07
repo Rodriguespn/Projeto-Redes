@@ -15,4 +15,7 @@ all:
 
 clean:
 	@echo Cleaning...
-	rm -f *.o as fs user pd
+	cd autentication-server && make clean
+	cd file-server && make clean
+	cd personal-device && make clean
+	cd user-app && make clean
