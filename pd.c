@@ -21,16 +21,16 @@ int main(int argc, char const *argv[]) {
     // parses the argv arguments
     parse_arguments(argv, argc);
 
-    printf("PDIP=%s\n", pdip);
+    /*printf("PDIP=%s\n", pdip);
     printf("PDport=%s\n", pdport);
     printf("ASIP=%s\n", asip);
-    printf("ASport=%s\n", asport);
+    printf("ASport=%s\n", asport);*/
     
     // sets the socket
     fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (fd == ERROR) {
         //error
-        fprintf(stderr, "Error: socket returned null");
+        fprintf(stderr, "Error: socket returned null\n");
         exit(EXIT_FAILURE);
     }
     
@@ -42,7 +42,7 @@ int main(int argc, char const *argv[]) {
     errcode = getaddrinfo(IP, asport, &hints, &res);
     if(errcode != 0) {
         //error
-        fprintf(stderr, "Error: getaddrinfo returned %d error code", errcode);
+        fprintf(stderr, "Error: getaddrinfo returned %d error code\n", errcode);
         exit(EXIT_FAILURE);
     }
 
@@ -59,46 +59,50 @@ int main(int argc, char const *argv[]) {
     strcat(buffer, pdport);
     strcat(buffer, "\n");
 
-    printf("%s", buffer);
+    printf("message sent: %s", buffer);
 
     // sends REG command
     n = sendto(fd, buffer, strlen(buffer), 0, res -> ai_addr, res -> ai_addrlen);
     if (n == ERROR) {
         //error
-        fprintf(stderr, "Error: sendto returned %d error code", ERROR);
+        fprintf(stderr, "Error: sendto returned %d error code\n", ERROR);
         exit(EXIT_FAILURE);
     }
 
     addrlen = sizeof(addr);
-    n= recvfrom (fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
+    n = recvfrom (fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
     if(n == ERROR) {
         //error
-        fprintf(stderr, "Error: recvfrom returned %d error code", ERROR);
+        fprintf(stderr, "Error: recvfrom returned %d error code\n", ERROR);
         exit(EXIT_FAILURE);
     }
 
-    write(1, "response: ", 10); 
+    write(1, "response: ", 10);
     write(1, buffer, n);
 
+    memset(buffer, 0, SIZE);
+    strcpy(buffer, UNREGISTRATION);
+    strcpy(buffer, "\n");
+
     // sends EXIT command
-    n = sendto(fd, "UNR\n", strlen(buffer), 0, res -> ai_addr, res -> ai_addrlen);
+    n = sendto(fd, buffer, strlen(buffer), 0, res -> ai_addr, res -> ai_addrlen);
     if (n == ERROR) {
         //error
-        fprintf(stderr, "Error: sendto returned %d error code", ERROR);
+        fprintf(stderr, "Error: sendto returned %d error code\n", ERROR);
         exit(EXIT_FAILURE);
     }
 
     addrlen = sizeof(addr);
-    n= recvfrom (fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
+    n = recvfrom (fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
     if(n == ERROR) {
         //error
-        fprintf(stderr, "Error: recvfrom returned %d error code", ERROR);
+        fprintf(stderr, "Error: recvfrom returned %d error code\n", ERROR);
         exit(EXIT_FAILURE);
     }
 
     freeaddrinfo(res);
 
-    close (fd);
+    close(fd);
 
     free(pdip);
     free(pdport);
@@ -116,7 +120,7 @@ int wrong_arguments(int argc) {
 // diplays a message with the correct usage of the file
 void usage() {
     printf("usage: ./pd PDIP [-d PDport] [-n ASIP] [-p ASport]\n");
-    printf("example: ./pd 10.0.2.15 -d 57000 -n 193.136.138.142 -p 58000");
+    printf("example: ./pd 10.0.2.15 -d 57000 -n 193.136.138.142 -p 58000\n");
 }
 
 // parses the arguments given on the command line
@@ -133,11 +137,11 @@ void parse_arguments(const char* argv[], int size) {
     parse_p_flag(argv, size);
 }
 
-// parses the PDport value, given with the -d flag
+// parses the PDport value, given with the PD_PORT flag
 // if no port given, sets the default value of 57000+GN
 void parse_d_flag(const char* argv[], int size) {
     for(int i = 0; i < size; ++i) {   
-        if (!strcmp(argv[i], "-d")) {
+        if (!strcmp(argv[i], PD_PORT)) {
             if (!(pdport = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {
                 perror("Error: allocating \"PDport\" buffer");
                 exit(EXIT_FAILURE);
@@ -162,7 +166,7 @@ void parse_d_flag(const char* argv[], int size) {
 // if no ip given, sets the default value equals to PDIP
 void parse_n_flag(const char* argv[], int size) {
     for(int i = 0; i < size; ++i) {   
-        if (!strcmp(argv[i], "-n")) {
+        if (!strcmp(argv[i], AS_IP)) {
             if (!(asip = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {
                 perror("Error: allocating \"PDport\" buffer");
                 exit(EXIT_FAILURE);
@@ -181,11 +185,11 @@ void parse_n_flag(const char* argv[], int size) {
 }
 
 
-// parses the ASport value, given with the -p flag
+// parses the ASport value, given with the AS_PORT flag
 // if no port given, sets the default value of 58000+GN
 void parse_p_flag(const char* argv[], int size) {
     for (int i = 0; i < size; ++i) {   
-        if (!strcmp(argv[i], "-p")) {
+        if (!strcmp(argv[i], AS_PORT)) {
             if (!(asport = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {
                 perror("Error: allocating \"PDport\" buffer");
                 exit(EXIT_FAILURE);

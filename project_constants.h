@@ -10,8 +10,8 @@ enum {false, true};
 #define SIZE 128
 #define IP "tejo.tecnico.ulisboa.pt" 
 
-#define PDPORT 57000 // Personal Device default IP
-#define ASPORT 58000 // Authentication System default IP
+#define PDPORT 57000 // Personal Device default Port
+#define ASPORT 58000 // Authentication System default Port
 
 /* COMMAND LINE FLAGS */
 #define PD_PORT "-d"
