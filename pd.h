@@ -16,6 +16,8 @@ void usage();
 int wrong_arguments(int argc);
 void read_stdin(char* buffer);
 void parse_register_message(char* buffer, char* command, char* uid, char* password);
+void parse_exit_message(char* buffer, char* command);
+void prepare_request(char* request, char* command, char* uid, char* password);
 void parse_pd_port(const char* argv[], int size);
 void parse_as_ip(const char* argv[], int size);
 void parse_as_port(const char* argv[], int size);

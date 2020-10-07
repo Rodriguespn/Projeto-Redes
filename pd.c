@@ -52,22 +52,18 @@ int main(int argc, char const *argv[]) {
 
 
     char command[SIZE], uid[SIZE], password[SIZE];
-    memset(command, 0, SIZE);
-    memset(uid, 0, SIZE);
-    memset(password, 0, SIZE);
+    memset(command, EOS, SIZE);
+    memset(uid, EOS, SIZE);
+    memset(password, EOS, SIZE);
 
     parse_register_message(buffer, command, uid, password);
     printf("Exiting for testing...\n");
-    exit(0);
 
-    // puts PDIP and PDport at the end of register request 
-    strcat(buffer, " ");
-    strcat(buffer, pdip);
-    strcat(buffer, " ");
-    strcat(buffer, pdport);
-    strcat(buffer, "\n");
+    memset(buffer, EOS, SIZE);
+    prepare_request(buffer, command, uid, password);
 
     printf("message sent: %s", buffer);
+    exit(0);
 
     // sends REG command
     n = sendto(fd, buffer, strlen(buffer), 0, res -> ai_addr, res -> ai_addrlen);
@@ -88,13 +84,8 @@ int main(int argc, char const *argv[]) {
     write(1, "response: ", 10);
     write(1, buffer, n);
 
-    memset(buffer, 0, SIZE);
-    strcpy(buffer, UNREGISTRATION);
-    /*strcat(buffer, " ");
-    strcat(buffer, uid);
-    strcat(buffer, " ");
-    strcat(buffer, password);*/
-    strcat(buffer, "\n");
+    memset(buffer, EOS, SIZE);
+    prepare_request(buffer, command, uid, password);
 
     printf("message sent: %s", buffer);
 
@@ -183,12 +174,36 @@ void parse_exit_message(char* buffer, char* command) {
     }
     strcpy(command, token);
 
-    printf("command: %s\tuid: %s\tpassword: %s\n", command);
+    printf("command: %s\t\n", command);
     printf("buffer: %s\n", buffer);
 }
 
-void prepare_request(char* command) {
+void prepare_request(char* request, char* command, char* uid, char* password) {
+    char aux[SIZE];
+    strcat(aux, " ");
+    strcat(request, uid);
+    strcat(request, " ");
+    strcat(request, password);
+    
+    if (!strcmp(command, PD_REGISTRATION)) {
+        strcpy(request, REGISTRATION);
+        strcat(request, aux);
 
+        // puts PDIP and PDport at the end of register request 
+        strcat(request, " ");
+        strcat(request, pdip);
+        strcat(request, " ");
+        strcat(request, pdport);
+    }
+    else if (!strcmp(command, PD_EXIT)) {
+        strcpy(request, UNREGISTRATION);
+    }
+    else {
+        fprintf(stderr, "Error: \"%s\" is an invalid command\n", command);
+        exit(EXIT_FAILURE);
+    }
+    
+    strcat(request, "\n");
 }
 
 // parses the arguments given on the command line

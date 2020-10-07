@@ -10,10 +10,12 @@ Gastão:
 - 
 
 Pedro:
-- Validação do comando do stdin
-- Mensagem de erro
-- Encapsulamento das ações da função main
+- ~~Validação do comando do stdin~~
+- ~~Mensagem de erro~~
+- ~~Encapsulamento das ações da função main~~
+- Validação das mensagens recebidas pelo AS
 - Tratamento do sinal SIGINT
+- Escrever mensagens que o as manda para o pd, via user (quando o user e o as estiverem feitos)
 
 Vicente:
 - 
