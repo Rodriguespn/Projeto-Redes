@@ -13,6 +13,7 @@ Pedro:
 - Validação do comando do stdin
 - Mensagem de erro
 - Encapsulamento das ações da função main
+- Tratamento do sinal SIGINT
 
 Vicente:
 - 
