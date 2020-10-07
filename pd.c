@@ -240,7 +240,9 @@ enum boolean valid_password(char* password) {
 }
 
 void prepare_request(char* request, char* command, char* uid, char* password) {
+
     char aux[SIZE];
+    
     strcpy(aux, " ");
     strcat(aux, uid);
     strcat(aux, " ");

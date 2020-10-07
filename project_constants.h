@@ -3,11 +3,11 @@
 
 enum boolean {false, true};
 
-#define EOS         '\0'    // End of String
-#define ERROR       -1      // Error code
-#define GN          38      // Group number
-#define UID_SIZE    5       // Size of the UID
-#define PASSWORD_SIZE    8       // Size of the Password
+#define EOS             '\0'    // End of String
+#define ERROR           -1      // Error code
+#define GN              38      // Group number
+#define UID_SIZE        5       // Size of the UID
+#define PASSWORD_SIZE   8       // Size of the Password
 
 /* APENAS PARA TESTES */
 #define SIZE    128
@@ -15,6 +15,7 @@ enum boolean {false, true};
 
 #define PDPORT  57000 // Personal Device default Port
 #define ASPORT  58000 // Authentication System default Port
+#define FSPORT  59000 // File Server default Port
 
 /* COMMAND LINE FLAGS */
 #define PD_PORT_FLAG        "-d"
