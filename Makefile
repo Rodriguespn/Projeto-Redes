@@ -7,14 +7,10 @@ LDFLAGS= -lm
 
 all:
 	@echo Calling all makefiles...
-	cd autentication-server
-	make
-	cd ../file-server
-	make
-	cd ../personal-device
-	make
-	cd ../user-app
-	make
+	cd autentication-server && make
+	cd file-server && make
+	cd personal-device && make
+	cd user-app && make
 	@echo Compilation Succeeded.
 
 clean:
