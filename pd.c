@@ -21,10 +21,12 @@ int main(int argc, char const *argv[]) {
     // parses the argv arguments
     parse_arguments(argv, argc);
 
-    /*printf("PDIP=%s\n", pdip);
+    /*
+    printf("PDIP=%s\n", pdip);
     printf("PDport=%s\n", pdport);
     printf("ASIP=%s\n", asip);
-    printf("ASport=%s\n", asport);*/
+    printf("ASport=%s\n", asport);
+    */
     
     // sets the socket
     fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -48,9 +50,19 @@ int main(int argc, char const *argv[]) {
 
     // reads a line from the stdin
     char c;
-    for (int i = 0; (c=getchar())!='\n'; i++) {
+    int i = 0;
+    for (;(c=getchar())!='\n'; i++) {
         buffer[i] = c;
     }
+    buffer[i] = '\0';
+
+    /*char *token, command[SIZE], uid[SIZE], password[SIZE];
+    token = strtok(buffer, " ");
+    strcpy(command, token);
+    token = strtok(buffer, " ");
+    strcpy(uid, token);
+    token = strtok(buffer, " ");
+    strcpy(password, token);*/
 
     // puts PDIP and PDport at the end of register request 
     strcat(buffer, " ");
@@ -82,7 +94,15 @@ int main(int argc, char const *argv[]) {
 
     memset(buffer, 0, SIZE);
     strcpy(buffer, UNREGISTRATION);
-    strcpy(buffer, "\n");
+    /*strcat(buffer, " ");
+    strcat(buffer, uid);
+    strcat(buffer, " ");
+    strcat(buffer, password);*/
+    strcat(buffer, "\n");
+
+    printf("message sent: %s", buffer);
+
+    exit(0);
 
     // sends EXIT command
     n = sendto(fd, buffer, strlen(buffer), 0, res -> ai_addr, res -> ai_addrlen);
@@ -99,6 +119,9 @@ int main(int argc, char const *argv[]) {
         fprintf(stderr, "Error: recvfrom returned %d error code\n", ERROR);
         exit(EXIT_FAILURE);
     }
+
+    write(1, "response: ", 10);
+    write(1, buffer, n);
 
     freeaddrinfo(res);
 
