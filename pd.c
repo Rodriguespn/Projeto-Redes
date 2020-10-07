@@ -48,21 +48,17 @@ int main(int argc, char const *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    // reads a line from the stdin
-    char c;
-    int i = 0;
-    for (;(c=getchar())!='\n'; i++) {
-        buffer[i] = c;
-    }
-    buffer[i] = '\0';
+    read_stdin(buffer);
 
-    /*char *token, command[SIZE], uid[SIZE], password[SIZE];
-    token = strtok(buffer, " ");
-    strcpy(command, token);
-    token = strtok(buffer, " ");
-    strcpy(uid, token);
-    token = strtok(buffer, " ");
-    strcpy(password, token);*/
+
+    char command[SIZE], uid[SIZE], password[SIZE];
+    memset(command, 0, SIZE);
+    memset(uid, 0, SIZE);
+    memset(password, 0, SIZE);
+
+    parse_register_message(buffer, command, uid, password);
+    printf("Exiting for testing...\n");
+    exit(0);
 
     // puts PDIP and PDport at the end of register request 
     strcat(buffer, " ");
@@ -101,8 +97,6 @@ int main(int argc, char const *argv[]) {
     strcat(buffer, "\n");
 
     printf("message sent: %s", buffer);
-
-    exit(0);
 
     // sends EXIT command
     n = sendto(fd, buffer, strlen(buffer), 0, res -> ai_addr, res -> ai_addrlen);
@@ -144,6 +138,57 @@ int wrong_arguments(int argc) {
 void usage() {
     printf("usage: ./pd PDIP [-d PDport] [-n ASIP] [-p ASport]\n");
     printf("example: ./pd 10.0.2.15 -d 57000 -n 193.136.138.142 -p 58000\n");
+}
+
+void read_stdin(char* buffer) {
+    // reads a line from the stdin
+    char c;
+    int i = 0;
+    for (;(c=getchar())!='\n'; i++) {
+        buffer[i] = c;
+    }
+    buffer[i] = EOS;
+}
+
+void parse_register_message(char* buffer, char* command, char* uid, char* password) {
+    char *token;
+
+    if(!(token = strtok(buffer, " "))) {
+        fprintf(stderr, "Command missing!\nMust give a command\n");
+        exit(EXIT_FAILURE);
+    }
+    strcpy(command, token);
+
+    if (!(token = strtok(NULL, " "))) {
+        fprintf(stderr, "UID missing!\nMust give a UID\n");
+        exit(EXIT_FAILURE);
+    }
+    strcpy(uid, token);
+    if (!(token = strtok(NULL, " "))) {
+        fprintf(stderr, "Password missing!\nMust give a password\n");
+        exit(EXIT_FAILURE);
+    }
+    strcpy(password, token);
+
+    printf("command: %s\tuid: %s\tpassword: %s\n", command, uid, password);
+    printf("buffer: %s\n", buffer);
+}
+
+void parse_exit_message(char* buffer, char* command) {
+    char *token;
+
+    if(!(token = strtok(buffer, " "))) {
+        fprintf(stderr, "Command missing!\nMust give a command\n");
+        exit(EXIT_FAILURE);
+    }
+    strcpy(command, token);
+
+    printf("command: %s\tuid: %s\tpassword: %s\n", command);
+    printf("buffer: %s\n", buffer);
+}
+
+void prepare_request(char* command) {
+
 }
 
 // parses the arguments given on the command line
