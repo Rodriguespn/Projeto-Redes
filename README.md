@@ -18,7 +18,7 @@ Pedro:
 - Escrever mensagens que o as manda para o pd, via user (quando o user e o as estiverem feitos)
 
 Vicente:
-- 
+- teste
 
 ### Primeira Reunião (Divisão):
 - AS    (Pedro)
