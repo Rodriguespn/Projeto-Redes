@@ -1,11 +1,13 @@
 #ifndef PROJECT_CONSTANTS_H
 #define PROJECT_CONSTANTS_H
 
-enum {false, true};
+enum boolean {false, true};
 
-#define EOS     '\0'
-#define ERROR   -1
-#define GN      38 // Group number
+#define EOS         '\0'    // End of String
+#define ERROR       -1      // Error code
+#define GN          38      // Group number
+#define UID_SIZE    5       // Size of the UID
+#define PASSWORD_SIZE    8       // Size of the Password
 
 /* APENAS PARA TESTES */
 #define SIZE    128
