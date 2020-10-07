@@ -14,12 +14,12 @@ enum {false, true};
 #define ASPORT  58000 // Authentication System default Port
 
 /* COMMAND LINE FLAGS */
-#define PD_PORT "-d"
-#define AS_IP   "-n"
-#define AS_PORT "-p"
-#define FS_IP   "-m"
-#define FS_PORT "-q"
-#define VERBOSE "-v"
+#define PD_PORT_FLAG "-d"
+#define AS_IP_FLAG   "-n"
+#define AS_PORT_FLAG "-p"
+#define FS_IP_FLAG   "-m"
+#define FS_PORT_FLAG "-q"
+#define VERBOSE_FLAG "-v"
 
 
 /* COMMUNICATION PROTOCOLS SPECIFICATION */
