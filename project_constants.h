@@ -3,6 +3,7 @@
 
 enum {false, true};
 
+#define EOS     '\0'
 #define ERROR   -1
 #define GN      38 // Group number
 
@@ -21,6 +22,26 @@ enum {false, true};
 #define FS_PORT_FLAG "-q"
 #define VERBOSE_FLAG "-v"
 
+/* USER STDIN COMMANDS */
+// Personal Device
+#define PD_REGISTRATION     "reg"
+#define PD_EXIT             "exit"
+
+// User
+#define USER_LOGIN          "login"
+#define USER_REQUEST        "req"
+#define USER_VAL            "val"
+#define USER_LIST           "list"
+#define USER_LIST_SHORT     "l"
+#define USER_RETRIEVE       "retrive"
+#define USER_RETRIEVE_SHORT "r"
+#define USER_UPLOAD         "upload"
+#define USER_UPLOAD_SHORT   "u"
+#define USER_DELETE         "delete"
+#define USER_DELETE_SHORT   "d"
+#define USER_REMOVE         "remove"
+#define USER_REMOVE_SHORT   "x"
+#define USER_EXIT           "exit"
 
 /* COMMUNICATION PROTOCOLS SPECIFICATION */
 // error
