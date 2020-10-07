@@ -17,12 +17,12 @@ enum boolean {false, true};
 #define ASPORT  58000 // Authentication System default Port
 
 /* COMMAND LINE FLAGS */
-#define PD_PORT_FLAG "-d"
-#define AS_IP_FLAG   "-n"
-#define AS_PORT_FLAG "-p"
-#define FS_IP_FLAG   "-m"
-#define FS_PORT_FLAG "-q"
-#define VERBOSE_FLAG "-v"
+#define PD_PORT_FLAG        "-d"
+#define AS_IP_FLAG          "-n"
+#define AS_PORT_FLAG        "-p"
+#define FS_IP_FLAG          "-m"
+#define FS_PORT_FLAG        "-q"
+#define VERBOSE_FLAG        "-v"
 
 /* USER STDIN COMMANDS */
 // Personal Device
