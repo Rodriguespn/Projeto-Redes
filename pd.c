@@ -155,16 +155,16 @@ void parse_arguments(const char* argv[], int size) {
 
     strcpy(pdip, argv[1]);
 
-    parse_d_flag(argv, size);
-    parse_n_flag(argv, size);
-    parse_p_flag(argv, size);
+    parse_pd_port(argv, size);
+    parse_as_ip(argv, size);
+    parse_as_port(argv, size);
 }
 
 // parses the PDport value, given with the PD_PORT flag
 // if no port given, sets the default value of 57000+GN
-void parse_d_flag(const char* argv[], int size) {
+void parse_pd_port(const char* argv[], int size) {
     for(int i = 0; i < size; ++i) {   
-        if (!strcmp(argv[i], PD_PORT)) {
+        if (!strcmp(argv[i], PD_PORT_FLAG)) {
             if (!(pdport = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {
                 perror("Error: allocating \"PDport\" buffer");
                 exit(EXIT_FAILURE);
@@ -187,9 +187,9 @@ void parse_d_flag(const char* argv[], int size) {
 
 // parses the ASIP value, given with the -n flag
 // if no ip given, sets the default value equals to PDIP
-void parse_n_flag(const char* argv[], int size) {
+void parse_as_ip(const char* argv[], int size) {
     for(int i = 0; i < size; ++i) {   
-        if (!strcmp(argv[i], AS_IP)) {
+        if (!strcmp(argv[i], AS_IP_FLAG)) {
             if (!(asip = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {
                 perror("Error: allocating \"PDport\" buffer");
                 exit(EXIT_FAILURE);
@@ -210,9 +210,9 @@ void parse_n_flag(const char* argv[], int size) {
 
 // parses the ASport value, given with the AS_PORT flag
 // if no port given, sets the default value of 58000+GN
-void parse_p_flag(const char* argv[], int size) {
+void parse_as_port(const char* argv[], int size) {
     for (int i = 0; i < size; ++i) {   
-        if (!strcmp(argv[i], AS_PORT)) {
+        if (!strcmp(argv[i], AS_PORT_FLAG)) {
             if (!(asport = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {
                 perror("Error: allocating \"PDport\" buffer");
                 exit(EXIT_FAILURE);

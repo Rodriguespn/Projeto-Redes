@@ -14,9 +14,9 @@
 
 void usage();
 int wrong_arguments(int argc);
-void parse_d_flag(const char* argv[], int size);
-void parse_n_flag(const char* argv[], int size);
-void parse_p_flag(const char* argv[], int size);
+void parse_pd_port(const char* argv[], int size);
+void parse_as_ip(const char* argv[], int size);
+void parse_as_port(const char* argv[], int size);
 void parse_arguments(const char* argv[], int size);
 
 #endif /* PD_H */
