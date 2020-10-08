@@ -11,9 +11,10 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include "../constants.h"
-#include "../functions.c"
+#include "../functions.h"
 
 void usage();
 int wrong_arguments(int argc);
+void parse_arguments(const char* argv[], int size);
 
 #endif /* AS_H */
