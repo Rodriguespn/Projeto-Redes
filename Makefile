@@ -7,7 +7,7 @@ LDFLAGS= -lm
 
 all:
 	@echo Calling all makefiles...
-	cd autentication-server && make
+	cd authentication-server && make
 	cd file-server && make
 	cd personal-device && make
 	cd user-app && make
@@ -15,7 +15,7 @@ all:
 
 clean:
 	@echo Cleaning...
-	cd autentication-server && make clean
+	cd authentication-server && make clean
 	cd file-server && make clean
 	cd personal-device && make clean
 	cd user-app && make clean
