@@ -21,7 +21,7 @@ int main(int argc, char const *argv[])
     // parses the argv arguments
     parse_arguments(argv, argc);
 
-    printf("ASport=%s\n\n", asport);
+    printf("ASport=%s\n", asport);
 
     exit(EXIT_SUCCESS);
 }
@@ -39,5 +39,5 @@ int wrong_arguments(int argc) {
 
 // parses the arguments given on the command line
 void parse_arguments(const char* argv[], int size) {
-    parse_as_port(argv, size, asport);
+    asport = parse_as_port(argv, size);
 }

@@ -12,7 +12,8 @@ void read_stdin(char* buffer) {
 
 // parses the PDport value, given with the PD_PORT flag
 // if no port given, sets the default value of 57000+GN
-void parse_pd_port(const char* argv[], int size, char* pdport) {
+char* parse_pd_port(const char* argv[], int size) {
+    char* pdport;
     for(int i = 0; i < size; ++i) {   
         if (!strcmp(argv[i], PD_PORT_FLAG)) {
             if (!(pdport = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {
@@ -32,12 +33,14 @@ void parse_pd_port(const char* argv[], int size, char* pdport) {
         int port = PDPORT+GN;
         sprintf(pdport, "%d", port);
     }
+    return pdport;
 }
 
 
 // parses the ASIP value, given with the AS_IP flag
 // if no ip given, sets the default value equals to PDIP
-void parse_as_ip(const char* argv[], int size, char* asip, char* pdip) {
+char* parse_as_ip(const char* argv[], int size, char* pdip) {
+    char* asip;
     for(int i = 0; i < size; ++i) {   
         if (!strcmp(argv[i], AS_IP_FLAG)) {
             if (!(asip = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {
@@ -55,12 +58,14 @@ void parse_as_ip(const char* argv[], int size, char* asip, char* pdip) {
         }
         strcpy(asip, pdip);
     }
+    return asip;
 }
 
 
 // parses the ASport value, given with the AS_PORT flag
 // if no port given, sets the default value of 58000+GN
-void parse_as_port(const char* argv[], int size, char* asport) {
+char* parse_as_port(const char* argv[], int size) {
+    char* asport;
     for (int i = 0; i < size; ++i) {   
         if (!strcmp(argv[i], AS_PORT_FLAG)) {
             if (!(asport = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {
@@ -80,11 +85,14 @@ void parse_as_port(const char* argv[], int size, char* asport) {
         int port = ASPORT+GN;
         sprintf(asport, "%d", port);
     }
+    printf("%s\n", asport);
+    return asport;
 }
 
 // parses the FSport value, given with the FS_PORT flag
 // if no port given, sets the default value of 59000+GN
-void parse_fs_port(const char* argv[], int size, char* fsport) {
+char* parse_fs_port(const char* argv[], int size) {
+    char* fsport;
     for (int i = 0; i < size; ++i) {   
         if (!strcmp(argv[i], FS_PORT_FLAG)) {
             if (!(fsport = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {
@@ -104,11 +112,13 @@ void parse_fs_port(const char* argv[], int size, char* fsport) {
         int port = FSPORT+GN;
         sprintf(fsport, "%d", port);
     }
+    return fsport;
 }
 
 // parses the FSIP value, given with the FS_IP flag
 // if no ip given, sets the default value equals to PDIP
-void parse_fs_ip(const char* argv[], int size, char* fsip, char* pdip) {
+char* parse_fs_ip(const char* argv[], int size, char* pdip) {
+    char* fsip;
     for(int i = 0; i < size; ++i) {   
         if (!strcmp(argv[i], FS_IP_FLAG)) {
             if (!(fsip = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {
@@ -126,4 +136,5 @@ void parse_fs_ip(const char* argv[], int size, char* fsip, char* pdip) {
         }
         strcpy(fsip, pdip);
     }
+    return fsip;
 }
