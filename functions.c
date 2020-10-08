@@ -35,7 +35,7 @@ void parse_pd_port(const char* argv[], int size, char* pdport) {
 }
 
 
-// parses the ASIP value, given with the -n flag
+// parses the ASIP value, given with the AS_IP flag
 // if no ip given, sets the default value equals to PDIP
 void parse_as_ip(const char* argv[], int size, char* asip, char* pdip) {
     for(int i = 0; i < size; ++i) {   
@@ -79,5 +79,51 @@ void parse_as_port(const char* argv[], int size, char* asport) {
 
         int port = ASPORT+GN;
         sprintf(asport, "%d", port);
+    }
+}
+
+// parses the FSport value, given with the FS_PORT flag
+// if no port given, sets the default value of 59000+GN
+void parse_fs_port(const char* argv[], int size, char* fsport) {
+    for (int i = 0; i < size; ++i) {   
+        if (!strcmp(argv[i], FS_PORT_FLAG)) {
+            if (!(fsport = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {
+                perror("Error: allocating \"PDport\" buffer");
+                exit(EXIT_FAILURE);
+            }
+            strcpy(fsport, argv[i+1]);
+            break;
+        }
+    }
+    if (!fsport) {
+        if (!(fsport = (char *) malloc(sizeof(char)*5))) {
+                perror("Error: allocating \"PDport\" buffer");
+                exit(EXIT_FAILURE);
+        }
+
+        int port = FSPORT+GN;
+        sprintf(fsport, "%d", port);
+    }
+}
+
+// parses the FSIP value, given with the FS_IP flag
+// if no ip given, sets the default value equals to PDIP
+void parse_fs_ip(const char* argv[], int size, char* fsip, char* pdip) {
+    for(int i = 0; i < size; ++i) {   
+        if (!strcmp(argv[i], FS_IP_FLAG)) {
+            if (!(fsip = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {
+                perror("Error: allocating \"PDport\" buffer");
+                exit(EXIT_FAILURE);
+            }
+            strcpy(fsip, argv[i+1]);
+            break;
+        }
+    }
+    if (!fsip) {
+        if (!(fsip = (char *) malloc(sizeof(char)*strlen(pdip)))) {
+                perror("Error: allocating \"PDport\" buffer");
+                exit(EXIT_FAILURE);
+        }
+        strcpy(fsip, pdip);
     }
 }
