@@ -3,7 +3,8 @@ Projeto de redes 2020/21
 -----
 
 ### Dúvidas
-~~Os pedidos feito pelo utilizador na linha de comandos são comm letra minúscula e os enviados para o server com letra maiúscula? (com letra minuscula)~~
+- ~~Os pedidos feito pelo utilizador na linha de comandos são comm letra minúscula e os enviados para o server com letra maiúscula? (com letra minuscula)~~
+- Se o comando inserido pelo utilizador estiver errado devemos terminar o programa?
 
 ### ToDos
 Gastão:
