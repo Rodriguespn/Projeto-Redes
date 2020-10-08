@@ -3,6 +3,6 @@
 
 
 #include "../constants.h"
-#include "../functions.c"
+#include "../functions.h"
 
 #endif /* FS_H */

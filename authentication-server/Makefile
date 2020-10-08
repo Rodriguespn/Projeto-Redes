@@ -7,7 +7,7 @@ LDFLAGS= -lm
 
 all:
 	@echo Compiling Authentication System...
-	$(LD) $(CFLAGS) $(LDFLAGS) -o as as.c
+	$(LD) $(CFLAGS) $(LDFLAGS) -o as as.c ../functions.c
 
 clean:
 	@echo Cleaning...

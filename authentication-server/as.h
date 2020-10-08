@@ -2,6 +2,6 @@
 #define AS_H
 
 #include "../constants.h"
-#include "../functions.c"
+#include "../functions.h"
 
 #endif /* AS_H */

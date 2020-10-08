@@ -7,7 +7,7 @@ LDFLAGS= -lm
 
 all:
 	@echo Compiling Personal Device...
-	$(LD) $(CFLAGS) $(LDFLAGS) -o pd pd.c
+	$(LD) $(CFLAGS) $(LDFLAGS) -o pd pd.c ../functions.c
 
 clean:
 	@echo Cleaning...
