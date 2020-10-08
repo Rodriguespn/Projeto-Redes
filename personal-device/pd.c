@@ -270,6 +270,6 @@ void parse_arguments(const char* argv[], int size) {
     strcpy(pdip, argv[1]);
 
     pdport = parse_pd_port(argv, size);
-    asip = parse_as_ip(argv, size, asip);
+    asip = parse_as_ip(argv, size, pdip);
     asport = parse_as_port(argv, size);
 }
