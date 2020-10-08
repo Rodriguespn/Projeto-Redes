@@ -7,7 +7,7 @@ LDFLAGS= -lm
 
 all:
 	@echo Compiling User...
-	$(LD) $(CFLAGS) $(LDFLAGS) -o user user.c
+	$(LD) $(CFLAGS) $(LDFLAGS) -o user user.c ../functions.c
 
 clean:
 	@echo Cleaning...

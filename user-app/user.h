@@ -2,6 +2,6 @@
 #define USER_H
 
 #include "../constants.h"
-#include "../functions.c"
+#include "../functions.h"
 
 #endif /* USER_H */

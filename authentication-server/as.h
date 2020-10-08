@@ -12,9 +12,12 @@
 #include <netdb.h>
 #include "../constants.h"
 #include "../functions.h"
+<<<<<<< HEAD
 
 void usage();
 int wrong_arguments(int argc);
 void parse_arguments(const char* argv[], int size);
+=======
+>>>>>>> master
 
 #endif /* AS_H */
