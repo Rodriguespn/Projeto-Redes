@@ -38,7 +38,6 @@ char* parse_pd_port(const char* argv[], int size) {
     return pdport;
 }
 
-
 // parses the ASIP value, given with the AS_IP flag
 // if no ip given, sets the default value equals to PDIP
 char* parse_as_ip(const char* argv[], int size, char* pdip) {
