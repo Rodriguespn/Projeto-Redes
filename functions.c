@@ -39,8 +39,8 @@ char* parse_pd_port(const char* argv[], int size) {
 }
 
 // parses the ASIP value, given with the AS_IP flag
-// if no ip given, sets the default value equals to PDIP
-char* parse_as_ip(const char* argv[], int size, char* pdip) {
+// if no ip given, sets the default value equals to DEFAULTIP
+char* parse_as_ip(const char* argv[], int size, char* defaultip) {
     char* asip;
     enum boolean flag = false;
     for(int i = 0; i < size; ++i) {   
@@ -55,11 +55,11 @@ char* parse_as_ip(const char* argv[], int size, char* pdip) {
         }
     }
     if (!flag) {
-        if (!(asip = (char *) malloc(sizeof(char)*strlen(pdip)))) {
+        if (!(asip = (char *) malloc(sizeof(char)*strlen(defaultip)))) {
                 perror("Error: allocating \"PDport\" buffer");
                 exit(EXIT_FAILURE);
         }
-        strcpy(asip, pdip);
+        strcpy(asip, defaultip);
     }
     return asip;
 }
@@ -123,8 +123,8 @@ char* parse_fs_port(const char* argv[], int size) {
 }
 
 // parses the FSIP value, given with the FS_IP flag
-// if no ip given, sets the default value equals to PDIP
-char* parse_fs_ip(const char* argv[], int size, char* pdip) {
+// if no ip given, sets the default value equals to DEFAULTIP
+char* parse_fs_ip(const char* argv[], int size, char* defaultip) {
     char* fsip;
     enum boolean flag = false;
     for(int i = 0; i < size; ++i) {   
@@ -139,11 +139,11 @@ char* parse_fs_ip(const char* argv[], int size, char* pdip) {
         }
     }
     if (!flag) {
-        if (!(fsip = (char *) malloc(sizeof(char)*strlen(pdip)))) {
+        if (!(fsip = (char *) malloc(sizeof(char)*strlen(defaultip)))) {
                 perror("Error: allocating \"PDport\" buffer");
                 exit(EXIT_FAILURE);
         }
-        strcpy(fsip, pdip);
+        strcpy(fsip, defaultip);
     }
     return fsip;
 }
