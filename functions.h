@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include "constants.h" 
 
+#define max(A,B) ((A)>=(B)?(A):(B))
+
 void read_stdin(char* buffer);
 char* parse_pd_port(const char* argv[], int size);
 char* parse_as_ip(const char* argv[], int size, char* pdip);
