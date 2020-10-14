@@ -163,7 +163,7 @@ int wrong_arguments(int argc) {
 // diplays a message with the correct usage of the file
 void usage() {
     printf("usage: ./pd PDIP [-d PDport] [-n ASIP] [-p ASport]\n");
-    printf("example: ./pd 10.0.2.15 -d 57000 -n 193.136.138.142 -p 58000\n");
+    printf("example: ./pd 10.0.2.15 -d 57000 -n 193.136.138.142 -p 58011\n");
 }
 
 // parses the register command

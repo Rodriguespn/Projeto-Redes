@@ -29,7 +29,7 @@ int main(int argc, char const *argv[])
 // diplays a message with the correct usage of the file
 void usage() {
     printf("usage: ./as [-p ASport] [-v]\n");
-    printf("example: ./as -p 58000 -v\n");
+    printf("example: ./as -p 58011 -v\n");
 }
 
 // returns true if the arguments given on the command line are on an invalid format, and false otherwise
