@@ -3,6 +3,11 @@
 
 enum boolean {false, true};
 
+#define STDIN           0
+#define STDOUT          1
+#define STDERR          2
+
+
 #define EOS             '\0'    // End of String
 #define ERROR           -1      // Error code
 #define GN              38      // Group number
