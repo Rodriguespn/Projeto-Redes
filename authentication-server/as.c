@@ -40,14 +40,14 @@ int main(int argc, char const *argv[])
         /*error*/ 
         exit(EXIT_FAILURE);
 
-    n = bind(fd, res->ai_addr, res->ai_addrlen);
+    n = bind(fd, res -> ai_addr, res -> ai_addrlen);
     if (n == ERROR) 
         /*error*/ 
         exit(EXIT_FAILURE);
 
     while (true) {
         addrlen = sizeof(addr);
-        n= recvfrom(fd, buffer, SIZE, 0, (struct sockaddr*)&addr, &addrlen);
+        n= recvfrom(fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
         if (n == ERROR)
             /*error*/
             exit(EXIT_FAILURE);

@@ -162,13 +162,6 @@ int wrong_arguments(int argc) {
     return !(argc > 0 && argc%2 == 0 && argc <= 8);
 }
 
-// Handler for SIGINT, caused by 
-// Ctrl-C at keyboard 
-void handler_sigint(int sig) { 
-    printf("Caught signal %d\n", sig);
-    exit(EXIT_FAILURE);
-} 
-
 // diplays a message with the correct usage of the file
 void usage() {
     printf("usage: ./pd PDIP [-d PDport] [-n ASIP] [-p ASport]\n");
