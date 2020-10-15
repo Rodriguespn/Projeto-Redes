@@ -18,6 +18,8 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
+    signal(SIGINT, handler_sigint);
+
     // parses the argv arguments
     parse_arguments(argv, argc);
 
