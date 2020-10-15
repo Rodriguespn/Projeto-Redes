@@ -14,8 +14,9 @@
 #include "../constants.h"
 #include "../functions.h"
 
-void usage();
 int wrong_arguments(int argc);
+void usage();
+void handler_sigint(int sig);
 void parse_register_message(char* buffer, char* command, char* uid, char* password);
 void parse_exit_message(char* buffer, char* command);
 enum boolean all_numbers(char* uid);
