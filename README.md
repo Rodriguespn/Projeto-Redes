@@ -3,7 +3,6 @@ Projeto de redes 2020/21
 -----
 
 ### Dúvidas
-- ~~Os pedidos feito pelo utilizador na linha de comandos são comm letra minúscula e os enviados para o server com letra maiúscula? (com letra minuscula)~~
 - Se o comando inserido pelo utilizador estiver errado devemos terminar o programa?
 
 ### ToDos
@@ -32,11 +31,7 @@ Vicente:
 - $ nc -t tejo.tecnico.ulisboa.pt 58011 (TCP)
   
 ### Comandos Makefile
-- $ make AS -> compila o ficheiro as.c
-- $ make FS -> compila o ficheiro fs.c
-- $ make User -> compila o ficheiro user.c
-- $ make PD -> compila o ficheiro pd.c
-- $ make all -> compila o todos os ficheiros
+- $ make -> compila o todos os ficheiros
 - $ make clean -> apaga todos os executaveis da diretoria
 
 ### Alguns comandos utéis para o Git
