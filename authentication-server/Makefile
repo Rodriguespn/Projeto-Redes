@@ -9,6 +9,9 @@ all:
 	@echo Compiling Authentication System...
 	$(LD) $(CFLAGS) $(LDFLAGS) -o as as.c ../functions.c
 
+run:
+	./as
+
 clean:
 	@echo Cleaning...
 	rm -f *.o as

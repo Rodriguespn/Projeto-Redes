@@ -44,7 +44,7 @@ int main(int argc, char const *argv[]) {
     
     // gets the address info
     errcode = getaddrinfo(asip, asport, &hints, &res);
-    if(errcode != 0) {
+    if (errcode != 0) {
         //error
         fprintf(stderr, "Error: getaddrinfo returned %d error code\n", errcode);
         exit(EXIT_FAILURE);

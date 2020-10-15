@@ -9,6 +9,9 @@ all:
 	@echo Compiling Personal Device...
 	$(LD) $(CFLAGS) $(LDFLAGS) -o pd pd.c ../functions.c
 
+run:
+	./pd 10.0.2.15
+
 clean:
 	@echo Cleaning...
 	rm -f *.o pd
