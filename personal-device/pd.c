@@ -43,7 +43,7 @@ int main(int argc, char const *argv[]) {
     hints.ai_socktype = SOCK_DGRAM;
     
     // gets the address info
-    errcode = getaddrinfo(IP, asport, &hints, &res);
+    errcode = getaddrinfo(asip, asport, &hints, &res);
     if(errcode != 0) {
         //error
         fprintf(stderr, "Error: getaddrinfo returned %d error code\n", errcode);

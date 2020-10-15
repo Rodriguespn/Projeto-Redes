@@ -5,12 +5,12 @@ char* asport;
 
 int main(int argc, char const *argv[])
 {
-    /*int fd, errcode;
+    int fd, errcode;
     ssize_t n;
     socklen_t addrlen;
     struct addrinfo hints,*res;
     struct sockaddr_in addr;
-    char buffer[SIZE];*/
+    char buffer[SIZE];
     
     // checks if the number of arguments is correct
     if (wrong_arguments(argc)) {
@@ -22,6 +22,47 @@ int main(int argc, char const *argv[])
     parse_arguments(argv, argc);
 
     printf("ASport=%s\n", asport);
+
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    if(fd == ERROR) 
+        /*error*/
+        exit(EXIT_FAILURE);
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET; // IPv4
+    hints.ai_socktype = SOCK_DGRAM; // UDP socket
+    hints.ai_flags = AI_PASSIVE;
+
+    errcode = getaddrinfo(NULL, asport, &hints, &res);
+
+    if (errcode != 0) 
+        /*error*/ 
+        exit(EXIT_FAILURE);
+
+    n = bind(fd, res->ai_addr, res->ai_addrlen);
+    if (n == ERROR) 
+        /*error*/ 
+        exit(EXIT_FAILURE);
+
+    while (true) {
+        addrlen = sizeof(addr);
+        n= recvfrom(fd, buffer, SIZE, 0, (struct sockaddr*)&addr, &addrlen);
+        if (n == ERROR)
+            /*error*/
+            exit(EXIT_FAILURE);
+        
+        write(STDOUT, "received: ", 10);
+        write(STDOUT, buffer, n);
+
+        n = sendto(fd, buffer, n, 0, (struct sockaddr*) &addr, addrlen);
+        if (n == ERROR)
+            /*error*/
+            exit(EXIT_FAILURE);
+    }
+
+    freeaddrinfo(res);
+    close (fd);
 
     exit(EXIT_SUCCESS);
 }
