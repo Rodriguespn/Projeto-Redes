@@ -40,16 +40,18 @@ int main(int argc, char const *argv[])
 
     if (errcode != 0) 
         /*error*/ 
+        fprintf(stderr, "Error: getaddrinfo returned %d error code\n", errcode);
         exit(EXIT_FAILURE);
 
     n = bind(fd, res -> ai_addr, res -> ai_addrlen);
     if (n == ERROR) 
-        /*error*/ 
+        /*error*/
+        fprintf(stderr, "Error: bind returned %d error code\n", n);
         exit(EXIT_FAILURE);
 
     while (true) {
         addrlen = sizeof(addr);
-        n= recvfrom(fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
+        n = recvfrom(fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
         if (n == ERROR)
             /*error*/
             exit(EXIT_FAILURE);
