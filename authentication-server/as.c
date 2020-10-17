@@ -1,7 +1,10 @@
 #include "as.h"
 
 // the buffer where ASport is stored
-char* asport;
+char *asport;
+char *users_directory = USERS_FOLDER_NAME;
+FILE *userfd; 
+struct stat st = {0};
 
 int main(int argc, char const *argv[])
 {
@@ -38,31 +41,72 @@ int main(int argc, char const *argv[])
 
     errcode = getaddrinfo(NULL, asport, &hints, &res);
 
-    if (errcode != 0) 
+    if (errcode != 0) {
         /*error*/ 
         fprintf(stderr, "Error: getaddrinfo returned %d error code\n", errcode);
         exit(EXIT_FAILURE);
+    }
 
     n = bind(fd, res -> ai_addr, res -> ai_addrlen);
-    if (n == ERROR) 
+    if (n == ERROR)  {
         /*error*/
-        fprintf(stderr, "Error: bind returned %d error code\n", n);
+        fprintf(stderr, "Error: bind returned %ld error code\n", n);
         exit(EXIT_FAILURE);
+    }
+
+    if (stat(users_directory, &st) == -1) { // if directory doesn t exists
+        // check if directory is created or not 
+        if (mkdir(users_directory, 0777)) { 
+            printf("Unable to create directory \"%s\"\n", users_directory); 
+            exit(EXIT_FAILURE); 
+        }
+    }
+
+    char command[SIZE], uid[UID_SIZE], password[PASSWORD_SIZE], pdip[SIZE], pdport[SIZE];
+    memset(buffer, EOS, SIZE);
+    memset(command, EOS, SIZE);
+    memset(uid, EOS, UID_SIZE);
+    memset(password, EOS, PASSWORD_SIZE);
+    memset(pdip, EOS, SIZE);
+    memset(pdport, EOS, SIZE);
 
     while (true) {
         addrlen = sizeof(addr);
         n = recvfrom(fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
-        if (n == ERROR)
+        if (n == ERROR) {
             /*error*/
             exit(EXIT_FAILURE);
+        }
+
+        if (parse_command(buffer, command)) {
+            if (!strcmp(command, REGISTRATION)) {
+                if (parse_register_message(buffer, uid, password, pdip, pdport)) {
+                    if (register_user(uid, password, pdip, pdport)) {
+                        prepare_registration_ok_message(buffer);
+                    } else {
+                        prepare_registration_nok_message(buffer);
+                    }
+                } else {
+                    prepare_error_message(buffer);
+                }
+
+            } /*else {
+                prepare_error_message(buffer);
+            } */
+        } else {
+            prepare_error_message(buffer);
+        }
         
+        printf("command = %s\n", command);
         write(STDOUT, "received: ", 10);
+        write(STDOUT, " ", 1);
         write(STDOUT, buffer, n);
 
         n = sendto(fd, buffer, n, 0, (struct sockaddr*) &addr, addrlen);
-        if (n == ERROR)
+        if (n == ERROR) {
             /*error*/
             exit(EXIT_FAILURE);
+        }
     }
 
     freeaddrinfo(res);
@@ -82,7 +126,258 @@ int wrong_arguments(int argc) {
     return argc != 1 && argc != 3 && argc != 4;
 }
 
+void prepare_error_message(char* buffer) {
+    memset(buffer, EOS, SIZE);
+    strcpy(buffer, PROTOCOL_ERROR);
+    strcat(buffer, "\n");
+}
+
+void prepare_registration_ok_message(char* buffer) {
+    memset(buffer, EOS, SIZE);
+    strcpy(buffer, REG_RESPONSE);
+    strcat(buffer, " ");
+    strcat(buffer, OK);
+    strcat(buffer, "\n");
+}
+
+void prepare_registration_nok_message(char* buffer) {
+    memset(buffer, EOS, SIZE);
+    strcpy(buffer, REG_RESPONSE);
+    strcat(buffer, " ");
+    strcat(buffer, NOT_OK);
+    strcat(buffer, "\n");
+}
+
 // parses the arguments given on the command line
 void parse_arguments(const char* argv[], int size) {
     asport = parse_as_port(argv, size);
+}
+
+enum boolean parse_command(char* buffer, char* command) {
+    char *token;
+
+    if(!(token = strtok(buffer, " "))) {
+        fprintf(stderr, "wrong command!\n");
+        return false;
+    }
+    strcpy(command, token);
+    return true;
+}
+
+// parses the register command
+enum boolean parse_register_message(char* buffer, char* uid, char* password, char* pdip, char* pdport) {
+    char *token;
+
+    token = strtok(NULL, " ");
+    if (!valid_uid(token)) {
+        fprintf(stderr, "Invalid user!\n");
+        return false;
+    }
+    printf("buffer out: %s\n", token);
+    strcpy(uid, token);
+
+    token = strtok(NULL, " ");
+    if (!valid_password(token)) {
+        fprintf(stderr, "Invalid password!\n");
+        return false;
+    }
+    strcpy(password, token);
+
+    token = strtok(NULL, " ");
+    if (!token) {
+        fprintf(stderr, "Invalid PDIP!\n");
+        return false;
+    }
+    strcpy(pdip, token);
+
+    token = strtok(NULL, "\n");
+    if (!token) {
+        fprintf(stderr, "Invalid PDPort!\n");
+        return false;
+    }
+    strcpy(pdport, token);
+
+    printf("uid: %s\npassword: %s\nPDIP: %s\nPDPort: %s\n", uid, password, pdip, pdport);
+    printf("buffer: %s\n", buffer);
+    return true;
+}
+
+// returns true if the uid only contains numbers
+// false otherwise
+enum boolean all_numbers(char* uid) {
+    int len = strlen(uid);
+    for (int i=0; i < len; i++) {
+        if (uid[i] < '0' || uid[i] > '9') {
+            return false;
+        }
+    }
+    return true;
+}
+
+// returns true if the user is valid
+// false otherwise
+enum boolean valid_uid(char* uid) {
+    if (uid) {
+        if (strlen(uid) > UID_SIZE || !all_numbers(uid)) {
+            fprintf(stderr, "Invalid UID\nThe UID must have 5 numbers\n");
+            return false;
+        }
+        return true;
+    }
+
+    fprintf(stderr, "UID missing!\nMust give a UID\n");
+    return false;
+}
+
+// returns true if the password only contains letters and/or numbers
+// false otherwise
+enum boolean only_numbers_or_letters(char* password) {
+    int len = strlen(password);
+    for (int i=0; i < len; i++) {
+        if ((password[i] >= '0' && password[i] <= '9') || 
+            (password[i] >= 'A' && password[i] <= 'Z') ||
+            (password[i] >= 'a' && password[i] <= 'z')) {
+            continue;
+        }
+        return false;
+    }
+    return true;
+}
+
+// returns true if the user is valid
+// false otherwise
+enum boolean valid_password(char* password) {
+    if (password) {
+        if (strlen(password) > PASSWORD_SIZE || !only_numbers_or_letters(password)) {
+            fprintf(stderr, "Invalid password!\nThe password must have 8 numbers and/or letters\n");
+            return false;
+        }
+        return true;
+    }
+
+    fprintf(stderr, "Password missing!\nMust give a password\n");
+    return false;
+}
+
+/*void parse_pd_request(char* buffer, char* command, char* uid, char* password) {
+
+}*/
+
+enum boolean register_user(char* uid, char* password, char* ip, char* port) {
+    char* filename;
+    char* directory;
+    char* full_path; // users_directory/uid/filename
+    int uid_size = strlen(uid);
+
+    // allocates memory for the relative path for the user with uid
+    if (!(directory = (char *) malloc(sizeof(char)*(strlen(users_directory)+ uid_size + 2)))) {
+        perror("Error: allocating \"path\" buffer");
+        exit(EXIT_FAILURE);
+    }
+
+    memset(directory, EOS, strlen(directory));
+
+    strcat(directory, "./");
+    strcat(directory, users_directory);
+    strcat(directory, uid);
+    strcat(directory, "/");
+
+    printf("directory = %s\n", directory);
+
+    // check if the directory is created or not 
+    if (stat(directory, &st) == ERROR) { // if directory doesn t exists
+        if (mkdir(directory, 0777)) { 
+            printf("Unable to create directory \"%s\"\n", directory); 
+            exit(EXIT_FAILURE); 
+        }
+    } else { // the user already exists
+        fprintf(stderr, "Error: the user %s already exits\n", uid);
+        return false;
+    }
+    
+
+    // allocates memory for the password file for the user with uid
+    int filename_size = uid_size+strlen(PASSWORD_FILE_PREFIX)+strlen(FILE_EXTENSION);
+    if (!(filename = (char *) malloc(sizeof(char)*filename_size))){
+        perror("Error: allocating \"filename\" buffer");
+        exit(EXIT_FAILURE);
+    }
+
+    strcat(filename, uid);
+    strcat(filename, PASSWORD_FILE_PREFIX);
+    strcat(filename, FILE_EXTENSION);
+
+    printf("password_filename = %s\n", filename);
+
+
+    // allocates memory for full relative path to the password file for the user with uid
+    if (!(full_path = (char *) malloc(sizeof(char)*(strlen(directory)+filename_size)))) {
+        perror("Error: allocating \"path\" buffer");
+        exit(EXIT_FAILURE);
+    }
+
+    strcat(full_path, directory);
+    strcat(full_path, filename);
+
+    printf("path = %s\n", full_path);
+    // opens the password file
+    if (!(userfd = fopen(full_path, "w"))) {
+        fprintf(stderr, "Error: could not open file %s\n", filename);
+        exit(EXIT_FAILURE);
+    }
+
+    // writes the password on the file
+    fprintf(userfd, "%s\n", password);
+
+    // closes the password file
+    fclose(userfd);
+
+    // clears the full_path and filename memory
+    memset(full_path, EOS, strlen(full_path));
+    memset(filename, EOS, strlen(filename));
+
+    // allocates memory for the registration file for the user with uid
+    filename_size = uid_size + strlen(REGISTRATION_FILE_PREFIX)+strlen(FILE_EXTENSION);
+    if (!(filename = (char *) realloc(filename, sizeof(char)*filename_size))){
+        perror("Error: allocating \"filename\" buffer");
+        exit(EXIT_FAILURE);
+    }
+
+    strcat(filename, uid);
+    strcat(filename, REGISTRATION_FILE_PREFIX);
+    strcat(filename, FILE_EXTENSION);
+
+    printf("registration_filename = %s\n", filename);
+
+
+    // allocates memory for full relative path to the registration file for the user with uid
+    if (!(full_path = (char *) realloc(full_path, sizeof(char)*(strlen(directory)+filename_size)))) {
+        perror("Error: allocating \"path\" buffer");
+        exit(EXIT_FAILURE);
+    }
+
+    strcat(full_path, directory);
+    strcat(full_path, filename);
+
+    printf("path = %s\n", full_path);
+
+    // opens the registration file
+    if (!(userfd = fopen(full_path, "w"))) {
+        fprintf(stderr, "Error: could not open file %s\n", filename);
+        exit(EXIT_FAILURE);
+    }
+
+    // writes the ip and the port like "ip:port"
+    fprintf(userfd, "%s", ip);
+    fprintf(userfd, "%s", ":");
+    fprintf(userfd, "%s\n", port);
+
+    // closes the registration file
+    fclose(userfd);
+
+    free(filename);
+    free(directory);
+    free(full_path);
+
+    return true;
 }
