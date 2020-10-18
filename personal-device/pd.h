@@ -16,13 +16,9 @@
 
 int wrong_arguments(int argc);
 void usage();
-void parse_register_message(char* buffer, char* command, char* uid, char* password);
+Boolean parse_register_message(char* buffer, char* command, char* uid, char* password);
 void parse_exit_message(char* buffer, char* command);
-enum boolean all_numbers(char* uid);
-enum boolean valid_uid(char* uid);
-enum boolean only_numbers_or_letters(char* password);
-enum boolean valid_password(char* password);
-void prepare_request(char* request, char* command, char* uid, char* password);
+Boolean prepare_request(char* request, char* command, char* uid, char* password);
 void parse_arguments(const char* argv[], int size);
 
 #endif /* PD_H */

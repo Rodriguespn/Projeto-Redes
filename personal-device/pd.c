@@ -52,41 +52,61 @@ int main(int argc, char const *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    char command[SIZE], uid[SIZE], password[SIZE];
+    char command[SIZE], uid[SIZE], password[SIZE], registration_success[SIZE];
     memset(buffer, EOS, SIZE);
     memset(command, EOS, SIZE);
     memset(uid, EOS, SIZE);
     memset(password, EOS, SIZE);
+    memset(registration_success, EOS, SIZE);
+    
+    // writes the "registration success" message
+    strcat(registration_success, REG_RESPONSE);
+    strcat(registration_success, " ");
+    strcat(registration_success, OK);
+    strcat(registration_success, "\n");
 
-    read_stdin(buffer);
-    parse_register_message(buffer, command, uid, password);
+    do {
+        read_stdin(buffer);
+        if (!parse_register_message(buffer, command, uid, password)) {
+            continue;
+        }
 
-    memset(buffer, EOS, SIZE);
-    prepare_request(buffer, command, uid, password);
+        memset(buffer, EOS, SIZE);
+        if (!prepare_request(buffer, command, uid, password)) {
+            continue;
+        }
 
-    printf("message sent: %s", buffer);
+        printf("message sent: %s", buffer);
 
-    // sends REG command
-    n = sendto(fd, buffer, strlen(buffer), 0, res -> ai_addr, res -> ai_addrlen);
-    if (n == ERROR) {
-        //error
-        fprintf(stderr, "Error: sendto returned %d error code\n", ERROR);
-        exit(EXIT_FAILURE);
-    }
+        // sends REG command
+        n = sendto(fd, buffer, strlen(buffer), 0, res -> ai_addr, res -> ai_addrlen);
+        if (n == ERROR) {
+            //error
+            fprintf(stderr, "Error: sendto returned %d error code\n", ERROR);
+            exit(EXIT_FAILURE);
+        }
 
-    addrlen = sizeof(addr);
-    n = recvfrom (fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
-    if(n == ERROR) {
-        //error
-        fprintf(stderr, "Error: recvfrom returned %d error code\n", ERROR);
-        exit(EXIT_FAILURE);
-    }
+        addrlen = sizeof(addr);
+        n = recvfrom (fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
+        if(n == ERROR) {
+            //error
+            fprintf(stderr, "Error: recvfrom returned %d error code\n", ERROR);
+            exit(EXIT_FAILURE);
+        }
 
-    write(STDOUT, "response: ", 10);
-    write(STDOUT, buffer, n);
-
+        write(STDOUT, "response: ", 10);
+        write(STDOUT, buffer, n);
+    } while (strcmp(buffer, registration_success));
     //state = idle;
 
+    char unregistration_success[SIZE];
+
+    memset(unregistration_success, EOS, SIZE);
+    // writes the "unregistration success" message
+    strcat(unregistration_success, UNR_RESPONSE);
+    strcat(unregistration_success, " ");
+    strcat(unregistration_success, OK);
+    strcat(unregistration_success, "\n");
     do {
         FD_ZERO(&rfds);
         FD_SET(fd, &rfds);
@@ -143,7 +163,7 @@ int main(int argc, char const *argv[]) {
             write(STDOUT, "response: ", 10);
             write(STDOUT, buffer, n);
         }
-    } while (strcmp(command, PD_EXIT));
+    } while (strcmp(buffer, unregistration_success));
 
     freeaddrinfo(res);
 
@@ -169,29 +189,32 @@ void usage() {
 }
 
 // parses the register command
-void parse_register_message(char* buffer, char* command, char* uid, char* password) {
+Boolean parse_register_message(char* buffer, char* command, char* uid, char* password) {
     char *token;
 
     if(!(token = strtok(buffer, " "))) {
         fprintf(stderr, "Command missing!\nMust give a command\n");
-        exit(EXIT_FAILURE);
+        return false;
     }
     strcpy(command, token);
 
     token = strtok(NULL, " ");
-    if (!valid_uid(token)) {
-        exit(EXIT_FAILURE);
+    if (!token) {
+        fprintf(stderr, "UID missing!\nMust give a UID\n");
+        return false;
     }
     strcpy(uid, token);
 
     token = strtok(NULL, " ");
-    if (!valid_password(token)) {
-        exit(EXIT_FAILURE);
+    if (!token) {
+        fprintf(stderr, "Password missing!\nMust give a password\n");
+        return false;
     }
     strcpy(password, token);
 
     printf("command: %s\tuid: %s\tpassword: %s\n", command, uid, password);
     printf("buffer: %s\n", buffer);
+    return true;
 }
 
 // parses the exit command 
@@ -208,64 +231,7 @@ void parse_exit_message(char* buffer, char* command) {
     printf("buffer: %s\n", buffer);
 }
 
-// returns true if the uid only contains numbers
-// false otherwise
-enum boolean all_numbers(char* uid) {
-    int len = strlen(uid);
-    for (int i=0; i < len; i++) {
-        if (uid[i] < '0' || uid[i] > '9') {
-            return false;
-        }
-    }
-    return true;
-}
-
-// returns true if the user is valid
-// false otherwise
-enum boolean valid_uid(char* uid) {
-    if (uid) {
-        if (strlen(uid) > UID_SIZE || !all_numbers(uid)) {
-            fprintf(stderr, "Invalid UID\nThe UID must have 5 numbers\n");
-            return false;
-        }
-        return true;
-    }
-
-    fprintf(stderr, "UID missing!\nMust give a UID\n");
-    return false;
-}
-
-// returns true if the password only contains letters and/or numbers
-// false otherwise
-enum boolean only_numbers_or_letters(char* password) {
-    int len = strlen(password);
-    for (int i=0; i < len; i++) {
-        if ((password[i] >= '0' && password[i] <= '9') || 
-            (password[i] >= 'A' && password[i] <= 'Z') ||
-            (password[i] >= 'a' && password[i] <= 'z')) {
-            continue;
-        }
-        return false;
-    }
-    return true;
-}
-
-// returns true if the user is valid
-// false otherwise
-enum boolean valid_password(char* password) {
-    if (password) {
-        if (strlen(password) > PASSWORD_SIZE || !only_numbers_or_letters(password)) {
-            fprintf(stderr, "Invalid password!\nThe password must have 8 numbers and/or letters\n");
-            return false;
-        }
-        return true;
-    }
-
-    fprintf(stderr, "Password missing!\nMust give a password\n");
-    return false;
-}
-
-void prepare_request(char* request, char* command, char* uid, char* password) {
+Boolean prepare_request(char* request, char* command, char* uid, char* password) {
 
     char aux[SIZE];
     
@@ -290,10 +256,11 @@ void prepare_request(char* request, char* command, char* uid, char* password) {
     }
     else {
         fprintf(stderr, "Error: \"%s\" is an invalid command\n", command);
-        exit(EXIT_FAILURE);
+        return false;
     }
     
     strcat(request, "\n");
+    return true;
 }
 
 // parses the arguments given on the command line
