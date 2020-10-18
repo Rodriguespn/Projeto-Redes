@@ -63,7 +63,6 @@ int main(int argc, char const *argv[])
     }
 
     char command[SIZE], uid[UID_SIZE], password[PASSWORD_SIZE], pdip[SIZE], pdport[SIZE];
-    memset(buffer, EOS, SIZE);
     memset(command, EOS, SIZE);
     memset(uid, EOS, UID_SIZE);
     memset(password, EOS, PASSWORD_SIZE);
@@ -71,6 +70,7 @@ int main(int argc, char const *argv[])
     memset(pdport, EOS, SIZE);
 
     while (true) {
+        memset(buffer, EOS, SIZE);
         addrlen = sizeof(addr);
         n = recvfrom(fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
         if (n == ERROR) {
@@ -80,26 +80,34 @@ int main(int argc, char const *argv[])
 
         if (parse_command(buffer, command)) {
             if (!strcmp(command, REGISTRATION)) {
-                if (parse_register_message(buffer, uid, password, pdip, pdport)) {
+                if (parse_register_message(uid, password, pdip, pdport)) {
                     if (register_user(uid, password, pdip, pdport)) {
-                        prepare_registration_ok_message(buffer);
+                        prepare_ok_message(buffer, REG_RESPONSE);
                     } else {
-                        prepare_registration_nok_message(buffer);
+                        prepare_nok_message(buffer, REG_RESPONSE);
                     }
                 } else {
                     prepare_error_message(buffer);
                 }
 
-            } /*else {
+            } else if (!strcmp(command, UNREGISTRATION)) {
+                if (parse_unregister_message(uid, password)) {
+                    printf("uid=%s\npassword=%s\n", uid, password);
+                    if (unregister_user(uid, password)) {
+                        prepare_ok_message(buffer, UNR_RESPONSE);
+                    } else {
+                        prepare_nok_message(buffer, UNR_RESPONSE);
+                    }
+                }
+            } else {
                 prepare_error_message(buffer);
-            } */
+            } 
         } else {
             prepare_error_message(buffer);
         }
         
         printf("command = %s\n", command);
         write(STDOUT, "received: ", 10);
-        write(STDOUT, " ", 1);
         write(STDOUT, buffer, n);
 
         n = sendto(fd, buffer, n, 0, (struct sockaddr*) &addr, addrlen);
@@ -132,17 +140,17 @@ void prepare_error_message(char* buffer) {
     strcat(buffer, "\n");
 }
 
-void prepare_registration_ok_message(char* buffer) {
+void prepare_ok_message(char* buffer, const char* command) {
     memset(buffer, EOS, SIZE);
-    strcpy(buffer, REG_RESPONSE);
+    strcpy(buffer, command);
     strcat(buffer, " ");
     strcat(buffer, OK);
     strcat(buffer, "\n");
 }
 
-void prepare_registration_nok_message(char* buffer) {
+void prepare_nok_message(char* buffer, const char* command) {
     memset(buffer, EOS, SIZE);
-    strcpy(buffer, REG_RESPONSE);
+    strcpy(buffer, command);
     strcat(buffer, " ");
     strcat(buffer, NOT_OK);
     strcat(buffer, "\n");
@@ -153,7 +161,7 @@ void parse_arguments(const char* argv[], int size) {
     asport = parse_as_port(argv, size);
 }
 
-enum boolean parse_command(char* buffer, char* command) {
+Boolean parse_command(char* buffer, char* command) {
     char *token;
 
     if(!(token = strtok(buffer, " "))) {
@@ -165,7 +173,7 @@ enum boolean parse_command(char* buffer, char* command) {
 }
 
 // parses the register command
-enum boolean parse_register_message(char* buffer, char* uid, char* password, char* pdip, char* pdport) {
+Boolean parse_register_message(char* uid, char* password, char* pdip, char* pdport) {
     char *token;
 
     token = strtok(NULL, " ");
@@ -173,7 +181,6 @@ enum boolean parse_register_message(char* buffer, char* uid, char* password, cha
         fprintf(stderr, "Invalid user!\n");
         return false;
     }
-    printf("buffer out: %s\n", token);
     strcpy(uid, token);
 
     token = strtok(NULL, " ");
@@ -198,13 +205,33 @@ enum boolean parse_register_message(char* buffer, char* uid, char* password, cha
     strcpy(pdport, token);
 
     printf("uid: %s\npassword: %s\nPDIP: %s\nPDPort: %s\n", uid, password, pdip, pdport);
-    printf("buffer: %s\n", buffer);
+    return true;
+}
+
+Boolean parse_unregister_message(char* uid, char* password) {
+    char *token;
+
+    token = strtok(NULL, " ");
+    printf("uid=%s\n", token);
+    if (!valid_uid(token)) {
+        fprintf(stderr, "Invalid user!\n");
+        return false;
+    }
+    strcpy(uid, token);
+
+    token = strtok(NULL, "\n");
+    printf("password=%s\n", token);
+    if (!valid_password(token)) {
+        fprintf(stderr, "Invalid password!\n");
+        return false;
+    }
+    strcpy(password, token);
     return true;
 }
 
 // returns true if the uid only contains numbers
 // false otherwise
-enum boolean all_numbers(char* uid) {
+Boolean all_numbers(char* uid) {
     int len = strlen(uid);
     for (int i=0; i < len; i++) {
         if (uid[i] < '0' || uid[i] > '9') {
@@ -216,7 +243,7 @@ enum boolean all_numbers(char* uid) {
 
 // returns true if the user is valid
 // false otherwise
-enum boolean valid_uid(char* uid) {
+Boolean valid_uid(char* uid) {
     if (uid) {
         if (strlen(uid) > UID_SIZE || !all_numbers(uid)) {
             fprintf(stderr, "Invalid UID\nThe UID must have 5 numbers\n");
@@ -231,7 +258,7 @@ enum boolean valid_uid(char* uid) {
 
 // returns true if the password only contains letters and/or numbers
 // false otherwise
-enum boolean only_numbers_or_letters(char* password) {
+Boolean only_numbers_or_letters(char* password) {
     int len = strlen(password);
     for (int i=0; i < len; i++) {
         if ((password[i] >= '0' && password[i] <= '9') || 
@@ -246,7 +273,7 @@ enum boolean only_numbers_or_letters(char* password) {
 
 // returns true if the user is valid
 // false otherwise
-enum boolean valid_password(char* password) {
+Boolean valid_password(char* password) {
     if (password) {
         if (strlen(password) > PASSWORD_SIZE || !only_numbers_or_letters(password)) {
             fprintf(stderr, "Invalid password!\nThe password must have 8 numbers and/or letters\n");
@@ -263,26 +290,47 @@ enum boolean valid_password(char* password) {
 
 }*/
 
-enum boolean register_user(char* uid, char* password, char* ip, char* port) {
-    char* filename;
-    char* directory;
-    char* full_path; // users_directory/uid/filename
-    int uid_size = strlen(uid);
+void get_user_directory(char* buffer, char *uid) {
+
+    memset(buffer, EOS, strlen(buffer));
+    strcat(buffer, "./");
+    strcat(buffer, users_directory);
+    strcat(buffer, uid);
+    strcat(buffer, "/");
+
+    printf("get_directory = %s\n", buffer);
+}
+
+void get_filename(char* buffer, char* uid, const char* filename, const char* file_ext) {
+    memset(buffer, EOS, strlen(buffer));
+    strcat(buffer, uid);
+    strcat(buffer, filename);
+    strcat(buffer, file_ext);
+
+    printf("get_filename = %s\n", buffer);
+}
+
+Boolean register_user(char* uid, char* password, char* ip, char* port) {
+    char* filename = NULL;
+    char* directory = NULL;
+    char* full_path; // users_directory/uid/file
+
+    // allocates memory for the password file for the user with uid
+    int filename_size = strlen(uid) + strlen(PASSWORD_FILE_PREFIX) + strlen(FILE_EXTENSION);
+    if (!(filename = (char *) malloc(sizeof(char)*filename_size))){
+            perror("Error: allocating \"filename\" buffer");
+            exit(EXIT_FAILURE);
+    }
+
+    get_filename(filename, uid, PASSWORD_FILE_PREFIX, FILE_EXTENSION);
 
     // allocates memory for the relative path for the user with uid
-    if (!(directory = (char *) malloc(sizeof(char)*(strlen(users_directory)+ uid_size + 2)))) {
+    if (!(directory = (char *) malloc(sizeof(char)*(strlen(users_directory)+ strlen(uid) + 2)))) {
         perror("Error: allocating \"path\" buffer");
         exit(EXIT_FAILURE);
     }
 
-    memset(directory, EOS, strlen(directory));
-
-    strcat(directory, "./");
-    strcat(directory, users_directory);
-    strcat(directory, uid);
-    strcat(directory, "/");
-
-    printf("directory = %s\n", directory);
+    get_user_directory(directory, uid);
 
     // check if the directory is created or not 
     if (stat(directory, &st) == ERROR) { // if directory doesn t exists
@@ -294,24 +342,9 @@ enum boolean register_user(char* uid, char* password, char* ip, char* port) {
         fprintf(stderr, "Error: the user %s already exits\n", uid);
         return false;
     }
-    
-
-    // allocates memory for the password file for the user with uid
-    int filename_size = uid_size+strlen(PASSWORD_FILE_PREFIX)+strlen(FILE_EXTENSION);
-    if (!(filename = (char *) malloc(sizeof(char)*filename_size))){
-        perror("Error: allocating \"filename\" buffer");
-        exit(EXIT_FAILURE);
-    }
-
-    strcat(filename, uid);
-    strcat(filename, PASSWORD_FILE_PREFIX);
-    strcat(filename, FILE_EXTENSION);
-
-    printf("password_filename = %s\n", filename);
-
 
     // allocates memory for full relative path to the password file for the user with uid
-    if (!(full_path = (char *) malloc(sizeof(char)*(strlen(directory)+filename_size)))) {
+    if (!(full_path = (char *) malloc(sizeof(char)*(strlen(directory) + strlen(filename))))) {
         perror("Error: allocating \"path\" buffer");
         exit(EXIT_FAILURE);
     }
@@ -334,27 +367,17 @@ enum boolean register_user(char* uid, char* password, char* ip, char* port) {
 
     // clears the full_path and filename memory
     memset(full_path, EOS, strlen(full_path));
-    memset(filename, EOS, strlen(filename));
 
+    filename_size = strlen(uid) + strlen(REGISTRATION_FILE_PREFIX) + strlen(FILE_EXTENSION);
     // allocates memory for the registration file for the user with uid
-    filename_size = uid_size + strlen(REGISTRATION_FILE_PREFIX)+strlen(FILE_EXTENSION);
     if (!(filename = (char *) realloc(filename, sizeof(char)*filename_size))){
         perror("Error: allocating \"filename\" buffer");
         exit(EXIT_FAILURE);
     }
 
-    strcat(filename, uid);
-    strcat(filename, REGISTRATION_FILE_PREFIX);
-    strcat(filename, FILE_EXTENSION);
+    get_filename(filename, uid, REGISTRATION_FILE_PREFIX, FILE_EXTENSION);
 
     printf("registration_filename = %s\n", filename);
-
-
-    // allocates memory for full relative path to the registration file for the user with uid
-    if (!(full_path = (char *) realloc(full_path, sizeof(char)*(strlen(directory)+filename_size)))) {
-        perror("Error: allocating \"path\" buffer");
-        exit(EXIT_FAILURE);
-    }
 
     strcat(full_path, directory);
     strcat(full_path, filename);
@@ -374,6 +397,89 @@ enum boolean register_user(char* uid, char* password, char* ip, char* port) {
 
     // closes the registration file
     fclose(userfd);
+
+    free(filename);
+    free(directory);
+    free(full_path);
+
+    return true;
+}
+
+Boolean unregister_user(char *uid, char *password) {
+    char* filename = NULL;
+    char* directory = NULL;
+    char* full_path; // users_directory/uid/file
+
+    // allocates memory for the password file for the user with uid
+    int filename_size = strlen(uid) + strlen(PASSWORD_FILE_PREFIX) + strlen(FILE_EXTENSION);
+    if (!(filename = (char *) malloc(sizeof(char)*filename_size))){
+            perror("Error: allocating \"filename\" buffer");
+            exit(EXIT_FAILURE);
+    }
+
+    get_filename(filename, uid, PASSWORD_FILE_PREFIX, FILE_EXTENSION);
+
+    // allocates memory for the relative path for the user with uid
+    if (!(directory = (char *) malloc(sizeof(char)*(strlen(users_directory)+ strlen(uid) + 2)))) {
+        perror("Error: allocating \"path\" buffer");
+        exit(EXIT_FAILURE);
+    }
+
+    get_user_directory(directory, uid);
+
+    // allocates memory for full relative path to the password file for the user with uid
+    if (!(full_path = (char *) malloc(sizeof(char)*(strlen(directory) + strlen(filename))))) {
+        perror("Error: allocating \"path\" buffer");
+        exit(EXIT_FAILURE);
+    }
+
+    strcat(full_path, directory);
+    strcat(full_path, filename);
+
+    printf("path = %s\n", full_path);
+
+    // opens the password file
+    if (!(userfd = fopen(full_path, "r"))) {
+        fprintf(stderr, "Error: could not open file %s\n", filename);
+        exit(EXIT_FAILURE);
+    }
+
+    char password_from_file[PASSWORD_SIZE];
+    // reads the password from the file
+    fscanf(userfd, "%s\n", password_from_file);
+    printf("password_from_file=%s\n", password_from_file);
+
+    if (strcmp(password, password_from_file)) {
+        fprintf(stderr, "Error: wrong uid or password\n");
+        return false;
+    }
+
+    // closes the password file
+    fclose(userfd);
+
+    // clears the full_path and filename memory
+    memset(full_path, EOS, strlen(full_path));
+
+    filename_size = strlen(uid) + strlen(REGISTRATION_FILE_PREFIX) + strlen(FILE_EXTENSION);
+    // allocates memory for the registration file for the user with uid
+    if (!(filename = (char *) realloc(filename, sizeof(char)*filename_size))){
+        perror("Error: allocating \"filename\" buffer");
+        exit(EXIT_FAILURE);
+    }
+
+    get_filename(filename, uid, REGISTRATION_FILE_PREFIX, FILE_EXTENSION);
+
+    printf("registration_filename = %s\n", filename);
+
+    strcat(full_path, directory);
+    strcat(full_path, filename);
+
+    printf("path = %s\n", full_path);
+
+    if (remove(full_path)) {
+        fprintf(stderr, "Error: could not remove file %s\n", filename);
+        exit(EXIT_FAILURE);
+    };
 
     free(filename);
     free(directory);

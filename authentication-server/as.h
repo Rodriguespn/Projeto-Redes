@@ -28,15 +28,19 @@
 void usage();
 int wrong_arguments(int argc);
 void prepare_error_message(char* buffer);
-void prepare_registration_ok_message(char* buffer);
-void prepare_registration_nok_message(char* buffer);
+void prepare_ok_message(char* buffer, const char* command);
+void prepare_nok_message(char* buffer, const char* command);
 void parse_arguments(const char* argv[], int size);
-enum boolean parse_command(char* buffer, char* command);
-enum boolean parse_register_message(char* buffer, char* uid, char* password, char* pdip, char* pdport);
-enum boolean all_numbers(char* uid);
-enum boolean valid_uid(char* uid);
-enum boolean only_numbers_or_letters(char* password);
-enum boolean valid_password(char* password);
-enum boolean register_user(char* uid, char* password, char* ip, char* port);
+Boolean parse_command(char* buffer, char* command);
+Boolean parse_register_message(char* uid, char* password, char* pdip, char* pdport);
+Boolean parse_unregister_message(char* uid, char* password);
+Boolean all_numbers(char* uid);
+Boolean valid_uid(char* uid);
+Boolean only_numbers_or_letters(char* password);
+Boolean valid_password(char* password);
+void get_user_directory(char* buffer, char *uid);
+void get_filename(char* buffer, char* uid, const char* filename, const char* file_ext);
+Boolean register_user(char* uid, char* password, char* ip, char* port);
+Boolean unregister_user(char *uid, char *password);
 
 #endif /* AS_H */

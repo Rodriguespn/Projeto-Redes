@@ -21,7 +21,7 @@ void read_stdin(char* buffer) {
 // if no port given, sets the default value of 57000+GN
 char* parse_pd_port(const char* argv[], int size) {
     char* pdport;
-    enum boolean flag = false;
+    Boolean flag = false;
     for(int i = 0; i < size; ++i) {   
         if (!strcmp(argv[i], PD_PORT_FLAG)) {
             if (!(pdport = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {
@@ -49,7 +49,7 @@ char* parse_pd_port(const char* argv[], int size) {
 // if no ip given, sets the default value equals to DEFAULTIP
 char* parse_as_ip(const char* argv[], int size, char* defaultip) {
     char* asip;
-    enum boolean flag = false;
+    Boolean flag = false;
     for(int i = 0; i < size; ++i) {   
         if (!strcmp(argv[i], AS_IP_FLAG)) {
             if (!(asip = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {
@@ -76,7 +76,7 @@ char* parse_as_ip(const char* argv[], int size, char* defaultip) {
 // if no port given, sets the default value of 58000+GN
 char* parse_as_port(const char* argv[], int size) {
     char* asport;
-    enum boolean flag = false;
+    Boolean flag = false;
     for (int i = 0; i < size; ++i) {   
         if (!strcmp(argv[i], AS_PORT_FLAG)) {
             if (!(asport = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {
@@ -105,7 +105,7 @@ char* parse_as_port(const char* argv[], int size) {
 // if no port given, sets the default value of 59000+GN
 char* parse_fs_port(const char* argv[], int size) {
     char* fsport;
-    enum boolean flag = false;
+    Boolean flag = false;
     for (int i = 0; i < size; ++i) {   
         if (!strcmp(argv[i], FS_PORT_FLAG)) {
             if (!(fsport = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {
@@ -133,7 +133,7 @@ char* parse_fs_port(const char* argv[], int size) {
 // if no ip given, sets the default value equals to DEFAULTIP
 char* parse_fs_ip(const char* argv[], int size, char* defaultip) {
     char* fsip;
-    enum boolean flag = false;
+    Boolean flag = false;
     for(int i = 0; i < size; ++i) {   
         if (!strcmp(argv[i], FS_IP_FLAG)) {
             if (!(fsip = (char *) malloc(sizeof(char)*strlen(argv[i+1])))) {

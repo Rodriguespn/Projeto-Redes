@@ -1,7 +1,7 @@
 #ifndef PROJECT_CONSTANTS_H
 #define PROJECT_CONSTANTS_H
 
-enum boolean { false, true };
+typedef enum boolean { false, true } Boolean;
 
 #define STDIN           0
 #define STDOUT          1
