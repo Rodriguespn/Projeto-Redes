@@ -14,6 +14,8 @@ typedef enum boolean { false, true } Boolean;
 #define UID_SIZE        6       // Size of the UID
 #define PASSWORD_SIZE   9       // Size of the Password
 
+#define LOCALHOST       "127.0.0.1"
+
 /* APENAS PARA TESTES */
 #define SIZE    128
 #define IP      "tejo.tecnico.ulisboa.pt" 

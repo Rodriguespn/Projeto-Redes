@@ -122,7 +122,7 @@ int main(int argc, char const *argv[]) {
             exit(EXIT_FAILURE);
         }
 
-        if(FD_ISSET(fd,&rfds)) {
+        if (FD_ISSET(fd,&rfds)) {
             addrlen = sizeof(addr);
             n = recvfrom (fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
             if(n == ERROR) {
@@ -135,7 +135,7 @@ int main(int argc, char const *argv[]) {
             write(STDOUT, buffer, n);
         }
 
-        if(FD_ISSET(afd,&rfds)) {
+        if (FD_ISSET(afd,&rfds)) {
             memset(buffer, EOS, SIZE);
             read_stdin(buffer);
 
