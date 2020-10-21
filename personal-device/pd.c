@@ -60,7 +60,7 @@ int main(int argc, char const *argv[]) {
     memset(registration_success, EOS, SIZE);
     
     // writes the "registration success" message
-    strcat(registration_success, REG_RESPONSE);
+    strcpy(registration_success, REG_RESPONSE);
     strcat(registration_success, " ");
     strcat(registration_success, OK);
     strcat(registration_success, "\n");
@@ -86,6 +86,7 @@ int main(int argc, char const *argv[]) {
             exit(EXIT_FAILURE);
         }
 
+        memset(buffer, EOS, SIZE);
         addrlen = sizeof(addr);
         n = recvfrom (fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
         if(n == ERROR) {
@@ -97,7 +98,6 @@ int main(int argc, char const *argv[]) {
         write(STDOUT, "response: ", 10);
         write(STDOUT, buffer, n);
     } while (strcmp(buffer, registration_success));
-    //state = idle;
 
     char unregistration_success[SIZE];
 
@@ -152,6 +152,7 @@ int main(int argc, char const *argv[]) {
                 exit(EXIT_FAILURE);
             }
 
+            memset(buffer, EOS, SIZE);
             addrlen = sizeof(addr);
             n = recvfrom (fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
             if(n == ERROR) {
