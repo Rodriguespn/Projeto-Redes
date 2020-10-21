@@ -10,12 +10,14 @@ Gastão:
 - 
 
 Pedro:
-- ~~Validação do comando do stdin~~
-- ~~Mensagem de erro~~
-- ~~Encapsulamento das ações da função main~~
+> PD:
 - Validação das mensagens recebidas pelo AS
-- Tratamento do sinal SIGINT
+- ~~Tratamento do sinal SIGINT~~
 - Escrever mensagens que o as manda para o pd, via user (quando o user e o as estiverem feitos)
+
+> AS:
+- criar um socket TCP
+- Implementar select
 
 Vicente:
 - teste
