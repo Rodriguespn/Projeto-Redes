@@ -53,13 +53,12 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    n = write(fd, "LOG 12346 password\n", strlen("LOG 12346 password\n"));
+    n = write(fd, "LOG 12347 password\n", strlen("LOG 12346 password\n"));
     if (n == ERROR) {
         //error
         fprintf(stderr, "Error: could not write.\n");
         exit(EXIT_FAILURE);
     }
-
 
     n = read(fd, buffer, SIZE);
     if (n == ERROR) {
@@ -70,7 +69,25 @@ int main(int argc, char const *argv[])
 
     write(STDOUT, "response: ", 10);
     write(STDOUT, buffer, n);
-    
+
+    memset(buffer, EOS, SIZE);
+
+    n = write(fd, "REQ 12347 L\n", strlen("REQ 12347 L\n"));
+    if (n == ERROR) {
+        //error
+        fprintf(stderr, "Error: could not write.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    n = read(fd, buffer, SIZE);
+    if (n == ERROR) {
+        //error
+        fprintf(stderr, "Error: could not read.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    write(STDOUT, "response: ", 10);
+    write(STDOUT, buffer, n);
 
     freeaddrinfo(res);
     close(fd);

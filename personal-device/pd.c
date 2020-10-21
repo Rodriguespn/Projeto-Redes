@@ -5,15 +5,15 @@
 char *pdip, *pdport, *asip, *asport;
 
 int main(int argc, char const *argv[]) {
-    int fd, afd = STDIN, errcode;
-    fd_set rfds;
-    //enum {idle, busy} state;
-    int maxfd, counter;
+    int fd, errcode;
+    fd_set inputs, testfds;
+    int out_fds;
 
     ssize_t n;
     socklen_t addrlen;
     struct addrinfo hints,*res;
     struct sockaddr_in addr;
+    struct timeval timeout;
     char buffer[SIZE];
     
     // checks if the number of arguments is correct
@@ -107,62 +107,74 @@ int main(int argc, char const *argv[]) {
     strcat(unregistration_success, " ");
     strcat(unregistration_success, OK);
     strcat(unregistration_success, "\n");
+
+    FD_ZERO(&inputs);
+    FD_SET(STDIN, &inputs);
+    FD_SET(fd, &inputs);
+
     do {
-        FD_ZERO(&rfds);
-        FD_SET(fd, &rfds);
-        
-        FD_SET(afd, &rfds);
-        maxfd = max(maxfd,afd);
+        testfds=inputs;
+        timeout.tv_sec=10;
+        timeout.tv_usec=0;
 
-        counter = select(maxfd+1, &rfds, (fd_set*) NULL,(fd_set*) NULL,(struct timeval *) NULL);
+        printf("testfds byte: %d\n", ((char *)&testfds)[0]);
+        out_fds = select(FD_SETSIZE, &testfds, (fd_set*) NULL,(fd_set*) NULL, &timeout);
         
-        if (counter <= 0) {
+        switch (out_fds) {
+        case 0:
+            printf("Timeout event\n");
+            break;
+        
+        case ERROR:
             /*error*/
-            fprintf(stderr, "Error: select returned %d error code\n", counter);
+            fprintf(stderr, "Error: select returned %d error code\n", out_fds);
             exit(EXIT_FAILURE);
-        }
+            break;
+        default:
+            if (FD_ISSET(fd, &testfds)) {
+                printf("Here\n");
+                addrlen = sizeof(addr);
+                n = recvfrom(fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
+                if (n == ERROR) {
+                    //error
+                    fprintf(stderr, "Error: recvfrom returned %d error code\n", ERROR);
+                    exit(EXIT_FAILURE);
+                }
 
-        if (FD_ISSET(fd,&rfds)) {
-            addrlen = sizeof(addr);
-            n = recvfrom (fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
-            if(n == ERROR) {
-                //error
-                fprintf(stderr, "Error: recvfrom returned %d error code\n", ERROR);
-                exit(EXIT_FAILURE);
+                write(STDOUT, "response from AS: ", 10);
+                write(STDOUT, buffer, n);
             }
 
-            write(STDOUT, "response from AS: ", 10);
-            write(STDOUT, buffer, n);
-        }
+            if (FD_ISSET(STDIN, &testfds)) {
+                memset(buffer, EOS, SIZE);
+                read_stdin(buffer);
 
-        if (FD_ISSET(afd,&rfds)) {
-            memset(buffer, EOS, SIZE);
-            read_stdin(buffer);
+                parse_exit_message(buffer, command); 
+                memset(buffer, EOS, SIZE);
+                prepare_request(buffer, command, uid, password);
 
-            parse_exit_message(buffer, command); 
-            memset(buffer, EOS, SIZE);
-            prepare_request(buffer, command, uid, password);
+                printf("message sent: %s", buffer);
 
-            printf("message sent: %s", buffer);
+                n = sendto(fd, buffer, strlen(buffer), 0, res -> ai_addr, res -> ai_addrlen);
+                if (n == ERROR) {
+                    //error
+                    fprintf(stderr, "Error: sendto returned %d error code\n", ERROR);
+                    exit(EXIT_FAILURE);
+                }
 
-            n = sendto(fd, buffer, strlen(buffer), 0, res -> ai_addr, res -> ai_addrlen);
-            if (n == ERROR) {
-                //error
-                fprintf(stderr, "Error: sendto returned %d error code\n", ERROR);
-                exit(EXIT_FAILURE);
+                memset(buffer, EOS, SIZE);
+                addrlen = sizeof(addr);
+                n = recvfrom(fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
+                if (n == ERROR) {
+                    //error
+                    fprintf(stderr, "Error: recvfrom returned %d error code\n", ERROR);
+                    exit(EXIT_FAILURE);
+                }
+
+                write(STDOUT, "response: ", 10);
+                write(STDOUT, buffer, n);
             }
-
-            memset(buffer, EOS, SIZE);
-            addrlen = sizeof(addr);
-            n = recvfrom (fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
-            if(n == ERROR) {
-                //error
-                fprintf(stderr, "Error: recvfrom returned %d error code\n", ERROR);
-                exit(EXIT_FAILURE);
-            }
-
-            write(STDOUT, "response: ", 10);
-            write(STDOUT, buffer, n);
+            break;
         }
     } while (strcmp(buffer, unregistration_success));
 
