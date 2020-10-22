@@ -2,6 +2,11 @@
 Projeto de redes 2020/21
 -----
 
+### Comandos Sigma
+file transfer -> scp -r -C ../Projeto-Redes/ ist1XXXX@sigma.tecnico.ulisboa.pt:~
+login -> ssh ist1XXXX@sigma04.tecnico.ulisboa.pt
+PD -> ./pd 193.136.128.104 -n tejo.tecnico.ulisboa.pt -p 58011
+
 ### Dúvidas
 - Se o comando inserido pelo utilizador estiver errado devemos terminar o programa?
 

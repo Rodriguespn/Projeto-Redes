@@ -13,6 +13,8 @@ typedef enum boolean { false, true } Boolean;
 #define GN              38      // Group number
 #define UID_SIZE        6       // Size of the UID
 #define PASSWORD_SIZE   9       // Size of the Password
+#define VC_SIZE         5       // Size of the Validation Code
+#define FOP_SIZE        2       // Size of the File Operation
 
 #define LOCALHOST       "127.0.0.1"
 
@@ -52,6 +54,13 @@ typedef enum boolean { false, true } Boolean;
 #define USER_REMOVE         "remove"
 #define USER_REMOVE_SHORT   "x"
 #define USER_EXIT           "exit"
+
+// Fops
+#define FOP_UPLOAD          "U"
+#define FOP_REMOVE          "X"
+#define FOP_DELETE          "D"
+#define FOP_LIST            "L"
+#define FOP_RETRIEVE        "R"
 
 /* COMMUNICATION PROTOCOLS SPECIFICATION */
 // error

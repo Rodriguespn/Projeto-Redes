@@ -99,6 +99,8 @@ int main(int argc, char const *argv[]) {
         write(STDOUT, buffer, n);
     } while (strcmp(buffer, registration_success));
 
+    printf("Registration successful\n");
+
     char unregistration_success[SIZE];
 
     memset(unregistration_success, EOS, SIZE);
@@ -130,6 +132,7 @@ int main(int argc, char const *argv[]) {
     }
 
     n = bind(listenfd, server -> ai_addr, server -> ai_addrlen);
+
     if (n == ERROR) {
         /*error*/
         fprintf(stderr, "Error: bind returned %ld error code\n", n);
@@ -145,10 +148,10 @@ int main(int argc, char const *argv[]) {
         timeout.tv_sec = 10;
         timeout.tv_usec = 0;
 
-        printf("testfds byte: %d\n", ((char *) &testfds)[0]);
         out_fds = select(FD_SETSIZE, &testfds, (fd_set*) NULL,(fd_set*) NULL, &timeout);
 
-        printf("counter=%d\n", out_fds);
+        printf("timeout time: %ld and %ld\n", timeout.tv_sec, timeout.tv_usec);
+        printf("counter = %d\n", out_fds);
         
         switch (out_fds) {
         case 0:
@@ -162,7 +165,8 @@ int main(int argc, char const *argv[]) {
             break;
         default:
             if (FD_ISSET(listenfd, &testfds)) {
-                printf("Here\n");
+                memset(buffer, EOS, SIZE);
+
                 addrlen = sizeof(addr);
                 n = recvfrom(listenfd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
                 if (n == ERROR) {
@@ -173,6 +177,24 @@ int main(int argc, char const *argv[]) {
 
                 write(STDOUT, "response from AS: ", 19);
                 write(STDOUT, buffer, n);
+
+                if (parse_validation_code(buffer)) {
+                    memset(buffer, EOS, SIZE);
+                    strcpy(buffer, VAL_USER_RESPONSE);
+                    strcat(buffer, " ");
+                    strcat(buffer, OK);
+                    strcat(buffer, "\n");
+
+                    addrlen = sizeof(addr);
+                    n = sendto(listenfd, buffer, strlen(buffer), 0, (struct sockaddr*) &addr, addrlen);
+                    if (n == ERROR) {
+                        //error
+                        fprintf(stderr, "Error: sendto returned %d error code\n", ERROR);
+                        exit(EXIT_FAILURE);
+                    }
+
+                    printf("message sent: %s\n", buffer);
+                }
             }
 
             if (FD_ISSET(STDIN, &testfds)) {
@@ -273,6 +295,112 @@ void parse_exit_message(char* buffer, char* command) {
 
     printf("command: %s\t\n", command);
     printf("buffer: %s\n", buffer);
+}
+
+Boolean parse_validation_code(char* buffer) {
+    char *token;
+    char vc[VC_SIZE], fop[FOP_SIZE], fop_long_name[SIZE], filename[SIZE], aux[SIZE];
+
+    memset(vc, EOS, VC_SIZE);
+    memset(fop, EOS, FOP_SIZE);
+    memset(fop_long_name, EOS, SIZE);
+    memset(filename, EOS, SIZE);
+    memset(aux, EOS, SIZE);
+
+    // Validation Code instruction
+    if(!(token = strtok(buffer, " "))) {
+        fprintf(stderr, "Command missing!\nMust give a command\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (strcmp(token, VALIDATE_USER)) {
+        fprintf(stderr, "Error: %s is not a valid instruction\n", token);
+        return false;
+    }
+
+    // UID
+    if(!(token = strtok(NULL, " "))) {
+        fprintf(stderr, "Error: invalid UID\n");
+        exit(EXIT_FAILURE);
+    }
+
+
+    // Validation Code
+    if(!(token = strtok(NULL, " "))) {
+        fprintf(stderr, "Error: invalid VC\n");
+        exit(EXIT_FAILURE);
+    }
+
+    strcpy(vc, token);
+
+    // Rest of the message
+    if(!(token = strtok(NULL, "\n"))) {
+        fprintf(stderr, "Error: invalid Fop\n");
+        exit(EXIT_FAILURE);
+    }
+
+    strcpy(aux, token);
+    
+    // Fop
+    if(!(token = strtok(aux, " "))) {
+        fprintf(stderr, "Error: invalid Fop\n");
+        exit(EXIT_FAILURE);
+    }
+
+    strcpy(fop, token);
+
+    if (!get_fop_from_fop_code(fop, fop_long_name)) {
+        return false;
+    }
+
+    // if the fop needs a filename and none is provided
+    if(!(token = strtok(NULL, "\0")) && fop_has_file(fop)) {
+        fprintf(stderr, "Error: Fop %s needs a file\n", fop);
+        exit(EXIT_FAILURE);
+    }
+
+    if (token) {
+        strcpy(filename, token);
+    }
+
+    printf("VC=%s, %s: %s\n", vc, fop_long_name, filename);
+
+    // VLC 90531 6785 U f1.txt
+    return true;
+}
+
+Boolean get_fop_from_fop_code(char* fop, char* fop_long_name) {
+    if (!strcmp(fop, FOP_DELETE)) {
+        strcpy(fop_long_name, USER_DELETE);
+    } 
+    
+    else if (!strcmp(fop, FOP_LIST)) {
+        strcpy(fop_long_name, USER_LIST);
+    }
+
+    else if (!strcmp(fop, FOP_REMOVE)) {
+        strcpy(fop_long_name, USER_REMOVE);
+    }
+
+    else if (!strcmp(fop, FOP_RETRIEVE)) {
+        strcpy(fop_long_name, USER_RETRIEVE);
+    }
+
+    else if (!strcmp(fop, FOP_UPLOAD)) {
+        strcpy(fop_long_name, USER_UPLOAD);
+    }
+    
+    else {
+        fprintf(stderr, "Error: Invalid Fop\n");
+        return false;
+    }
+    return true;
+}
+
+Boolean fop_has_file(char* fop) {
+    return !(strcmp(fop, FOP_UPLOAD) && 
+            strcmp(fop, FOP_RETRIEVE) && 
+            strcmp(fop, FOP_DELETE));
 }
 
 Boolean prepare_request(char* request, char* command, char* uid, char* password) {
