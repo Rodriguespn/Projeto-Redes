@@ -5,13 +5,13 @@
 char *pdip, *pdport, *asip, *asport;
 
 int main(int argc, char const *argv[]) {
-    int fd, errcode;
+    int fd, errcode, listenfd;
     fd_set inputs, testfds;
     int out_fds;
 
     ssize_t n;
     socklen_t addrlen;
-    struct addrinfo hints,*res;
+    struct addrinfo hints,*client, *server;
     struct sockaddr_in addr;
     struct timeval timeout;
     char buffer[SIZE];
@@ -45,7 +45,7 @@ int main(int argc, char const *argv[]) {
     hints.ai_socktype = SOCK_DGRAM;
     
     // gets the address info
-    errcode = getaddrinfo(asip, asport, &hints, &res);
+    errcode = getaddrinfo(asip, asport, &hints, &client);
     if (errcode != 0) {
         //error
         fprintf(stderr, "Error: getaddrinfo returned %d error code\n", errcode);
@@ -79,7 +79,7 @@ int main(int argc, char const *argv[]) {
         printf("message sent: %s", buffer);
 
         // sends REG command
-        n = sendto(fd, buffer, strlen(buffer), 0, res -> ai_addr, res -> ai_addrlen);
+        n = sendto(fd, buffer, strlen(buffer), 0, client -> ai_addr, client -> ai_addrlen);
         if (n == ERROR) {
             //error
             fprintf(stderr, "Error: sendto returned %d error code\n", ERROR);
@@ -108,17 +108,47 @@ int main(int argc, char const *argv[]) {
     strcat(unregistration_success, OK);
     strcat(unregistration_success, "\n");
 
+    // the socket where the AS will send info
+    listenfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd == ERROR) {
+        //error
+        fprintf(stderr, "Error: socket returned null\n");
+        exit(EXIT_FAILURE);
+    }
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET; // IPv4
+    hints.ai_socktype = SOCK_DGRAM; // UDP socket
+    hints.ai_flags = AI_PASSIVE;
+
+    errcode = getaddrinfo(NULL, pdport, &hints, &server);
+
+    if (errcode != 0) {
+        /*error*/ 
+        fprintf(stderr, "Error: getaddrinfo returned %d error code\n", errcode);
+        exit(EXIT_FAILURE);
+    }
+
+    n = bind(listenfd, server -> ai_addr, server -> ai_addrlen);
+    if (n == ERROR) {
+        /*error*/
+        fprintf(stderr, "Error: bind returned %ld error code\n", n);
+        exit(EXIT_FAILURE);
+    }
+
     FD_ZERO(&inputs);
     FD_SET(STDIN, &inputs);
-    FD_SET(fd, &inputs);
+    FD_SET(listenfd, &inputs);
 
     do {
-        testfds=inputs;
-        timeout.tv_sec=10;
-        timeout.tv_usec=0;
+        testfds = inputs;
+        timeout.tv_sec = 10;
+        timeout.tv_usec = 0;
 
-        printf("testfds byte: %d\n", ((char *)&testfds)[0]);
+        printf("testfds byte: %d\n", ((char *) &testfds)[0]);
         out_fds = select(FD_SETSIZE, &testfds, (fd_set*) NULL,(fd_set*) NULL, &timeout);
+
+        printf("counter=%d\n", out_fds);
         
         switch (out_fds) {
         case 0:
@@ -131,17 +161,17 @@ int main(int argc, char const *argv[]) {
             exit(EXIT_FAILURE);
             break;
         default:
-            if (FD_ISSET(fd, &testfds)) {
+            if (FD_ISSET(listenfd, &testfds)) {
                 printf("Here\n");
                 addrlen = sizeof(addr);
-                n = recvfrom(fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
+                n = recvfrom(listenfd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
                 if (n == ERROR) {
                     //error
                     fprintf(stderr, "Error: recvfrom returned %d error code\n", ERROR);
                     exit(EXIT_FAILURE);
                 }
 
-                write(STDOUT, "response from AS: ", 10);
+                write(STDOUT, "response from AS: ", 19);
                 write(STDOUT, buffer, n);
             }
 
@@ -155,7 +185,7 @@ int main(int argc, char const *argv[]) {
 
                 printf("message sent: %s", buffer);
 
-                n = sendto(fd, buffer, strlen(buffer), 0, res -> ai_addr, res -> ai_addrlen);
+                n = sendto(fd, buffer, strlen(buffer), 0, client -> ai_addr, client -> ai_addrlen);
                 if (n == ERROR) {
                     //error
                     fprintf(stderr, "Error: sendto returned %d error code\n", ERROR);
@@ -178,7 +208,8 @@ int main(int argc, char const *argv[]) {
         }
     } while (strcmp(buffer, unregistration_success));
 
-    freeaddrinfo(res);
+    freeaddrinfo(client);
+    freeaddrinfo(server);
 
     close(fd);
 

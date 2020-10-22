@@ -97,7 +97,6 @@ char* parse_as_port(const char* argv[], int size) {
         int port = ASPORT+GN;
         sprintf(asport, "%d", port);
     }
-    printf("%s\n", asport);
     return asport;
 }
 

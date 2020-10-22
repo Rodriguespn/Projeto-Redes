@@ -10,10 +10,10 @@ all:
 	$(LD) $(CFLAGS) $(LDFLAGS) -o pd pd.c ../functions.c
 
 run:
-	./pd 127.0.0.1
+	./pd 10.0.2.15
 
 run_as_tejo:
-	./pd 127.0.0.1 -n tejo.tecnico.ulisboa.pt -p 58011
+	./pd 2.0.0.0 -n tejo.tecnico.ulisboa.pt -p 58011
 
 clean:
 	@echo Cleaning...

@@ -53,7 +53,7 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    n = write(fd, "LOG 12347 password\n", strlen("LOG 12346 password\n"));
+    n = write(fd, "LOG 90531 password\n", strlen("LOG 90531 password\n"));
     if (n == ERROR) {
         //error
         fprintf(stderr, "Error: could not write.\n");
@@ -72,7 +72,7 @@ int main(int argc, char const *argv[])
 
     memset(buffer, EOS, SIZE);
 
-    n = write(fd, "REQ 12347 L\n", strlen("REQ 12347 L\n"));
+    n = write(fd, "REQ 90531 1234 U f1.txt\n", strlen("REQ 90531 1234 U f1.txt\n"));
     if (n == ERROR) {
         //error
         fprintf(stderr, "Error: could not write.\n");
