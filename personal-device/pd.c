@@ -10,7 +10,6 @@ int main(int argc, char const *argv[]) {
     int out_fds;
 
     ssize_t n;
-    socklen_t addrlen;
     struct addrinfo hints,*client, *server;
     struct sockaddr_in addr;
     struct timeval timeout;
@@ -79,21 +78,10 @@ int main(int argc, char const *argv[]) {
         printf("message sent: %s", buffer);
 
         // sends REG command
-        n = sendto(fd, buffer, strlen(buffer), 0, client -> ai_addr, client -> ai_addrlen);
-        if (n == ERROR) {
-            //error
-            fprintf(stderr, "Error: sendto returned %d error code\n", ERROR);
-            exit(EXIT_FAILURE);
-        }
+        n = udp_write(fd, buffer, client);
 
         memset(buffer, EOS, SIZE);
-        addrlen = sizeof(addr);
-        n = recvfrom (fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
-        if(n == ERROR) {
-            //error
-            fprintf(stderr, "Error: recvfrom returned %d error code\n", ERROR);
-            exit(EXIT_FAILURE);
-        }
+        n = udp_read(fd, buffer, SIZE, addr);
 
         write(STDOUT, "response: ", 10);
         write(STDOUT, buffer, n);
@@ -167,13 +155,7 @@ int main(int argc, char const *argv[]) {
             if (FD_ISSET(listenfd, &testfds)) {
                 memset(buffer, EOS, SIZE);
 
-                addrlen = sizeof(addr);
-                n = recvfrom(listenfd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
-                if (n == ERROR) {
-                    //error
-                    fprintf(stderr, "Error: recvfrom returned %d error code\n", ERROR);
-                    exit(EXIT_FAILURE);
-                }
+                n = udp_read(listenfd, buffer, SIZE, addr);
 
                 write(STDOUT, "response from AS: ", 19);
                 write(STDOUT, buffer, n);
@@ -187,13 +169,7 @@ int main(int argc, char const *argv[]) {
                     strcat(buffer, OK);
                     strcat(buffer, "\n");
 
-                    addrlen = sizeof(addr);
-                    n = sendto(listenfd, buffer, strlen(buffer), 0, (struct sockaddr*) &addr, addrlen);
-                    if (n == ERROR) {
-                        //error
-                        fprintf(stderr, "Error: sendto returned %d error code\n", ERROR);
-                        exit(EXIT_FAILURE);
-                    }
+                    n = udp_write(listenfd, buffer, (struct addrinfo*) &addr);
 
                     printf("message sent: %s\n", buffer);
                 }
@@ -209,21 +185,10 @@ int main(int argc, char const *argv[]) {
 
                 printf("message sent: %s", buffer);
 
-                n = sendto(fd, buffer, strlen(buffer), 0, client -> ai_addr, client -> ai_addrlen);
-                if (n == ERROR) {
-                    //error
-                    fprintf(stderr, "Error: sendto returned %d error code\n", ERROR);
-                    exit(EXIT_FAILURE);
-                }
+                n = udp_write(fd, buffer, client);
 
                 memset(buffer, EOS, SIZE);
-                addrlen = sizeof(addr);
-                n = recvfrom(fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
-                if (n == ERROR) {
-                    //error
-                    fprintf(stderr, "Error: recvfrom returned %d error code\n", ERROR);
-                    exit(EXIT_FAILURE);
-                }
+                n = udp_read(fd, buffer, SIZE, addr);
 
                 write(STDOUT, "response: ", 10);
                 write(STDOUT, buffer, n);
@@ -446,7 +411,7 @@ void parse_arguments(const char* argv[], int size) {
 
     strcpy(pdip, argv[1]);
 
-    pdport = parse_pd_port(argv, size);
-    asip = parse_as_ip(argv, size, pdip);
-    asport = parse_as_port(argv, size);
+    parse_pd_port(argv, size, &pdport);
+    parse_as_ip(argv, size, pdip, &asip);
+    parse_as_port(argv, size, &asport);
 }
