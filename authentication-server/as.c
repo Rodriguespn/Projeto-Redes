@@ -158,7 +158,7 @@ void prepare_nok_message(char* buffer, const char* command) {
 
 // parses the arguments given on the command line
 void parse_arguments(const char* argv[], int size) {
-    asport = parse_as_port(argv, size);
+    parse_as_port(argv, size, &asport);
 }
 
 Boolean parse_command(char* buffer, char* command) {
