@@ -1,19 +1,31 @@
 #ifndef FUNCTIONS_H
 #define FUNCTIONS_H
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <signal.h> 
 #include "constants.h" 
 
 #define max(A,B) ((A)>=(B)?(A):(B))
 
 void handler_sigint();
 void read_stdin(char* buffer);
-char* parse_pd_port(const char* argv[], int size);
-char* parse_as_ip(const char* argv[], int size, char* defaultip);
-char* parse_as_port(const char* argv[], int size);
-char* parse_fs_port(const char* argv[], int size);
-char* parse_fs_ip(const char* argv[], int size, char* pdip);
+void parse_pd_port(const char* argv[], int size, char** pdport);
+void parse_as_ip(const char* argv[], int size, char* defaultip, char** asip);
+void parse_as_port(const char* argv[], int size, char** asport);
+void parse_fs_port(const char* argv[], int size, char** fsport);
+void parse_fs_ip(const char* argv[], int size, char* defaultip, char** fsip);
+
+int tcp_write(int sockfd, char* buffer);
+int tcp_read(int sockfd, char* buffer, int size);
+int udp_write(int sockfd, char* buffer, struct addrinfo *addr);
+int udp_read(int sockfd, char* buffer, int size, struct sockaddr_in addr);
 
 #endif /* FUNCTIONS_H */

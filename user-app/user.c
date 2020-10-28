@@ -5,7 +5,9 @@ char *asip, *asport, *fsip, *fsport;
 
 int main(int argc, char const *argv[])
 {
-    int fd, errcode;
+    int fd, errcode, listenfd;
+    fd_set inputs, testfds;
+    int out_fds;
     ssize_t n;
     socklen_t addrlen;
     struct addrinfo hints, *res;
@@ -53,41 +55,37 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    n = write(fd, "LOG 90531 password\n", strlen("LOG 90531 password\n"));
-    if (n == ERROR) {
-        //error
-        fprintf(stderr, "Error: could not write.\n");
-        exit(EXIT_FAILURE);
-    }
+    FD_ZERO(&inputs);
+    FD_SET(STDIN, &inputs);
+    FD_SET(listenfd, &inputs);
 
-    n = read(fd, buffer, SIZE);
-    if (n == ERROR) {
-        //error
-        fprintf(stderr, "Error: could not read.\n");
-        exit(EXIT_FAILURE);
-    }
+    do {
+        tcp_write(fd, "LOG 90531 password\n", strlen("LOG 90531 password\n"));
 
-    write(STDOUT, "response: ", 10);
-    write(STDOUT, buffer, n);
+        tcp_read(fd, buffer, SIZE);
 
-    memset(buffer, EOS, SIZE);
+        write(STDOUT, "response: ", 10);
+        write(STDOUT, buffer, n);
 
-    n = write(fd, "REQ 90531 1234 U f1.txt\n", strlen("REQ 90531 1234 U f1.txt\n"));
-    if (n == ERROR) {
-        //error
-        fprintf(stderr, "Error: could not write.\n");
-        exit(EXIT_FAILURE);
-    }
+        memset(buffer, EOS, SIZE);
 
-    n = read(fd, buffer, SIZE);
-    if (n == ERROR) {
-        //error
-        fprintf(stderr, "Error: could not read.\n");
-        exit(EXIT_FAILURE);
-    }
+        n = write(fd, "REQ 90531 1234 U f1.txt\n", strlen("REQ 90531 1234 U f1.txt\n"));
+        if (n == ERROR) {
+            //error
+            fprintf(stderr, "Error: could not write.\n");
+            exit(EXIT_FAILURE);
+        }
 
-    write(STDOUT, "response: ", 10);
-    write(STDOUT, buffer, n);
+        n = read(fd, buffer, SIZE);
+        if (n == ERROR) {
+            //error
+            fprintf(stderr, "Error: could not read.\n");
+            exit(EXIT_FAILURE);
+        }
+
+        write(STDOUT, "response: ", 10);
+        write(STDOUT, buffer, n);
+    } while (strcmp(buffer, unregistration_success));
 
     freeaddrinfo(res);
     close(fd);
@@ -110,8 +108,8 @@ int wrong_arguments(int argc)
 // parses the arguments given on the command line
 void parse_arguments(const char *argv[], int size)
 {
-    asip = parse_as_ip(argv, size, LOCALHOST);
-    asport = parse_as_port(argv, size);
-    fsip = parse_fs_ip(argv, size, LOCALHOST);
-    fsport = parse_fs_port(argv, size);
+    parse_as_ip(argv, size, LOCALHOST, &asip);
+    parse_as_port(argv, size, &asport);
+    parse_fs_ip(argv, size, LOCALHOST, &fsip);
+    parse_fs_port(argv, size, &fsport);
 }

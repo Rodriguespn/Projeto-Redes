@@ -332,17 +332,6 @@ Boolean register_user(char* uid, char* password, char* ip, char* port) {
 
     get_user_directory(directory, uid);
 
-    // check if the directory is created or not 
-    if (stat(directory, &st) == ERROR) { // if directory doesn t exists
-        if (mkdir(directory, 0777)) { 
-            printf("Unable to create directory \"%s\"\n", directory); 
-            exit(EXIT_FAILURE); 
-        }
-    } else { // the user already exists
-        fprintf(stderr, "Error: the user %s already exits\n", uid);
-        return false;
-    }
-
     // allocates memory for full relative path to the password file for the user with uid
     if (!(full_path = (char *) malloc(sizeof(char)*(strlen(directory) + strlen(filename))))) {
         perror("Error: allocating \"path\" buffer");
@@ -352,18 +341,46 @@ Boolean register_user(char* uid, char* password, char* ip, char* port) {
     strcat(full_path, directory);
     strcat(full_path, filename);
 
-    printf("path = %s\n", full_path);
-    // opens the password file
-    if (!(userfd = fopen(full_path, "w"))) {
-        fprintf(stderr, "Error: could not open file %s\n", filename);
-        exit(EXIT_FAILURE);
+    // check if the directory is created or not 
+    if (stat(directory, &st) == ERROR) { // if directory doesn t exists
+        if (mkdir(directory, 0777)) { 
+            printf("Unable to create directory \"%s\"\n", directory); 
+            exit(EXIT_FAILURE); 
+        }
+
+        // opens the password file
+        if (!(userfd = fopen(full_path, "w"))) {
+            fprintf(stderr, "Error: could not open file %s\n", filename);
+            exit(EXIT_FAILURE);
+        }
+
+        // writes the password on the file
+        fprintf(userfd, "%s\n", password);
+
+        // closes the password file
+        fclose(userfd);
+    } else { // the user already exists
+        //fprintf(stderr, "Error: the user %s already exits\n", uid);
+        printf("path = %s\n", full_path);
+
+        // opens the password file
+        if (!(userfd = fopen(full_path, "r"))) {
+            fprintf(stderr, "Error: could not open file %s\n", filename);
+            exit(EXIT_FAILURE);
+        }
+        char password_from_file[PASSWORD_SIZE];
+        // reads the password from the file
+        fscanf(userfd, "%s\n", password_from_file);
+        printf("password_from_file=%s\n", password_from_file);
+
+        if (strcmp(password, password_from_file)) {
+            fprintf(stderr, "Error: wrong uid or password\n");
+            return false;
+        }
+
+        // closes the password file
+        fclose(userfd);
     }
-
-    // writes the password on the file
-    fprintf(userfd, "%s\n", password);
-
-    // closes the password file
-    fclose(userfd);
 
     // clears the full_path and filename memory
     memset(full_path, EOS, strlen(full_path));
