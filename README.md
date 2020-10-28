@@ -16,11 +16,12 @@ Gastão:
 
 Pedro:
 > PD:
-- Validação das mensagens recebidas pelo AS
+- ~Validação das mensagens recebidas pelo AS~
 - ~~Tratamento do sinal SIGINT~~
 - Escrever mensagens que o as manda para o pd, via user (quando o user e o as estiverem feitos)
 
 > AS:
+> - permitir q PDs se registem outra vez qd mandam a password certa
 - criar um socket TCP
 - Implementar select
 

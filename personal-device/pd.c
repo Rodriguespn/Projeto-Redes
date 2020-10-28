@@ -182,6 +182,8 @@ int main(int argc, char const *argv[]) {
                     memset(buffer, EOS, SIZE);
                     strcpy(buffer, VAL_USER_RESPONSE);
                     strcat(buffer, " ");
+                    strcat(buffer, uid);
+                    strcat(buffer, " ");
                     strcat(buffer, OK);
                     strcat(buffer, "\n");
 
