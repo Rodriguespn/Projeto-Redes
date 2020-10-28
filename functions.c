@@ -165,8 +165,9 @@ int tcp_read(int sockfd, char* buffer, int size) {
     return n;
 }
 
-int udp_write(int sockfd, char* buffer, struct addrinfo * addr) {
-    int n = sendto(sockfd, buffer, strlen(buffer), 0, addr -> ai_addr, addr -> ai_addrlen);
+int udp_write(int sockfd, char* buffer, struct sockaddr *addr, socklen_t addrlen) {
+    printf("%s\n", buffer);
+    int n = sendto(sockfd, buffer, strlen(buffer), 0, addr,  addrlen);
     if (n == ERROR) {
         //error
         fprintf(stderr, "Error: sendto returned %d error code\n", ERROR);
@@ -175,9 +176,9 @@ int udp_write(int sockfd, char* buffer, struct addrinfo * addr) {
     return n;
 }
 
-int udp_read(int sockfd, char* buffer, int size, struct sockaddr_in addr) {
+int udp_read(int sockfd, char* buffer, int size, struct sockaddr* addr) {
     socklen_t addrlen = sizeof(addr);
-    int n = recvfrom (sockfd, buffer, size, 0, (struct sockaddr*) &addr, &addrlen);
+    int n = recvfrom (sockfd, buffer, size, 0, addr, &addrlen);
     if(n == ERROR) {
         //error
         fprintf(stderr, "Error: recvfrom returned %d error code\n", ERROR);

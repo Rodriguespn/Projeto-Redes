@@ -60,7 +60,9 @@ int main(int argc, char const *argv[])
     FD_SET(listenfd, &inputs);
 
     do {
-        tcp_write(fd, "LOG 90531 password\n", strlen("LOG 90531 password\n"));
+        tcp_write(fd, "LOG 90531 password\n");
+
+        memset(buffer, EOS, SIZE);
 
         tcp_read(fd, buffer, SIZE);
 
@@ -69,13 +71,9 @@ int main(int argc, char const *argv[])
 
         memset(buffer, EOS, SIZE);
 
-        n = write(fd, "REQ 90531 1234 U f1.txt\n", strlen("REQ 90531 1234 U f1.txt\n"));
-        if (n == ERROR) {
-            //error
-            fprintf(stderr, "Error: could not write.\n");
-            exit(EXIT_FAILURE);
-        }
-
+        n = tcp_write(fd, "REQ 90531 1234 U f1.txt\n");
+        
+        memset(buffer, EOS, SIZE);
         n = read(fd, buffer, SIZE);
         if (n == ERROR) {
             //error
@@ -85,7 +83,7 @@ int main(int argc, char const *argv[])
 
         write(STDOUT, "response: ", 10);
         write(STDOUT, buffer, n);
-    } while (strcmp(buffer, unregistration_success));
+    } while (false); //strcmp(buffer, unregistration_success));
 
     freeaddrinfo(res);
     close(fd);

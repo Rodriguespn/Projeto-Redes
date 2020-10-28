@@ -25,7 +25,7 @@ void parse_fs_ip(const char* argv[], int size, char* defaultip, char** fsip);
 
 int tcp_write(int sockfd, char* buffer);
 int tcp_read(int sockfd, char* buffer, int size);
-int udp_write(int sockfd, char* buffer, struct addrinfo *addr);
-int udp_read(int sockfd, char* buffer, int size, struct sockaddr_in addr);
+int udp_write(int sockfd, char* buffer, struct sockaddr *addr, socklen_t addrlen);
+int udp_read(int sockfd, char* buffer, int size, struct sockaddr* addr);
 
 #endif /* FUNCTIONS_H */

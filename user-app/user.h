@@ -16,7 +16,5 @@
 void usage();
 int wrong_arguments(int argc);
 void parse_arguments(const char* argv[], int size);
-int tcp_write(int sockfd, char* buffer, int size);
-int tcp_read(int sockfd, char* buffer, int size);
 
 #endif /* USER_H */

@@ -78,10 +78,10 @@ int main(int argc, char const *argv[]) {
         printf("message sent: %s", buffer);
 
         // sends REG command
-        n = udp_write(fd, buffer, client);
+        n = udp_write(fd, buffer, client -> ai_addr, client -> ai_addrlen);
 
         memset(buffer, EOS, SIZE);
-        n = udp_read(fd, buffer, SIZE, addr);
+        n = udp_read(fd, buffer, SIZE, (struct sockaddr*) &addr);
 
         write(STDOUT, "response: ", 10);
         write(STDOUT, buffer, n);
@@ -155,7 +155,7 @@ int main(int argc, char const *argv[]) {
             if (FD_ISSET(listenfd, &testfds)) {
                 memset(buffer, EOS, SIZE);
 
-                n = udp_read(listenfd, buffer, SIZE, addr);
+                n = udp_read(listenfd, buffer, SIZE, (struct sockaddr*) &addr);
 
                 write(STDOUT, "response from AS: ", 19);
                 write(STDOUT, buffer, n);
@@ -169,7 +169,7 @@ int main(int argc, char const *argv[]) {
                     strcat(buffer, OK);
                     strcat(buffer, "\n");
 
-                    n = udp_write(listenfd, buffer, (struct addrinfo*) &addr);
+                    n = udp_write(listenfd, buffer, (struct sockaddr*) &addr, sizeof(addr));
 
                     printf("message sent: %s\n", buffer);
                 }
@@ -185,10 +185,10 @@ int main(int argc, char const *argv[]) {
 
                 printf("message sent: %s", buffer);
 
-                n = udp_write(fd, buffer, client);
+                n = udp_write(fd, buffer, client -> ai_addr, client -> ai_addrlen);
 
                 memset(buffer, EOS, SIZE);
-                n = udp_read(fd, buffer, SIZE, addr);
+                n = udp_read(fd, buffer, SIZE, (struct sockaddr*) &addr);
 
                 write(STDOUT, "response: ", 10);
                 write(STDOUT, buffer, n);
