@@ -8,11 +8,13 @@ struct stat st = {0};
 
 int main(int argc, char const *argv[])
 {
-    int fd, errcode;
+    int udpsocket, tcpsocket, connectfd, out_fds, childpid, errcode;
+    fd_set inputs, testfds;
+    struct timeval timeout;
     ssize_t n;
     socklen_t addrlen;
     struct addrinfo hints,*res;
-    struct sockaddr_in addr;
+    struct sockaddr_in cliaddr;
     char buffer[SIZE];
     
     // checks if the number of arguments is correct
@@ -28,11 +30,14 @@ int main(int argc, char const *argv[])
 
     printf("ASport=%s\n", asport);
 
-    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    // create and bind the UDP Socket
+    udpsocket = socket(AF_INET, SOCK_DGRAM, 0);
 
-    if(fd == ERROR) 
+    if(udpsocket == ERROR) {
         /*error*/
+        fprintf(stderr, "Error: it was not possible to create udp socket\n");
         exit(EXIT_FAILURE);
+    }
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET; // IPv4
@@ -43,17 +48,55 @@ int main(int argc, char const *argv[])
 
     if (errcode != 0) {
         /*error*/ 
-        fprintf(stderr, "Error: getaddrinfo returned %d error code\n", errcode);
+        fprintf(stderr, "Error: udp socket getaddrinfo returned %d error code\n", errcode);
         exit(EXIT_FAILURE);
     }
 
-    n = bind(fd, res -> ai_addr, res -> ai_addrlen);
+    n = bind(udpsocket, res -> ai_addr, res -> ai_addrlen);
     if (n == ERROR)  {
         /*error*/
-        fprintf(stderr, "Error: bind returned %ld error code\n", n);
+        fprintf(stderr, "Error: udp socket bind returned %ld error code\n", n);
         exit(EXIT_FAILURE);
     }
 
+    // create and bind the TCP Socket
+    tcpsocket = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (tcpsocket == ERROR) {
+        //error
+        fprintf(stderr, "Error: it was not possible to create tcp socket\n");
+        exit(EXIT_FAILURE);
+    }
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+    
+    //TCP socket
+    //IPv4
+    //TCP socket
+    errcode = getaddrinfo(NULL, asport, &hints, &res);
+    if (errcode != 0) {
+        /*error*/
+        fprintf(stderr, "Error: tcp socket getaddrinfo returned %d error code\n", errcode);
+        exit(EXIT_FAILURE); 
+    }
+
+    n = bind(tcpsocket, res -> ai_addr, res -> ai_addrlen);
+    if (n == ERROR) {
+        fprintf(stderr, "Error: tcp socket bind returned %ld error code\n", n);
+        /*error*/ 
+        exit(EXIT_FAILURE);
+    } 
+        
+    if (listen(tcpsocket, 5) == ERROR) {
+        /*error*/
+        fprintf(stderr, "Error: tcp socket listen returned %d error code\n", ERROR);
+        exit(EXIT_FAILURE);
+    }
+
+    // creates the directory where the users' information will be stored
     if (stat(users_directory, &st) == -1) { // if directory doesn t exists
         // check if directory is created or not 
         if (mkdir(users_directory, 0777)) { 
@@ -69,56 +112,140 @@ int main(int argc, char const *argv[])
     memset(pdip, EOS, SIZE);
     memset(pdport, EOS, SIZE);
 
-    while (true) {
-        memset(buffer, EOS, SIZE);
-        addrlen = sizeof(addr);
-        n = recvfrom(fd, buffer, SIZE, 0, (struct sockaddr*) &addr, &addrlen);
-        if (n == ERROR) {
-            /*error*/
-            exit(EXIT_FAILURE);
-        }
+    FD_ZERO(&inputs);
+    FD_SET(udpsocket, &inputs);
+    FD_SET(tcpsocket, &inputs);
 
-        if (parse_command(buffer, command)) {
-            if (!strcmp(command, REGISTRATION)) {
-                if (parse_register_message(uid, password, pdip, pdport)) {
-                    if (register_user(uid, password, pdip, pdport)) {
-                        prepare_ok_message(buffer, REG_RESPONSE);
+    while (true) {
+        testfds = inputs;
+        timeout.tv_sec = 10;
+        timeout.tv_usec = 0;
+
+        out_fds = select(FD_SETSIZE, &testfds, (fd_set*) NULL,(fd_set*) NULL, &timeout);
+
+        printf("timeout time: %ld and %ld\n", timeout.tv_sec, timeout.tv_usec);
+        printf("counter = %d\n", out_fds);
+
+        switch (out_fds) {
+        case 0:
+            printf("Timeout event\n");
+            break;
+        
+        case ERROR:
+            /*error*/
+            fprintf(stderr, "Error: select returned %d error code\n", out_fds);
+            exit(EXIT_FAILURE);
+            break;
+
+        default:
+            //  if udp socket is ready to listen
+            if (FD_ISSET(udpsocket, &testfds)) {
+                printf("Received on UDP socket\n");
+                memset(buffer, EOS, SIZE);
+                addrlen = sizeof(cliaddr);
+                n = udp_read(udpsocket, buffer, SIZE, (struct sockaddr*) &cliaddr);
+
+                if (parse_command(buffer, command)) {
+                    if (!strcmp(command, REGISTRATION)) {
+                        if (parse_register_message(uid, password, pdip, pdport)) {
+                            if (register_user(uid, password, pdip, pdport)) {
+                                prepare_ok_message(buffer, REG_RESPONSE);
+                            } else {
+                                prepare_nok_message(buffer, REG_RESPONSE);
+                            }
+                        } else {
+                            prepare_error_message(buffer);
+                        }
+
+                    } else if (!strcmp(command, UNREGISTRATION)) {
+                        if (parse_unregister_message(uid, password)) {
+                            printf("uid=%s\npassword=%s\n", uid, password);
+                            if (unregister_user(uid, password)) {
+                                prepare_ok_message(buffer, UNR_RESPONSE);
+                            } else {
+                                prepare_nok_message(buffer, UNR_RESPONSE);
+                            }
+                        }
                     } else {
-                        prepare_nok_message(buffer, REG_RESPONSE);
-                    }
+                        prepare_error_message(buffer);
+                    } 
                 } else {
                     prepare_error_message(buffer);
                 }
+                
+                printf("command = %s\n", command);
+                write(STDOUT, "received: ", 10);
+                write(STDOUT, buffer, n);
 
-            } else if (!strcmp(command, UNREGISTRATION)) {
-                if (parse_unregister_message(uid, password)) {
-                    printf("uid=%s\npassword=%s\n", uid, password);
-                    if (unregister_user(uid, password)) {
-                        prepare_ok_message(buffer, UNR_RESPONSE);
-                    } else {
-                        prepare_nok_message(buffer, UNR_RESPONSE);
-                    }
-                }
-            } else {
-                prepare_error_message(buffer);
-            } 
-        } else {
-            prepare_error_message(buffer);
+                n = udp_write(udpsocket, buffer, (struct sockaddr*) &cliaddr, sizeof(cliaddr));
+            }
+            break;
         }
-        
-        printf("command = %s\n", command);
-        write(STDOUT, "received: ", 10);
-        write(STDOUT, buffer, n);
 
-        n = sendto(fd, buffer, n, 0, (struct sockaddr*) &addr, addrlen);
-        if (n == ERROR) {
-            /*error*/
-            exit(EXIT_FAILURE);
+        //  if tcp socket is ready to listen
+        if (FD_ISSET(tcpsocket, &testfds)) {
+            printf("Received on TCP socket\n");
+            addrlen = sizeof(cliaddr);
+            connectfd = accept(tcpsocket, (struct sockaddr*) &cliaddr, &addrlen);
+            printf("connectfd = %d\n", connectfd);
+            
+            if ((childpid = fork()) == 0) {
+                close(tcpsocket);
+                memset(buffer, EOS, SIZE);
+                printf("Message from tcp client: ");
+                n = tcp_read(connectfd, buffer, SIZE);
+                printf("read response = %ld\n", n);
+                puts(buffer);
+
+                if (parse_command(buffer, command)) {
+                    if (!strcmp(command, LOGIN)) {
+                        if (parse_login_message(uid, password)) {
+                            if (login_user(uid, password)) {
+                                prepare_ok_message(buffer, REG_RESPONSE); 
+                            }
+                            else {
+                                prepare_nok_message(buffer, LOG_RESPONSE);
+                            }
+                        } else {
+                        prepare_error_message(buffer);
+                        } 
+                    } else {
+                        prepare_error_message(buffer);
+                    } 
+                } else {
+                    prepare_error_message(buffer);
+                }
+                
+                n = tcp_write(connectfd, buffer);
+                printf("Message sent to tcp client: ");
+                puts(buffer);
+
+                memset(buffer, EOS, SIZE);
+                printf("Message from tcp client: ");
+                n = tcp_read(connectfd, buffer, SIZE);
+                printf("read response = %ld\n", n);
+                puts(buffer);
+
+                memset(buffer, EOS, SIZE);
+                strcpy(buffer, "Ok\n");
+                
+                n = tcp_write(connectfd, buffer);
+                printf("Message sent to tcp client: ");
+                puts(buffer);
+
+                close(connectfd);
+                exit(EXIT_SUCCESS);
+
+            } else if (childpid == ERROR) {
+                fprintf(stderr, "Error: could not create child process for tcp connection");
+                exit(EXIT_FAILURE);
+            }
+            close(connectfd);
         }
     }
 
     freeaddrinfo(res);
-    close (fd);
+    close (udpsocket);
 
     exit(EXIT_SUCCESS);
 }
@@ -223,6 +350,23 @@ Boolean parse_unregister_message(char* uid, char* password) {
     printf("password=%s\n", token);
     if (!valid_password(token)) {
         fprintf(stderr, "Invalid password!\n");
+        return false;
+    }
+    strcpy(password, token);
+    return true;
+}
+
+Boolean parse_login_message(char* uid, char* password) {
+    char *token;
+
+    token = strtok(NULL, " ");
+    if (!valid_uid(token)) {
+        return false;
+    }
+    strcpy(uid, token);
+
+    token = strtok(NULL, "\n");
+    if (!valid_password(token)) {
         return false;
     }
     strcpy(password, token);
@@ -502,5 +646,97 @@ Boolean unregister_user(char *uid, char *password) {
     free(directory);
     free(full_path);
 
+    return true;
+}
+
+Boolean login_user(char* uid, char* password) {
+    char* filename = NULL;
+    char* directory = NULL;
+    char* full_path; // users_directory/uid/file
+
+    // allocates memory for the password file for the user with uid
+    int filename_size = strlen(uid) + strlen(PASSWORD_FILE_PREFIX) + strlen(FILE_EXTENSION);
+    if (!(filename = (char *) malloc(sizeof(char)*filename_size))){
+            perror("Error: allocating \"filename\" buffer");
+            exit(EXIT_FAILURE);
+    }
+
+    get_filename(filename, uid, PASSWORD_FILE_PREFIX, FILE_EXTENSION);
+
+    // allocates memory for the relative path for the user with uid
+    if (!(directory = (char *) malloc(sizeof(char)*(strlen(users_directory)+ strlen(uid) + 2)))) {
+        perror("Error: allocating \"path\" buffer");
+        exit(EXIT_FAILURE);
+    }
+
+    get_user_directory(directory, uid);
+
+    // check if the directory is created or not 
+    if (stat(directory, &st) == ERROR) { // if directory doesn't exists
+        fprintf(stderr, "Error: user was not registered\n");
+        return false;
+    }
+
+    // allocates memory for full relative path to the password file for the user with uid
+    if (!(full_path = (char *) malloc(sizeof(char)*(strlen(directory) + strlen(filename))))) {
+        perror("Error: allocating \"path\" buffer");
+        exit(EXIT_FAILURE);
+    }
+
+    strcat(full_path, directory);
+    strcat(full_path, filename);
+
+    printf("path = %s\n", full_path);
+
+    // opens the password file
+    if (!(userfd = fopen(full_path, "r"))) {
+        fprintf(stderr, "Error: could not open file %s\n", filename);
+        exit(EXIT_FAILURE);
+    }
+
+    char password_from_file[PASSWORD_SIZE];
+    // reads the password from the file
+    fscanf(userfd, "%s\n", password_from_file);
+    printf("password_from_file=%s\n", password_from_file);
+
+    if (strcmp(password, password_from_file)) {
+        fprintf(stderr, "Error: wrong uid or password\n");
+        return false;
+    }
+
+    // closes the password file
+    fclose(userfd);
+
+    // clears the full_path and filename memory
+    memset(full_path, EOS, strlen(full_path));
+
+    filename_size = strlen(uid) + strlen(REGISTRATION_FILE_PREFIX) + strlen(FILE_EXTENSION);
+    // allocates memory for the registration file for the user with uid
+    if (!(filename = (char *) realloc(filename, sizeof(char)*filename_size))){
+        perror("Error: allocating \"filename\" buffer");
+        exit(EXIT_FAILURE);
+    }
+
+    get_filename(filename, uid, LOGIN_FILE_PREFIX, FILE_EXTENSION);
+
+    printf("registration_filename = %s\n", filename);
+
+    strcat(full_path, directory);
+    strcat(full_path, filename);
+
+    // opens the password file
+    if (!(userfd = fopen(full_path, "w"))) {
+        fprintf(stderr, "Error: could not open file %s\n", filename);
+        exit(EXIT_FAILURE);
+    }
+
+    // writes the uid and the password on the file
+    fprintf(userfd, "%s:%s\n", uid, password);
+    // closes the password file
+    fclose(userfd);
+
+    free(filename);
+    free(directory);
+    free(full_path);
     return true;
 }

@@ -34,6 +34,7 @@ void parse_arguments(const char* argv[], int size);
 Boolean parse_command(char* buffer, char* command);
 Boolean parse_register_message(char* uid, char* password, char* pdip, char* pdport);
 Boolean parse_unregister_message(char* uid, char* password);
+Boolean parse_login_message(char* uid, char* password);
 Boolean all_numbers(char* uid);
 Boolean valid_uid(char* uid);
 Boolean only_numbers_or_letters(char* password);
@@ -42,5 +43,6 @@ void get_user_directory(char* buffer, char *uid);
 void get_filename(char* buffer, char* uid, const char* filename, const char* file_ext);
 Boolean register_user(char* uid, char* password, char* ip, char* port);
 Boolean unregister_user(char *uid, char *password);
+Boolean login_user(char* uid, char* password);
 
 #endif /* AS_H */
