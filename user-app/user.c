@@ -60,26 +60,25 @@ int main(int argc, char const *argv[])
     FD_SET(listenfd, &inputs);
 
     do {
-        tcp_write(fd, "LOG 90531 password\n");
+        n = tcp_write(fd, "LOG 90531 password\n");
 
         memset(buffer, EOS, SIZE);
 
-        tcp_read(fd, buffer, SIZE);
+        n = tcp_read(fd, buffer, SIZE);
 
         write(STDOUT, "response: ", 10);
         write(STDOUT, buffer, n);
 
         memset(buffer, EOS, SIZE);
+        strcpy(buffer, "REQ 90531 1234 U f1.txt\n");
 
-        n = tcp_write(fd, "REQ 90531 1234 U f1.txt\n");
+        n = tcp_write(fd, buffer);
+
+        write(STDOUT, "request: ", 9);
+        write(STDOUT, buffer, n);
         
         memset(buffer, EOS, SIZE);
-        n = read(fd, buffer, SIZE);
-        if (n == ERROR) {
-            //error
-            fprintf(stderr, "Error: could not read.\n");
-            exit(EXIT_FAILURE);
-        }
+        n = tcp_read(fd, buffer, SIZE);
 
         write(STDOUT, "response: ", 10);
         write(STDOUT, buffer, n);

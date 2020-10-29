@@ -147,25 +147,9 @@ int main(int argc, char const *argv[])
 
                 if (parse_command(buffer, command)) {
                     if (!strcmp(command, REGISTRATION)) {
-                        if (parse_register_message(uid, password, pdip, pdport)) {
-                            if (register_user(uid, password, pdip, pdport)) {
-                                prepare_ok_message(buffer, REG_RESPONSE);
-                            } else {
-                                prepare_nok_message(buffer, REG_RESPONSE);
-                            }
-                        } else {
-                            prepare_error_message(buffer);
-                        }
-
+                        process_registration_request(buffer, uid, password, pdip, pdport);
                     } else if (!strcmp(command, UNREGISTRATION)) {
-                        if (parse_unregister_message(uid, password)) {
-                            printf("uid=%s\npassword=%s\n", uid, password);
-                            if (unregister_user(uid, password)) {
-                                prepare_ok_message(buffer, UNR_RESPONSE);
-                            } else {
-                                prepare_nok_message(buffer, UNR_RESPONSE);
-                            }
-                        }
+                        process_unregistration_request(buffer, uid, password);
                     } else {
                         prepare_error_message(buffer);
                     } 
@@ -191,48 +175,32 @@ int main(int argc, char const *argv[])
             
             if ((childpid = fork()) == 0) {
                 close(tcpsocket);
-                memset(buffer, EOS, SIZE);
-                printf("Message from tcp client: ");
-                n = tcp_read(connectfd, buffer, SIZE);
-                printf("read response = %ld\n", n);
-                puts(buffer);
+                n = 1;
+                while (n) {
+                    memset(buffer, EOS, SIZE);
+                    printf("Message from tcp client: ");
+                    n = tcp_read(connectfd, buffer, SIZE);
+                    printf("read response = %ld\n", n);
+                    puts(buffer);
+                    if (!n) { // the socket disconnected
+                        continue;
+                    }
 
-                if (parse_command(buffer, command)) {
-                    if (!strcmp(command, LOGIN)) {
-                        if (parse_login_message(uid, password)) {
-                            if (login_user(uid, password)) {
-                                prepare_ok_message(buffer, REG_RESPONSE); 
-                            }
-                            else {
-                                prepare_nok_message(buffer, LOG_RESPONSE);
-                            }
+                    if (parse_command(buffer, command)) {
+                        if (!strcmp(command, LOGIN)) {
+                            process_login_request(buffer, uid, password);
                         } else {
-                        prepare_error_message(buffer);
+                            prepare_error_message(buffer);
                         } 
                     } else {
                         prepare_error_message(buffer);
-                    } 
-                } else {
-                    prepare_error_message(buffer);
+                    }
+                    
+                    n = tcp_write(connectfd, buffer);
+                    printf("Message sent to tcp client: ");
+                    puts(buffer);
                 }
-                
-                n = tcp_write(connectfd, buffer);
-                printf("Message sent to tcp client: ");
-                puts(buffer);
-
-                memset(buffer, EOS, SIZE);
-                printf("Message from tcp client: ");
-                n = tcp_read(connectfd, buffer, SIZE);
-                printf("read response = %ld\n", n);
-                puts(buffer);
-
-                memset(buffer, EOS, SIZE);
-                strcpy(buffer, "Ok\n");
-                
-                n = tcp_write(connectfd, buffer);
-                printf("Message sent to tcp client: ");
-                puts(buffer);
-
+                printf("Client %d disconnected\n", connectfd);
                 close(connectfd);
                 exit(EXIT_SUCCESS);
 
@@ -259,6 +227,44 @@ void usage() {
 // returns true if the arguments given on the command line are on an invalid format, and false otherwise
 int wrong_arguments(int argc) {
     return argc != 1 && argc != 3 && argc != 4;
+}
+
+void process_registration_request(char* buffer, char* uid, char* password, char* pdip, char* pdport) {
+    if (parse_register_message(uid, password, pdip, pdport)) {
+        if (register_user(uid, password, pdip, pdport)) {
+            prepare_ok_message(buffer, REG_RESPONSE);
+        } else {
+            prepare_nok_message(buffer, REG_RESPONSE);
+        }
+    } else {
+        prepare_error_message(buffer);
+    }
+}
+
+void process_unregistration_request(char* buffer, char* uid, char* password) {
+    if (parse_unregister_message(uid, password)) {
+        printf("uid=%s\npassword=%s\n", uid, password);
+        if (unregister_user(uid, password)) {
+            prepare_ok_message(buffer, UNR_RESPONSE);
+        } else {
+            prepare_nok_message(buffer, UNR_RESPONSE);
+        }
+    } else {
+        prepare_error_message(buffer);
+    }
+}
+
+void process_login_request(char* buffer, char* uid, char* password) {
+    if (parse_login_message(uid, password)) {
+        if (login_user(uid, password)) {
+            prepare_ok_message(buffer, REG_RESPONSE); 
+        }
+        else {
+            prepare_nok_message(buffer, LOG_RESPONSE);
+        }
+    } else {
+    prepare_error_message(buffer);
+    } 
 }
 
 void prepare_error_message(char* buffer) {
@@ -740,3 +746,8 @@ Boolean login_user(char* uid, char* password) {
     free(full_path);
     return true;
 }
+
+/*Boolean request_fop_user(char* uid, char* password) {
+
+    return true;
+}*/

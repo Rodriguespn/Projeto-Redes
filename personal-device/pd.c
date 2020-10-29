@@ -151,6 +151,7 @@ int main(int argc, char const *argv[]) {
             fprintf(stderr, "Error: select returned %d error code\n", out_fds);
             exit(EXIT_FAILURE);
             break;
+            
         default:
             if (FD_ISSET(listenfd, &testfds)) {
                 memset(buffer, EOS, SIZE);

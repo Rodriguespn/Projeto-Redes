@@ -27,6 +27,9 @@
 
 void usage();
 int wrong_arguments(int argc);
+void process_registration_request(char* buffer, char* uid, char* password, char* pdip, char* pdport);
+void process_unregistration_request(char* buffer, char* uid, char* password);
+void process_login_request(char* buffer, char* uid, char* password);
 void prepare_error_message(char* buffer);
 void prepare_ok_message(char* buffer, const char* command);
 void prepare_nok_message(char* buffer, const char* command);
