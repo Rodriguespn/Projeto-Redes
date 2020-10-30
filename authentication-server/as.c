@@ -2,7 +2,7 @@
 
 // the buffer where ASport is stored
 char *asport;
-char *users_directory = USERS_FOLDER_NAME;
+const char *users_directory = USERS_FOLDER_NAME;
 FILE *userfd; 
 struct stat st = {0};
 
@@ -172,23 +172,62 @@ int main(int argc, char const *argv[])
             addrlen = sizeof(cliaddr);
             connectfd = accept(tcpsocket, (struct sockaddr*) &cliaddr, &addrlen);
             printf("connectfd = %d\n", connectfd);
+            char rid[TID_SIZE], fop[FOP_SIZE];
+
+            memset(rid, EOS, TID_SIZE);
+            memset(fop, EOS, FOP_SIZE);
             
             if ((childpid = fork()) == 0) {
                 close(tcpsocket);
-                n = 1;
-                while (n) {
+                char login_succeeded[SIZE];
+                strcpy(login_succeeded, LOG_RESPONSE);
+                strcat(login_succeeded, " ");
+                strcat(login_succeeded, OK);
+                strcat(login_succeeded, "\n");
+
+                do { // user has to login before anything else
                     memset(buffer, EOS, SIZE);
-                    printf("Message from tcp client: ");
                     n = tcp_read(connectfd, buffer, SIZE);
-                    printf("read response = %ld\n", n);
-                    puts(buffer);
-                    if (!n) { // the socket disconnected
+
+                    if (!n) { // the client has disconnected
                         continue;
                     }
 
                     if (parse_command(buffer, command)) {
                         if (!strcmp(command, LOGIN)) {
                             process_login_request(buffer, uid, password);
+                        } else if (!strcmp(command, REQUEST)) {
+                            prepare_not_logged_in_message(buffer);
+                        }
+                        else {
+                            prepare_error_message(buffer);
+                        } 
+                    } else {
+                        prepare_error_message(buffer);
+                    }
+
+                    n = tcp_write(connectfd, buffer);
+                    printf("Message to tcp client: ");
+                    puts(buffer);
+                } while (n && strcmp(buffer, login_succeeded)); // while the socket is connected and login not succeeded
+
+                while (n) { // until the socket disconnects
+                    memset(buffer, EOS, SIZE);
+                    n = tcp_read(connectfd, buffer, SIZE);
+                    printf("Message from tcp client: ");
+                    puts(buffer);
+                    if (!n) { // the socket has disconnected
+                        continue;
+                    }
+                    
+                    if (parse_command(buffer, command)) {
+                        if (!strcmp(command, LOGIN)) {
+                            process_login_request(buffer, uid, password);
+                        } 
+                        else if (!strcmp(command, REQUEST)) {
+                            process_request_request(buffer, uid, rid, fop);
+                            memset(buffer, EOS, SIZE);
+                            strcpy(buffer, "REQ not implemented yet\n");
                         } else {
                             prepare_error_message(buffer);
                         } 
@@ -257,13 +296,21 @@ void process_unregistration_request(char* buffer, char* uid, char* password) {
 void process_login_request(char* buffer, char* uid, char* password) {
     if (parse_login_message(uid, password)) {
         if (login_user(uid, password)) {
-            prepare_ok_message(buffer, REG_RESPONSE); 
+            prepare_ok_message(buffer, LOG_RESPONSE); 
         }
         else {
             prepare_nok_message(buffer, LOG_RESPONSE);
         }
     } else {
     prepare_error_message(buffer);
+    } 
+}
+
+void process_request_request(char* buffer, char* uid, char* rid, char* fop) {
+    if (parse_request_message(uid, rid, fop)) {
+        // request fop por implementar
+    } else {
+        prepare_error_message(buffer);
     } 
 }
 
@@ -286,6 +333,12 @@ void prepare_nok_message(char* buffer, const char* command) {
     strcpy(buffer, command);
     strcat(buffer, " ");
     strcat(buffer, NOT_OK);
+    strcat(buffer, "\n");
+}
+
+void prepare_not_logged_in_message(char* buffer) {
+    memset(buffer, EOS, SIZE);
+    strcpy(buffer, NOT_LOGGED_IN);
     strcat(buffer, "\n");
 }
 
@@ -376,6 +429,39 @@ Boolean parse_login_message(char* uid, char* password) {
         return false;
     }
     strcpy(password, token);
+    return true;
+}
+
+Boolean parse_request_message(char* uid, char* rid, char* fop) {
+    char *token;
+
+    token = strtok(NULL, " ");
+    if (!valid_uid(token)) {
+        fprintf(stderr, "Error: invalid user!\n");
+        return false;
+    }
+    printf("token=%s\n", token);
+    memset(uid, EOS, UID_SIZE);
+    strcpy(uid, token);
+    printf("uid=%s\n", uid);
+
+    token = strtok(NULL, " ");
+    if (!token) {
+        fprintf(stderr, "Error: invalid RID!\n");
+        return false;
+    }
+    strcpy(rid, token);
+
+    token = strtok(NULL, " ");
+    if (!token) {
+        fprintf(stderr, "Error: invalid FOP!\n");
+        return false;
+    }
+    strcpy(fop, token);
+
+    // PODE TER UM FICHEIRO ASSOCIADO
+
+    printf("uid: %s\nRID: %s\nFop: %s\n", uid, rid, fop);
     return true;
 }
 
