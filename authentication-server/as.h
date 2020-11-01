@@ -25,6 +25,14 @@
 #define FILE_EXTENSION              ".txt"
 
 
+// Request error codes
+#define USER_REQUEST_OK             0
+#define INVALID_UID_ERR_CODE        1
+#define INVALID_FOP_ERR_CODE        2
+#define PD_NOT_CONNECTED_ERR_CODE   3
+#define PD_SENT_ERR_MSG_ERR_CODE    4
+
+
 void usage();
 int wrong_arguments(int argc);
 void process_registration_request(char* buffer, char* uid, char* password, char* pdip, char* pdport);
@@ -35,20 +43,26 @@ void prepare_error_message(char* buffer);
 void prepare_ok_message(char* buffer, const char* command);
 void prepare_nok_message(char* buffer, const char* command);
 void prepare_not_logged_in_message(char* buffer);
+void prepare_invalid_user_message(char* buffer);
+void prepare_invalid_fop_message(char* buffer);
+void prepare_pd_error_message(char* buffer);
+void prepare_request_message(char* buffer, int code);
 void parse_arguments(const char* argv[], int size);
 Boolean parse_command(char* buffer, char* command);
 Boolean parse_register_message(char* uid, char* password, char* pdip, char* pdport);
 Boolean parse_unregister_message(char* uid, char* password);
 Boolean parse_login_message(char* uid, char* password);
-Boolean parse_request_message(char* uid, char* rid, char* fop);
+Boolean parse_request_message(char* uid, char* rid, char* fop, char*filename);
 Boolean all_numbers(char* uid);
 Boolean valid_uid(char* uid);
 Boolean only_numbers_or_letters(char* password);
 Boolean valid_password(char* password);
+Boolean fop_has_file(char* fop);
 void get_user_directory(char* buffer, char *uid);
 void get_filename(char* buffer, char* uid, const char* filename, const char* file_ext);
 Boolean register_user(char* uid, char* password, char* ip, char* port);
 Boolean unregister_user(char *uid, char *password);
 Boolean login_user(char* uid, char* password);
+int request_user(char* uid, char* fop, char* filename);
 
 #endif /* AS_H */

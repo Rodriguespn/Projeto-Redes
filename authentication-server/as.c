@@ -226,8 +226,8 @@ int main(int argc, char const *argv[])
                         } 
                         else if (!strcmp(command, REQUEST)) {
                             process_request_request(buffer, uid, rid, fop);
-                            memset(buffer, EOS, SIZE);
-                            strcpy(buffer, "REQ not implemented yet\n");
+                            /*memset(buffer, EOS, SIZE);
+                            strcpy(buffer, "REQ not implemented yet\n");*/
                         } else {
                             prepare_error_message(buffer);
                         } 
@@ -307,8 +307,10 @@ void process_login_request(char* buffer, char* uid, char* password) {
 }
 
 void process_request_request(char* buffer, char* uid, char* rid, char* fop) {
-    if (parse_request_message(uid, rid, fop)) {
-        // request fop por implementar
+    char filename[SIZE];
+    if (parse_request_message(uid, rid, fop, filename)) {
+        int code = request_user(uid, fop, filename);
+        prepare_request_message(buffer, code);
     } else {
         prepare_error_message(buffer);
     } 
@@ -338,8 +340,56 @@ void prepare_nok_message(char* buffer, const char* command) {
 
 void prepare_not_logged_in_message(char* buffer) {
     memset(buffer, EOS, SIZE);
-    strcpy(buffer, NOT_LOGGED_IN);
+    strcpy(buffer, REQ_RESPONSE);
+    strcat(buffer, " ");
+    strcat(buffer, NOT_LOGGED_IN);
     strcat(buffer, "\n");
+}
+
+void prepare_invalid_user_message(char* buffer) {
+    memset(buffer, EOS, SIZE);
+    strcpy(buffer, REQ_RESPONSE);
+    strcat(buffer, " ");
+    strcat(buffer, INVALID_UID);
+    strcat(buffer, "\n");
+}
+
+void prepare_invalid_fop_message(char* buffer) {
+    memset(buffer, EOS, SIZE);
+    strcpy(buffer, REQ_RESPONSE);
+    strcat(buffer, " ");
+    strcat(buffer, INVALID_FOP);
+    strcat(buffer, "\n");
+}
+
+void prepare_pd_error_message(char* buffer) {
+    memset(buffer, EOS, SIZE);
+    strcpy(buffer, REQ_RESPONSE);
+    strcat(buffer, " ");
+    strcpy(buffer, PD_NOT_AVAILABLE);
+    strcat(buffer, "\n");
+}
+
+void prepare_request_message(char* buffer, int code) {
+    printf("request code=%d\n", code);
+    switch (code) {
+        case INVALID_UID_ERR_CODE:
+            prepare_invalid_user_message(buffer);
+            break;
+
+        case INVALID_FOP_ERR_CODE:
+            prepare_invalid_fop_message(buffer);
+            break;
+
+        case PD_NOT_CONNECTED_ERR_CODE:
+        case PD_SENT_ERR_MSG_ERR_CODE:
+            prepare_pd_error_message(buffer);
+            break;
+
+        default:
+            prepare_ok_message(buffer, REQ_RESPONSE);
+            break;
+    }
 }
 
 // parses the arguments given on the command line
@@ -432,18 +482,20 @@ Boolean parse_login_message(char* uid, char* password) {
     return true;
 }
 
-Boolean parse_request_message(char* uid, char* rid, char* fop) {
-    char *token;
+Boolean parse_request_message(char* uid, char* rid, char* fop, char* filename) {
+    char *token, aux[SIZE];
+
+    memset(aux, EOS, SIZE);
+    memset(filename, EOS, SIZE);
 
     token = strtok(NULL, " ");
-    if (!valid_uid(token)) {
+    if (!token) { // the user validation will be performed later
         fprintf(stderr, "Error: invalid user!\n");
         return false;
     }
     printf("token=%s\n", token);
     memset(uid, EOS, UID_SIZE);
     strcpy(uid, token);
-    printf("uid=%s\n", uid);
 
     token = strtok(NULL, " ");
     if (!token) {
@@ -452,16 +504,33 @@ Boolean parse_request_message(char* uid, char* rid, char* fop) {
     }
     strcpy(rid, token);
 
-    token = strtok(NULL, " ");
-    if (!token) {
-        fprintf(stderr, "Error: invalid FOP!\n");
+    // Rest of the message
+    if(!(token = strtok(NULL, "\n"))) {
+        fprintf(stderr, "Error: invalid Fop\n");
         return false;
     }
+
+    strcpy(aux, token);
+    
+    // Fop
+    if(!(token = strtok(aux, " "))) {
+        fprintf(stderr, "Error: invalid Fop\n");
+        return false;
+    }
+
     strcpy(fop, token);
 
-    // PODE TER UM FICHEIRO ASSOCIADO
+    // if the fop needs a filename and none is provided
+    if(!(token = strtok(NULL, "\0")) && fop_has_file(fop)) {
+        fprintf(stderr, "Error: Fop %s needs a file\n", fop);
+        return false;
+    }
 
-    printf("uid: %s\nRID: %s\nFop: %s\n", uid, rid, fop);
+    if (token) {
+        strcpy(filename, token);
+    }
+
+    printf("uid: %s\nRID: %s\nFop: %s\nFilename: %s\n", uid, rid, fop, filename);
     return true;
 }
 
@@ -481,7 +550,7 @@ Boolean all_numbers(char* uid) {
 // false otherwise
 Boolean valid_uid(char* uid) {
     if (uid) {
-        if (strlen(uid) > UID_SIZE || !all_numbers(uid)) {
+        if (strlen(uid) != UID_SIZE-1 || !all_numbers(uid)) {
             fprintf(stderr, "Invalid UID\nThe UID must have 5 numbers\n");
             return false;
         }
@@ -522,9 +591,19 @@ Boolean valid_password(char* password) {
     return false;
 }
 
-/*void parse_pd_request(char* buffer, char* command, char* uid, char* password) {
+Boolean fop_has_file(char* fop) {
+    return !(strcmp(fop, FOP_UPLOAD) && 
+            strcmp(fop, FOP_RETRIEVE) && 
+            strcmp(fop, FOP_DELETE));
+}
 
-}*/
+Boolean valid_fop(char *fop) {
+    return !(strcmp(fop, FOP_DELETE) && 
+             strcmp(fop, FOP_LIST) &&
+             strcmp(fop, FOP_REMOVE) &&
+             strcmp(fop, FOP_RETRIEVE) &&
+             strcmp(fop, FOP_UPLOAD));
+}
 
 void get_user_directory(char* buffer, char *uid) {
 
@@ -833,7 +912,18 @@ Boolean login_user(char* uid, char* password) {
     return true;
 }
 
-/*Boolean request_fop_user(char* uid, char* password) {
+int request_user(char* uid, char* fop, char* filename) {
+    // if the uid is invalid
+    if (!valid_uid(uid)) {
+        return INVALID_UID_ERR_CODE;
+    }
 
-    return true;
-}*/
+    // if the fop is not valid
+    if (!valid_fop(fop)) {
+        return INVALID_FOP_ERR_CODE;
+    }
+
+    // if the PD doesn't respond
+    // por implementar
+    return USER_REQUEST_OK;
+}
