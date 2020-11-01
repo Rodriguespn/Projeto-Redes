@@ -15,6 +15,7 @@ typedef enum boolean { false, true } Boolean;
 #define PASSWORD_SIZE   9       // Size of the Password
 #define VC_SIZE         5       // Size of the Validation Code
 #define FOP_SIZE        2       // Size of the File Operation
+#define TID_SIZE        5       // Size of the TID
 
 #define LOCALHOST       "127.0.0.1"
 
@@ -70,6 +71,10 @@ typedef enum boolean { false, true } Boolean;
 // status
 #define OK                  "OK"
 #define NOT_OK              "NOK"
+#define NOT_LOGGED_IN       "ELOG"
+#define PD_NOT_AVAILABLE    "EPD"
+#define INVALID_UID         "EUSER"
+#define INVALID_FOP         "EFOP"
 
 // PD-AS Protocol
 #define REGISTRATION        "REG"

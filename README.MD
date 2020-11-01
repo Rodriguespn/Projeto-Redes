@@ -8,7 +8,9 @@ login -> ssh ist1XXXX@sigma04.tecnico.ulisboa.pt
 PD -> ./pd 193.136.128.104 -n tejo.tecnico.ulisboa.pt -p 58011
 
 ### Dúvidas
-- Se o comando inserido pelo utilizador estiver errado devemos terminar o programa?
+- No AS, quando o utilizador tenta fazer uma ação sem ter feito login mandamos sempre o erro ELOG ou só se tentar fazer REQ?
+- Deixamos o utilizador fazer login depois de já ter feito login?
+- Como eq o userID pode estar errado no comando REQ se fizemos login antes e o user não consegue enviar o UID no comando?
 
 ### ToDos
 Gastão:
@@ -22,8 +24,10 @@ Pedro:
 
 > AS:
 > - ~~permitir q PDs se registem outra vez qd mandam a password certa~~
-- criar um socket TCP
-- Implementar select
+- ~~criar um socket TCP~~
+- ~~Implementar select~~
+- Implementar Request command
+- Ativar a flag verbose
 
 Vicente:
 - teste

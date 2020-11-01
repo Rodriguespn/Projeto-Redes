@@ -60,6 +60,20 @@ int main(int argc, char const *argv[])
     FD_SET(listenfd, &inputs);
 
     do {
+        memset(buffer, EOS, SIZE);
+        strcpy(buffer, "REQ 90531 1234 U f1.txt\n");
+
+        n = tcp_write(fd, buffer);
+
+        write(STDOUT, "request: ", 9);
+        write(STDOUT, buffer, n);
+        
+        memset(buffer, EOS, SIZE);
+        n = tcp_read(fd, buffer, SIZE);
+
+        write(STDOUT, "response: ", 10);
+        write(STDOUT, buffer, n);
+
         n = tcp_write(fd, "LOG 90531 password\n");
 
         memset(buffer, EOS, SIZE);
