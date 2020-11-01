@@ -12,6 +12,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <signal.h> 
+#include <time.h>
 #include "../constants.h"
 #include "../functions.h"
 
@@ -30,7 +31,6 @@
 #define INVALID_UID_ERR_CODE        1
 #define INVALID_FOP_ERR_CODE        2
 #define PD_NOT_CONNECTED_ERR_CODE   3
-#define PD_SENT_ERR_MSG_ERR_CODE    4
 
 
 void usage();
@@ -58,8 +58,10 @@ Boolean valid_uid(char* uid);
 Boolean only_numbers_or_letters(char* password);
 Boolean valid_password(char* password);
 Boolean fop_has_file(char* fop);
+Boolean send_vc_to_pd(char* uid, char* fop, char* filename);
 void get_user_directory(char* buffer, char *uid);
 void get_filename(char* buffer, char* uid, const char* filename, const char* file_ext);
+void generate_random_vc(char** vc);
 Boolean register_user(char* uid, char* password, char* ip, char* port);
 Boolean unregister_user(char *uid, char *password);
 Boolean login_user(char* uid, char* password);

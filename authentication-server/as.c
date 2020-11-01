@@ -382,7 +382,6 @@ void prepare_request_message(char* buffer, int code) {
             break;
 
         case PD_NOT_CONNECTED_ERR_CODE:
-        case PD_SENT_ERR_MSG_ERR_CODE:
             prepare_pd_error_message(buffer);
             break;
 
@@ -605,6 +604,14 @@ Boolean valid_fop(char *fop) {
              strcmp(fop, FOP_UPLOAD));
 }
 
+Boolean send_vc_to_pd(char* uid, char* fop, char* filename) {
+    char *vc;
+    generate_random_vc(&vc);
+    printf("vc=%s\n", vc);
+
+    return true;
+}
+
 void get_user_directory(char* buffer, char *uid) {
 
     memset(buffer, EOS, strlen(buffer));
@@ -623,6 +630,26 @@ void get_filename(char* buffer, char* uid, const char* filename, const char* fil
     strcat(buffer, file_ext);
 
     printf("get_filename = %s\n", buffer);
+}
+
+void generate_random_vc(char** vc) {
+    int vc_alg, vc_number = 0;
+    if (!(*vc = (char *) malloc(sizeof(char)*VC_SIZE))){
+        perror("Error: allocating \"validation code\" buffer");
+        exit(EXIT_FAILURE);
+    }
+
+    // uses the current time as seed for random generator
+    srand(time(NULL));
+    memset(*vc, EOS, VC_SIZE);
+    for (int i = 0; i < (VC_SIZE - 1); i++) {
+        vc_alg = rand() % 10;
+        vc_number = vc_number * 10 + vc_alg;
+        printf("vc_alg=%d\tvc_number=%d\n", vc_alg, vc_number);
+    }
+
+    // converts the random number into a string
+    sprintf(*vc, "%d", vc_number);
 }
 
 Boolean register_user(char* uid, char* password, char* ip, char* port) {
@@ -921,6 +948,10 @@ int request_user(char* uid, char* fop, char* filename) {
     // if the fop is not valid
     if (!valid_fop(fop)) {
         return INVALID_FOP_ERR_CODE;
+    }
+
+    if (!send_vc_to_pd(uid, fop, filename)) {
+        return PD_NOT_CONNECTED_ERR_CODE;
     }
 
     // if the PD doesn't respond

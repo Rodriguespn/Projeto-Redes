@@ -2,7 +2,7 @@
 # Redes de Computadores, DEI/IST/ULisboa 2020-21
 
 LD   = gcc
-CFLAGS = -g -Wall -Wextra -std=gnu99 -I../
+CFLAGS = -g -Wall -Wextra
 LDFLAGS= -lm
 
 all:
