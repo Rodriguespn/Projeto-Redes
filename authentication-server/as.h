@@ -47,6 +47,7 @@ void prepare_invalid_user_message(char* buffer);
 void prepare_invalid_fop_message(char* buffer);
 void prepare_pd_error_message(char* buffer);
 void prepare_request_message(char* buffer, int code);
+void prepare_validation_pd_request(char* buffer, char* uid, char* vc, char* fop, char* filename);
 void parse_arguments(const char* argv[], int size);
 Boolean parse_command(char* buffer, char* command);
 Boolean parse_register_message(char* uid, char* password, char* pdip, char* pdport);

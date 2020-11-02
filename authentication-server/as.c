@@ -366,7 +366,7 @@ void prepare_pd_error_message(char* buffer) {
     memset(buffer, EOS, SIZE);
     strcpy(buffer, REQ_RESPONSE);
     strcat(buffer, " ");
-    strcpy(buffer, PD_NOT_AVAILABLE);
+    strcat(buffer, PD_NOT_AVAILABLE);
     strcat(buffer, "\n");
 }
 
@@ -389,6 +389,20 @@ void prepare_request_message(char* buffer, int code) {
             prepare_ok_message(buffer, REQ_RESPONSE);
             break;
     }
+}
+
+void prepare_validation_pd_request(char* buffer, char* uid, char* vc, char* fop, char* filename) {
+    memset(buffer, EOS, SIZE);
+    strcpy(buffer, VALIDATE_USER);
+    strcat(buffer, " ");
+    strcat(buffer, uid);
+    strcat(buffer, " ");
+    strcat(buffer, vc);
+    strcat(buffer, " ");
+    strcat(buffer, fop);
+    strcat(buffer, " ");
+    strcat(buffer, filename);
+    strcat(buffer, "\n");
 }
 
 // parses the arguments given on the command line
@@ -605,9 +619,125 @@ Boolean valid_fop(char *fop) {
 }
 
 Boolean send_vc_to_pd(char* uid, char* fop, char* filename) {
-    char *vc;
+    char *vc, pdip[SIZE], pdport[SIZE];
+    char buffer[SIZE], *directory, *user_filename, *full_path;
+    int pdsocket;
+    struct addrinfo hints, *client;
+    struct sockaddr_in addr;
+
     generate_random_vc(&vc);
     printf("vc=%s\n", vc);
+
+    prepare_validation_pd_request(buffer, uid, vc, fop, filename);
+
+    // allocates memory for the relative path for the user with uid
+    if (!(directory = (char *) malloc(sizeof(char)*(strlen(users_directory)+ strlen(uid) + 2)))) {
+        perror("Error: allocating \"path\" buffer");
+        return false;
+    }
+
+    get_user_directory(directory, uid);
+
+
+    int filename_size = strlen(uid) + strlen(REGISTRATION_FILE_PREFIX) + strlen(FILE_EXTENSION);
+    // allocates memory for the registration file for the user with uid
+    if (!(user_filename = (char *) malloc(sizeof(char)*filename_size))){
+        perror("Error: allocating \"user filename\" buffer");
+        return false;
+    }
+
+    get_filename(user_filename, uid, REGISTRATION_FILE_PREFIX, FILE_EXTENSION);
+
+    printf("registration_filename = %s\n", user_filename);
+
+     // allocates memory for full relative path to the password file for the user with uid
+    if (!(full_path = (char *) malloc(sizeof(char)*(strlen(directory) + strlen(user_filename))))) {
+        perror("Error: allocating \"path\" buffer");
+        return false;
+    }
+
+    // clears the full_path and filename memory
+    memset(full_path, EOS, strlen(full_path));
+
+    strcat(full_path, directory);
+    strcat(full_path, user_filename);
+
+    printf("path = %s\n", full_path);
+
+    // opens the password file
+    if (!(userfd = fopen(full_path, "r"))) {
+        fprintf(stderr, "Error: could not open file %s\n", user_filename);
+        return false;
+    }
+
+    memset(pdip, EOS, SIZE);
+    memset(pdport, EOS, SIZE);
+
+    // reads the password from the file
+    fscanf(userfd, "%s %s\n", pdip, pdport);
+
+    // closes the password file
+    fclose(userfd);
+
+    free(user_filename);
+    free(directory);
+    free(full_path);
+
+    printf("pdip=%s\npdport=%s\n", pdip, pdport);
+
+    // sets the socket
+    pdsocket = socket(AF_INET, SOCK_DGRAM, 0);
+    if (pdsocket == ERROR) {
+        //error
+        fprintf(stderr, "Error: socket returned null\n");
+        return false;
+    }
+    
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+    
+    // gets the address info
+    int errcode = getaddrinfo(pdip, pdport, &hints, &client);
+    if (errcode != 0) {
+        //error
+        fprintf(stderr, "Error: getaddrinfo returned %d error code\n", errcode);
+        return false;
+    }
+
+    struct timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0; 
+
+    // sets socket timeout as 1s
+    if ((errcode = setsockopt(pdsocket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv))) < 0) {
+        fprintf(stderr, "Error: setsockopt returned erro code %s\n", errcode);
+        return false;
+    }
+
+    printf("sent to pd=%s", buffer);
+
+    int n = udp_write(pdsocket, buffer, client -> ai_addr, client -> ai_addrlen);
+
+    if (!n) return false;
+
+    memset(buffer, EOS, SIZE);
+
+    n = udp_read(pdsocket, buffer, SIZE, (struct sockaddr*) &addr);
+
+    if (!n) return false;
+
+    printf("received from pd = %s\n", buffer);
+
+    char error_message[SIZE];
+    memset(error_message, EOS, SIZE);
+    strcpy(error_message, PROTOCOL_ERROR);
+    strcat(error_message, "\n");
+
+    if (!strcmp(buffer, error_message)) {
+        fprintf("Error: PD sent %s error message", PROTOCOL_ERROR);
+        return false;
+    }
 
     return true;
 }
@@ -750,10 +880,8 @@ Boolean register_user(char* uid, char* password, char* ip, char* port) {
     }
 
     // writes the ip and the port like "ip:port"
-    fprintf(userfd, "%s", ip);
-    fprintf(userfd, "%s", ":");
-    fprintf(userfd, "%s\n", port);
-
+    fprintf(userfd, "%s %s\n", ip, port);
+    
     // closes the registration file
     fclose(userfd);
 
@@ -929,7 +1057,7 @@ Boolean login_user(char* uid, char* password) {
     }
 
     // writes the uid and the password on the file
-    fprintf(userfd, "%s:%s\n", uid, password);
+    fprintf(userfd, "%s %s\n", uid, password);
     // closes the password file
     fclose(userfd);
 
