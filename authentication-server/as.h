@@ -71,5 +71,6 @@ Boolean unregister_user(char *uid, char *password);
 Boolean login_user(char* uid, char* password);
 int request_user(char* uid, char* fop, char* filename, char** vc);
 Boolean authenticate_user(char* uid, char* rid, char* vc, char* request_uid, char* request_rid, char* request_vc, char* tid, int* tid_number);
+Boolean get_user_file_path(char** path, char* uid, const char* file_name, const char* file_extension);
 
 #endif /* AS_H */

@@ -3,6 +3,7 @@ as
 fs
 user
 pd
+USERS/
 
 # Prerequisites
 *.d

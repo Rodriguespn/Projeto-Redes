@@ -684,7 +684,7 @@ Boolean valid_fop(char *fop) {
 
 Boolean send_vc_to_pd(char* uid, char* fop, char* filename, char** vc) {
     char pdip[SIZE], pdport[SIZE];
-    char buffer[SIZE], *directory, *user_filename, *full_path;
+    char buffer[SIZE], *full_path;
     int pdsocket;
     struct addrinfo hints, *client;
     struct sockaddr_in addr;
@@ -694,43 +694,14 @@ Boolean send_vc_to_pd(char* uid, char* fop, char* filename, char** vc) {
 
     prepare_validation_pd_request(buffer, uid, *vc, fop, filename);
 
-    // allocates memory for the relative path for the user with uid
-    if (!(directory = (char *) malloc(sizeof(char)*(strlen(users_directory)+ strlen(uid) + 2)))) {
-        perror("Error: allocating \"path\" buffer");
-        return false;
-    }
-
-    get_user_directory(directory, uid);
-
-
-    int filename_size = strlen(uid) + strlen(REGISTRATION_FILE_PREFIX) + strlen(FILE_EXTENSION);
-    // allocates memory for the registration file for the user with uid
-    if (!(user_filename = (char *) malloc(sizeof(char)*filename_size))){
-        perror("Error: allocating \"user filename\" buffer");
-        return false;
-    }
-
-    get_filename(user_filename, uid, REGISTRATION_FILE_PREFIX, FILE_EXTENSION);
-
-    printf("registration_filename = %s\n", user_filename);
-
-     // allocates memory for full relative path to the password file for the user with uid
-    if (!(full_path = (char *) malloc(sizeof(char)*(strlen(directory) + strlen(user_filename))))) {
-        perror("Error: allocating \"path\" buffer");
-        return false;
-    }
-
-    // clears the full_path and filename memory
-    memset(full_path, EOS, strlen(full_path));
-
-    strcat(full_path, directory);
-    strcat(full_path, user_filename);
+    get_user_file_path(&full_path, uid, REGISTRATION_FILE_PREFIX, FILE_EXTENSION);
 
     printf("path = %s\n", full_path);
 
     // opens the password file
     if (!(userfd = fopen(full_path, "r"))) {
-        fprintf(stderr, "Error: could not open file %s\n", user_filename);
+        fprintf(stderr, "Error: could not open file %s\n", full_path);
+        free(full_path);
         return false;
     }
 
@@ -743,8 +714,6 @@ Boolean send_vc_to_pd(char* uid, char* fop, char* filename, char** vc) {
     // closes the password file
     fclose(userfd);
 
-    free(user_filename);
-    free(directory);
     free(full_path);
 
     printf("pdip=%s\npdport=%s\n", pdip, pdport);
@@ -807,9 +776,8 @@ Boolean send_vc_to_pd(char* uid, char* fop, char* filename, char** vc) {
 }
 
 void get_user_directory(char* buffer, char *uid) {
-
     memset(buffer, EOS, strlen(buffer));
-    strcat(buffer, "./");
+    strcpy(buffer, "./");
     strcat(buffer, users_directory);
     strcat(buffer, uid);
     strcat(buffer, "/");
@@ -847,47 +815,33 @@ void generate_random_vc(char** vc) {
 }
 
 Boolean register_user(char* uid, char* password, char* ip, char* port) {
-    char* filename = NULL;
     char* directory = NULL;
     char* full_path; // users_directory/uid/file
-
-    // allocates memory for the password file for the user with uid
-    int filename_size = strlen(uid) + strlen(PASSWORD_FILE_PREFIX) + strlen(FILE_EXTENSION);
-    if (!(filename = (char *) malloc(sizeof(char)*filename_size))){
-            perror("Error: allocating \"filename\" buffer");
-            exit(EXIT_FAILURE);
-    }
-
-    get_filename(filename, uid, PASSWORD_FILE_PREFIX, FILE_EXTENSION);
 
     // allocates memory for the relative path for the user with uid
     if (!(directory = (char *) malloc(sizeof(char)*(strlen(users_directory)+ strlen(uid) + 2)))) {
         perror("Error: allocating \"path\" buffer");
-        exit(EXIT_FAILURE);
+        return false;
     }
 
     get_user_directory(directory, uid);
-
-    // allocates memory for full relative path to the password file for the user with uid
-    if (!(full_path = (char *) malloc(sizeof(char)*(strlen(directory) + strlen(filename))))) {
-        perror("Error: allocating \"path\" buffer");
-        exit(EXIT_FAILURE);
-    }
-
-    strcat(full_path, directory);
-    strcat(full_path, filename);
+    get_user_file_path(&full_path, uid, PASSWORD_FILE_PREFIX, FILE_EXTENSION);
 
     // check if the directory is created or not 
     if (stat(directory, &st) == ERROR) { // if directory doesn t exists
         if (mkdir(directory, 0777)) { 
             printf("Unable to create directory \"%s\"\n", directory); 
-            exit(EXIT_FAILURE); 
+            free(directory);
+            free(full_path);
+            return false;
         }
 
         // opens the password file
         if (!(userfd = fopen(full_path, "w"))) {
-            fprintf(stderr, "Error: could not open file %s\n", filename);
-            exit(EXIT_FAILURE);
+            fprintf(stderr, "Error: could not open file: %s\n", full_path);
+            free(directory);
+            free(full_path);
+            return false;
         }
 
         // writes the password on the file
@@ -896,13 +850,12 @@ Boolean register_user(char* uid, char* password, char* ip, char* port) {
         // closes the password file
         fclose(userfd);
     } else { // the user already exists
-        //fprintf(stderr, "Error: the user %s already exits\n", uid);
-        printf("path = %s\n", full_path);
-
         // opens the password file
         if (!(userfd = fopen(full_path, "r"))) {
-            fprintf(stderr, "Error: could not open file %s\n", filename);
-            exit(EXIT_FAILURE);
+            fprintf(stderr, "Error: could not open file %s\n", full_path);
+            free(directory);
+            free(full_path);
+            return false;
         }
         char password_from_file[PASSWORD_SIZE];
         // reads the password from the file
@@ -911,6 +864,8 @@ Boolean register_user(char* uid, char* password, char* ip, char* port) {
 
         if (strcmp(password, password_from_file)) {
             fprintf(stderr, "Error: wrong uid or password\n");
+            free(directory);
+            free(full_path);
             return false;
         }
 
@@ -918,29 +873,17 @@ Boolean register_user(char* uid, char* password, char* ip, char* port) {
         fclose(userfd);
     }
 
-    // clears the full_path and filename memory
-    memset(full_path, EOS, strlen(full_path));
+    free(full_path);
+    get_user_file_path(&full_path, uid, REGISTRATION_FILE_PREFIX, FILE_EXTENSION);
 
-    filename_size = strlen(uid) + strlen(REGISTRATION_FILE_PREFIX) + strlen(FILE_EXTENSION);
-    // allocates memory for the registration file for the user with uid
-    if (!(filename = (char *) realloc(filename, sizeof(char)*filename_size))){
-        perror("Error: allocating \"filename\" buffer");
-        exit(EXIT_FAILURE);
-    }
-
-    get_filename(filename, uid, REGISTRATION_FILE_PREFIX, FILE_EXTENSION);
-
-    printf("registration_filename = %s\n", filename);
-
-    strcat(full_path, directory);
-    strcat(full_path, filename);
-
-    printf("path = %s\n", full_path);
+    printf("reg_path = %s\n", full_path);
 
     // opens the registration file
     if (!(userfd = fopen(full_path, "w"))) {
-        fprintf(stderr, "Error: could not open file %s\n", filename);
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Error: could not open file %s\n", full_path);
+        free(directory);
+        free(full_path);
+        return false;
     }
 
     // writes the ip and the port like "ip:port"
@@ -949,7 +892,6 @@ Boolean register_user(char* uid, char* password, char* ip, char* port) {
     // closes the registration file
     fclose(userfd);
 
-    free(filename);
     free(directory);
     free(full_path);
 
@@ -957,42 +899,14 @@ Boolean register_user(char* uid, char* password, char* ip, char* port) {
 }
 
 Boolean unregister_user(char *uid, char *password) {
-    char* filename = NULL;
-    char* directory = NULL;
     char* full_path; // users_directory/uid/file
 
-    // allocates memory for the password file for the user with uid
-    int filename_size = strlen(uid) + strlen(PASSWORD_FILE_PREFIX) + strlen(FILE_EXTENSION);
-    if (!(filename = (char *) malloc(sizeof(char)*filename_size))){
-            perror("Error: allocating \"filename\" buffer");
-            exit(EXIT_FAILURE);
-    }
-
-    get_filename(filename, uid, PASSWORD_FILE_PREFIX, FILE_EXTENSION);
-
-    // allocates memory for the relative path for the user with uid
-    if (!(directory = (char *) malloc(sizeof(char)*(strlen(users_directory)+ strlen(uid) + 2)))) {
-        perror("Error: allocating \"path\" buffer");
-        exit(EXIT_FAILURE);
-    }
-
-    get_user_directory(directory, uid);
-
-    // allocates memory for full relative path to the password file for the user with uid
-    if (!(full_path = (char *) malloc(sizeof(char)*(strlen(directory) + strlen(filename))))) {
-        perror("Error: allocating \"path\" buffer");
-        exit(EXIT_FAILURE);
-    }
-
-    strcat(full_path, directory);
-    strcat(full_path, filename);
-
-    printf("path = %s\n", full_path);
-
+    get_user_file_path(&full_path, uid, PASSWORD_FILE_PREFIX, FILE_EXTENSION);
     // opens the password file
     if (!(userfd = fopen(full_path, "r"))) {
-        fprintf(stderr, "Error: could not open file %s\n", filename);
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Error: could not open file %s\n", full_path);
+        free(full_path);
+        return false;
     }
 
     char password_from_file[PASSWORD_SIZE];
@@ -1002,6 +916,7 @@ Boolean unregister_user(char *uid, char *password) {
 
     if (strcmp(password, password_from_file)) {
         fprintf(stderr, "Error: wrong uid or password\n");
+        free(full_path);
         return false;
     }
 
@@ -1009,54 +924,31 @@ Boolean unregister_user(char *uid, char *password) {
     fclose(userfd);
 
     // clears the full_path and filename memory
-    memset(full_path, EOS, strlen(full_path));
+    free(full_path);
 
-    filename_size = strlen(uid) + strlen(REGISTRATION_FILE_PREFIX) + strlen(FILE_EXTENSION);
-    // allocates memory for the registration file for the user with uid
-    if (!(filename = (char *) realloc(filename, sizeof(char)*filename_size))){
-        perror("Error: allocating \"filename\" buffer");
-        exit(EXIT_FAILURE);
-    }
+    get_user_file_path(&full_path, uid, REGISTRATION_FILE_PREFIX, FILE_EXTENSION);
 
-    get_filename(filename, uid, REGISTRATION_FILE_PREFIX, FILE_EXTENSION);
-
-    printf("registration_filename = %s\n", filename);
-
-    strcat(full_path, directory);
-    strcat(full_path, filename);
-
-    printf("path = %s\n", full_path);
+    printf("reg_path = %s\n", full_path);
 
     if (remove(full_path)) {
-        fprintf(stderr, "Error: could not remove file %s\n", filename);
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Error: could not remove file %s\n", full_path);
+        free(full_path);
+        return false;
     };
 
-    free(filename);
-    free(directory);
     free(full_path);
 
     return true;
 }
 
 Boolean login_user(char* uid, char* password) {
-    char* filename = NULL;
     char* directory = NULL;
-    char* full_path; // users_directory/uid/file
-
-    // allocates memory for the password file for the user with uid
-    int filename_size = strlen(uid) + strlen(PASSWORD_FILE_PREFIX) + strlen(FILE_EXTENSION);
-    if (!(filename = (char *) malloc(sizeof(char)*filename_size))){
-            perror("Error: allocating \"filename\" buffer");
-            exit(EXIT_FAILURE);
-    }
-
-    get_filename(filename, uid, PASSWORD_FILE_PREFIX, FILE_EXTENSION);
+    char* full_path = NULL; // users_directory/uid/file
 
     // allocates memory for the relative path for the user with uid
     if (!(directory = (char *) malloc(sizeof(char)*(strlen(users_directory)+ strlen(uid) + 2)))) {
         perror("Error: allocating \"path\" buffer");
-        exit(EXIT_FAILURE);
+        return false;
     }
 
     get_user_directory(directory, uid);
@@ -1064,24 +956,19 @@ Boolean login_user(char* uid, char* password) {
     // check if the directory is created or not 
     if (stat(directory, &st) == ERROR) { // if directory doesn't exists
         fprintf(stderr, "Error: user was not registered\n");
+        free(directory);
         return false;
     }
 
-    // allocates memory for full relative path to the password file for the user with uid
-    if (!(full_path = (char *) malloc(sizeof(char)*(strlen(directory) + strlen(filename))))) {
-        perror("Error: allocating \"path\" buffer");
-        exit(EXIT_FAILURE);
-    }
-
-    strcat(full_path, directory);
-    strcat(full_path, filename);
-
+    get_user_file_path(&full_path, uid, PASSWORD_FILE_PREFIX, FILE_EXTENSION);
     printf("path = %s\n", full_path);
 
     // opens the password file
     if (!(userfd = fopen(full_path, "r"))) {
-        fprintf(stderr, "Error: could not open file %s\n", filename);
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Error: could not open file %s\n", full_path);
+        free(directory);
+        free(full_path);
+        return false;
     }
 
     char password_from_file[PASSWORD_SIZE];
@@ -1091,33 +978,24 @@ Boolean login_user(char* uid, char* password) {
 
     if (strcmp(password, password_from_file)) {
         fprintf(stderr, "Error: wrong uid or password\n");
+        free(directory);
+        free(full_path);
         return false;
     }
 
     // closes the password file
     fclose(userfd);
 
-    // clears the full_path and filename memory
-    memset(full_path, EOS, strlen(full_path));
+    free(full_path);
 
-    filename_size = strlen(uid) + strlen(REGISTRATION_FILE_PREFIX) + strlen(FILE_EXTENSION);
-    // allocates memory for the registration file for the user with uid
-    if (!(filename = (char *) realloc(filename, sizeof(char)*filename_size))){
-        perror("Error: allocating \"filename\" buffer");
-        exit(EXIT_FAILURE);
-    }
-
-    get_filename(filename, uid, LOGIN_FILE_PREFIX, FILE_EXTENSION);
-
-    printf("registration_filename = %s\n", filename);
-
-    strcat(full_path, directory);
-    strcat(full_path, filename);
+    get_user_file_path(&full_path, uid, LOGIN_FILE_PREFIX, FILE_EXTENSION);
 
     // opens the password file
     if (!(userfd = fopen(full_path, "w"))) {
-        fprintf(stderr, "Error: could not open file %s\n", filename);
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Error: could not open file %s\n", full_path);
+        free(directory);
+        free(full_path);
+        return false;
     }
 
     // writes the uid and the password on the file
@@ -1125,7 +1003,6 @@ Boolean login_user(char* uid, char* password) {
     // closes the password file
     fclose(userfd);
 
-    free(filename);
     free(directory);
     free(full_path);
     return true;
@@ -1181,4 +1058,42 @@ Boolean authenticate_user(char* uid, char* rid, char* vc, char* request_uid, cha
     sprintf(tid, "%d", *tid_number++);
 
     return true;
+}
+
+Boolean get_user_file_path(char** path, char* uid, const char* file_name, const char* file_extension) {
+    char* filename = NULL, *directory = NULL;
+    Boolean return_value = true;
+
+    // allocates memory for the password file for the user with uid
+    int filename_size = strlen(uid) + strlen(file_name) + strlen(file_extension);
+    if (!(filename = (char *) malloc(sizeof(char) * filename_size))){
+        perror("Error: allocating \"filename\" buffer");
+        return_value = false;
+    }
+
+    get_filename(filename, uid, file_name, file_extension);
+
+    // allocates memory for the relative path for the user with uid
+    if (!(directory = (char *) malloc(sizeof(char) * (strlen(users_directory) + strlen(uid) + 2)))) {
+        perror("Error: allocating \"path\" buffer");
+        return_value = false;
+    }
+
+    get_user_directory(directory, uid);
+
+    // allocates memory for full relative path to the password file for the user with uid
+    if (!(*path = (char *) malloc(sizeof(char)*(strlen(directory) + strlen(filename))))) {
+        perror("Error: allocating \"path\" buffer");
+        return_value = false;
+    }
+
+    memset(*path, EOS, strlen(directory) + strlen(filename));
+
+    strcat(*path, directory);
+    strcat(*path, filename);
+
+    free(directory);
+    free(filename);
+
+    return return_value;
 }

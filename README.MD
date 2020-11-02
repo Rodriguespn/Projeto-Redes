@@ -14,6 +14,7 @@ PD -> ./pd 193.136.128.104 -n tejo.tecnico.ulisboa.pt -p 58011
 - Como eq o userID pode estar errado no comando REQ se fizemos login antes e o user não consegue enviar o UID no comando?
 - Apenas devemos devolver EPD se não obtiveremos comunicação com o PD ou em todos os casos de erro durante o processo de comunicação com o PD?
 - O TID é gerado aleatóriamente? E pode ser repetido para diferentes users? Ou para o mesmo user?
+- Se tivermos duas instancias do User a autenticarem-se, o que devemos fazer?
 
 ### ToDos
 Gastão:
