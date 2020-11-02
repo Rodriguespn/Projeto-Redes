@@ -8,10 +8,12 @@ login -> ssh ist1XXXX@sigma04.tecnico.ulisboa.pt
 PD -> ./pd 193.136.128.104 -n tejo.tecnico.ulisboa.pt -p 58011
 
 ### Dúvidas
+- NOS PODEMOS TER OS DIFERENTES FICHEIROS DIVIDIDOS EM PASTAS?
 - No AS, quando o utilizador tenta fazer uma ação sem ter feito login mandamos sempre o erro ELOG ou só se tentar fazer REQ?
 - Deixamos o utilizador fazer login depois de já ter feito login?
 - Como eq o userID pode estar errado no comando REQ se fizemos login antes e o user não consegue enviar o UID no comando?
 - Apenas devemos devolver EPD se não obtiveremos comunicação com o PD ou em todos os casos de erro durante o processo de comunicação com o PD?
+- O TID é gerado aleatóriamente? E pode ser repetido para diferentes users? Ou para o mesmo user?
 
 ### ToDos
 Gastão:

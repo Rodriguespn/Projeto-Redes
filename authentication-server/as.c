@@ -172,11 +172,10 @@ int main(int argc, char const *argv[])
             addrlen = sizeof(cliaddr);
             connectfd = accept(tcpsocket, (struct sockaddr*) &cliaddr, &addrlen);
             printf("connectfd = %d\n", connectfd);
-            char rid[TID_SIZE], fop[FOP_SIZE], vc[SIZE];
+            char rid[TID_SIZE], fop[FOP_SIZE], *vc = NULL;
 
             memset(rid, EOS, TID_SIZE);
             memset(fop, EOS, FOP_SIZE);
-            memset(vc, EOS, TID_SIZE);
             
             if ((childpid = fork()) == 0) {
                 close(tcpsocket);
@@ -212,6 +211,8 @@ int main(int argc, char const *argv[])
                     puts(buffer);
                 } while (n && strcmp(buffer, login_succeeded)); // while the socket is connected and login not succeeded
 
+                static int tid_number = 1;
+
                 while (n) { // until the socket disconnects
                     memset(buffer, EOS, SIZE);
                     n = tcp_read(connectfd, buffer, SIZE);
@@ -226,10 +227,11 @@ int main(int argc, char const *argv[])
                             process_login_request(buffer, uid, password);
                         } 
                         else if (!strcmp(command, REQUEST)) {
-                            process_request_request(buffer, uid, rid, fop, vc);
+                            process_request_request(buffer, uid, rid, fop, &vc);
                         } 
                         else if (!strcmp(command, AUTHENTICATION)) {
-                            process_authentication_request(buffer, uid, rid, vc);
+                            printf("entering authentication vc=%s\n", vc);
+                            process_authentication_request(buffer, uid, rid, vc, &tid_number);
                         }
                         else {
                             prepare_error_message(buffer);
@@ -309,7 +311,7 @@ void process_login_request(char* buffer, char* uid, char* password) {
     } 
 }
 
-void process_request_request(char* buffer, char* uid, char* rid, char* fop, char* vc) {
+void process_request_request(char* buffer, char* uid, char* rid, char* fop, char** vc) {
     char filename[SIZE];
     if (parse_request_message(uid, rid, fop, filename)) {
         int code = request_user(uid, fop, filename, vc);
@@ -319,8 +321,23 @@ void process_request_request(char* buffer, char* uid, char* rid, char* fop, char
     } 
 }
 
-void process_authentication_request(char* buffer, char* uid, char* rid, char* vc) {
+void process_authentication_request(char* buffer, char* uid, char* rid, char* vc, int* tid_number) {
+    char request_uid[UID_SIZE], request_rid[TID_SIZE], request_vc[VC_SIZE], tid[TID_SIZE];
 
+    memset(request_uid, EOS, UID_SIZE); 
+    memset(request_rid, EOS, TID_SIZE);
+    memset(request_vc, EOS, VC_SIZE);
+
+    if (parse_authentication_message(request_uid, request_rid, request_vc)) {
+        memset(tid, EOS, TID_SIZE);
+        if (authenticate_user(uid, rid, vc, request_uid, request_rid, request_vc, tid, tid_number)) {
+            prepare_authentication_message(buffer, tid); 
+        } else {
+            prepare_error_message(buffer);
+        }
+    } else {
+        prepare_error_message(buffer);
+    }
 }
 
 void prepare_error_message(char* buffer) {
@@ -398,6 +415,7 @@ void prepare_request_message(char* buffer, int code) {
     }
 }
 
+
 void prepare_validation_pd_request(char* buffer, char* uid, char* vc, char* fop, char* filename) {
     memset(buffer, EOS, SIZE);
     strcpy(buffer, VALIDATE_USER);
@@ -409,6 +427,14 @@ void prepare_validation_pd_request(char* buffer, char* uid, char* vc, char* fop,
     strcat(buffer, fop);
     strcat(buffer, " ");
     strcat(buffer, filename);
+    strcat(buffer, "\n");
+}
+
+void prepare_authentication_message(char* buffer, char* tid) {
+    memset(buffer, EOS, SIZE);
+    strcpy(buffer, AUT_RESPONSE);
+    strcat(buffer, " ");
+    strcat(buffer, tid);
     strcat(buffer, "\n");
 }
 
@@ -554,6 +580,37 @@ Boolean parse_request_message(char* uid, char* rid, char* fop, char* filename) {
     return true;
 }
 
+Boolean parse_authentication_message(char* uid, char* rid, char* vc) {
+    char* token;
+    
+    token = strtok(NULL, " ");
+    if (!valid_uid(token)) { // the user validation will be performed later
+        fprintf(stderr, "Error: invalid user!\n");
+        return false;
+    }
+    
+    memset(uid, EOS, UID_SIZE);
+    strcpy(uid, token);
+
+    token = strtok(NULL, " ");
+    if (!token) {
+        fprintf(stderr, "Error: invalid RID!\n");
+        return false;
+    }
+    strcpy(rid, token);
+
+    // Rest of the message
+    if(!(token = strtok(NULL, "\n"))) {
+        fprintf(stderr, "Error: invalid VC\n");
+        return false;
+    }
+
+    strcpy(vc, token);
+    
+    printf("uid: %s\nRID: %s\nVC: %s\n", uid, rid, vc);
+    return true;
+}
+
 // returns true if the uid only contains numbers
 // false otherwise
 Boolean all_numbers(char* uid) {
@@ -625,17 +682,17 @@ Boolean valid_fop(char *fop) {
              strcmp(fop, FOP_UPLOAD));
 }
 
-Boolean send_vc_to_pd(char* uid, char* fop, char* filename, char* vc) {
+Boolean send_vc_to_pd(char* uid, char* fop, char* filename, char** vc) {
     char pdip[SIZE], pdport[SIZE];
     char buffer[SIZE], *directory, *user_filename, *full_path;
     int pdsocket;
     struct addrinfo hints, *client;
     struct sockaddr_in addr;
 
-    generate_random_vc(&vc);
-    printf("vc=%s\n", vc);
+    generate_random_vc(vc);
+    printf("vc=%s\n", *vc);
 
-    prepare_validation_pd_request(buffer, uid, vc, fop, filename);
+    prepare_validation_pd_request(buffer, uid, *vc, fop, filename);
 
     // allocates memory for the relative path for the user with uid
     if (!(directory = (char *) malloc(sizeof(char)*(strlen(users_directory)+ strlen(uid) + 2)))) {
@@ -713,10 +770,10 @@ Boolean send_vc_to_pd(char* uid, char* fop, char* filename, char* vc) {
     }
 
     struct timeval tv;
-    tv.tv_sec = 1;
+    tv.tv_sec = 5;
     tv.tv_usec = 0; 
 
-    // sets socket timeout as 1s
+    // sets socket timeout as 5s
     if ((errcode = setsockopt(pdsocket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv))) < 0) {
         fprintf(stderr, "Error: setsockopt returned erro code %d\n", errcode);
         return false;
@@ -785,7 +842,7 @@ void generate_random_vc(char** vc) {
         printf("vc_alg=%d\tvc_number=%d\n", vc_alg, vc_number);
     }
 
-    // converts the random number into a string
+    // converts the random number into a string with 4 digits
     sprintf(*vc, "%04d", vc_number);
 }
 
@@ -1074,7 +1131,7 @@ Boolean login_user(char* uid, char* password) {
     return true;
 }
 
-int request_user(char* uid, char* fop, char* filename, char* vc) {
+int request_user(char* uid, char* fop, char* filename, char** vc) {
     // if the uid is invalid
     if (!valid_uid(uid)) {
         return INVALID_UID_ERR_CODE;
@@ -1085,11 +1142,43 @@ int request_user(char* uid, char* fop, char* filename, char* vc) {
         return INVALID_FOP_ERR_CODE;
     }
 
+    // if the PD doesn't respond
     if (!send_vc_to_pd(uid, fop, filename, vc)) {
         return PD_NOT_CONNECTED_ERR_CODE;
     }
 
-    // if the PD doesn't respond
-    // por implementar
+    printf("exiting send_vc_to_pd\tvc=%s\n", *vc);
+
     return USER_REQUEST_OK;
+}
+
+Boolean authenticate_user(char* uid, char* rid, char* vc, char* request_uid, char* request_rid, char* request_vc, char* tid, int* tid_number) {
+    strcpy(tid, "0");
+    // if user, rid or vc are not initialized
+    if (!(uid && rid && vc)) {
+        fprintf(stderr, "uid or rid or vc were not initialized\n");
+        return false;
+    }
+
+    if (strcmp(uid, request_uid)) {
+        fprintf(stderr, "uid was incorrect\n");
+        return false;
+    }
+
+    if (strcmp(rid, request_rid)) {
+        fprintf(stderr, "rid was incorrect\n");
+        return false;
+    }
+
+    if (strcmp(vc, request_vc)) {
+        printf("vc=%s\trequest_vc=%s\n", vc, request_vc);
+        fprintf(stderr, "vc was incorrect\n");
+        return false;
+    }
+
+    memset(tid, EOS, TID_SIZE);
+    // converts the number into a string
+    sprintf(tid, "%d", *tid_number++);
+
+    return true;
 }
