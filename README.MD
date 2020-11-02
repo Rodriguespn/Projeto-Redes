@@ -11,6 +11,7 @@ PD -> ./pd 193.136.128.104 -n tejo.tecnico.ulisboa.pt -p 58011
 - No AS, quando o utilizador tenta fazer uma ação sem ter feito login mandamos sempre o erro ELOG ou só se tentar fazer REQ?
 - Deixamos o utilizador fazer login depois de já ter feito login?
 - Como eq o userID pode estar errado no comando REQ se fizemos login antes e o user não consegue enviar o UID no comando?
+- Apenas devemos devolver EPD se não obtiveremos comunicação com o PD ou em todos os casos de erro durante o processo de comunicação com o PD?
 
 ### ToDos
 Gastão:
@@ -26,7 +27,10 @@ Pedro:
 > - ~~permitir q PDs se registem outra vez qd mandam a password certa~~
 - ~~criar um socket TCP~~
 - ~~Implementar select~~
-- Implementar Request command
+- ~~Implementar Request command~~
+- Implementar o comando authenticate
+- Fazer a comunicação com o User
+- Fazer a comunicação com o FS
 - Ativar a flag verbose
 
 Vicente:

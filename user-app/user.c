@@ -96,6 +96,33 @@ int main(int argc, char const *argv[])
 
         write(STDOUT, "response: ", 10);
         write(STDOUT, buffer, n);
+
+        char request_succeeded[SIZE];
+        memset(request_succeeded, EOS, SIZE);
+        
+        strcpy(request_succeeded, REQ_RESPONSE);
+        strcat(request_succeeded, " ");
+        strcat(request_succeeded, OK);
+        strcat(request_succeeded, "\n");
+
+        if (!strcmp(request_succeeded, buffer)) {
+            memset(buffer, EOS, SIZE);
+            read_stdin(buffer); // "AUT 90531 1234 VC\n");
+
+            strcat(buffer, "\n");
+
+            n = tcp_write(fd, buffer);
+
+            write(STDOUT, "request: ", 9);
+            write(STDOUT, buffer, n);
+            
+            memset(buffer, EOS, SIZE);
+            n = tcp_read(fd, buffer, SIZE);
+
+            write(STDOUT, "response: ", 10);
+            write(STDOUT, buffer, n);
+        }
+
     } while (false); //strcmp(buffer, unregistration_success));
 
     freeaddrinfo(res);
