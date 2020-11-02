@@ -172,10 +172,11 @@ int main(int argc, char const *argv[])
             addrlen = sizeof(cliaddr);
             connectfd = accept(tcpsocket, (struct sockaddr*) &cliaddr, &addrlen);
             printf("connectfd = %d\n", connectfd);
-            char rid[TID_SIZE], fop[FOP_SIZE];
+            char rid[TID_SIZE], fop[FOP_SIZE], vc[SIZE];
 
             memset(rid, EOS, TID_SIZE);
             memset(fop, EOS, FOP_SIZE);
+            memset(vc, EOS, TID_SIZE);
             
             if ((childpid = fork()) == 0) {
                 close(tcpsocket);
@@ -225,10 +226,12 @@ int main(int argc, char const *argv[])
                             process_login_request(buffer, uid, password);
                         } 
                         else if (!strcmp(command, REQUEST)) {
-                            process_request_request(buffer, uid, rid, fop);
-                            /*memset(buffer, EOS, SIZE);
-                            strcpy(buffer, "REQ not implemented yet\n");*/
-                        } else {
+                            process_request_request(buffer, uid, rid, fop, vc);
+                        } 
+                        else if (!strcmp(command, AUTHENTICATION)) {
+                            process_authentication_request(buffer, uid, rid, vc);
+                        }
+                        else {
                             prepare_error_message(buffer);
                         } 
                     } else {
@@ -306,14 +309,18 @@ void process_login_request(char* buffer, char* uid, char* password) {
     } 
 }
 
-void process_request_request(char* buffer, char* uid, char* rid, char* fop) {
+void process_request_request(char* buffer, char* uid, char* rid, char* fop, char* vc) {
     char filename[SIZE];
     if (parse_request_message(uid, rid, fop, filename)) {
-        int code = request_user(uid, fop, filename);
+        int code = request_user(uid, fop, filename, vc);
         prepare_request_message(buffer, code);
     } else {
         prepare_error_message(buffer);
     } 
+}
+
+void process_authentication_request(char* buffer, char* uid, char* rid, char* vc) {
+
 }
 
 void prepare_error_message(char* buffer) {
@@ -618,8 +625,8 @@ Boolean valid_fop(char *fop) {
              strcmp(fop, FOP_UPLOAD));
 }
 
-Boolean send_vc_to_pd(char* uid, char* fop, char* filename) {
-    char *vc, pdip[SIZE], pdport[SIZE];
+Boolean send_vc_to_pd(char* uid, char* fop, char* filename, char* vc) {
+    char pdip[SIZE], pdport[SIZE];
     char buffer[SIZE], *directory, *user_filename, *full_path;
     int pdsocket;
     struct addrinfo hints, *client;
@@ -711,7 +718,7 @@ Boolean send_vc_to_pd(char* uid, char* fop, char* filename) {
 
     // sets socket timeout as 1s
     if ((errcode = setsockopt(pdsocket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv))) < 0) {
-        fprintf(stderr, "Error: setsockopt returned erro code %s\n", errcode);
+        fprintf(stderr, "Error: setsockopt returned erro code %d\n", errcode);
         return false;
     }
 
@@ -735,7 +742,7 @@ Boolean send_vc_to_pd(char* uid, char* fop, char* filename) {
     strcat(error_message, "\n");
 
     if (!strcmp(buffer, error_message)) {
-        fprintf("Error: PD sent %s error message", PROTOCOL_ERROR);
+        fprintf(stderr, "Error: PD sent %s error message", PROTOCOL_ERROR);
         return false;
     }
 
@@ -779,7 +786,7 @@ void generate_random_vc(char** vc) {
     }
 
     // converts the random number into a string
-    sprintf(*vc, "%d", vc_number);
+    sprintf(*vc, "%04d", vc_number);
 }
 
 Boolean register_user(char* uid, char* password, char* ip, char* port) {
@@ -1067,7 +1074,7 @@ Boolean login_user(char* uid, char* password) {
     return true;
 }
 
-int request_user(char* uid, char* fop, char* filename) {
+int request_user(char* uid, char* fop, char* filename, char* vc) {
     // if the uid is invalid
     if (!valid_uid(uid)) {
         return INVALID_UID_ERR_CODE;
@@ -1078,7 +1085,7 @@ int request_user(char* uid, char* fop, char* filename) {
         return INVALID_FOP_ERR_CODE;
     }
 
-    if (!send_vc_to_pd(uid, fop, filename)) {
+    if (!send_vc_to_pd(uid, fop, filename, vc)) {
         return PD_NOT_CONNECTED_ERR_CODE;
     }
 

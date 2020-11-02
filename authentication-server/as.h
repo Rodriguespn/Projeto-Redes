@@ -38,7 +38,8 @@ int wrong_arguments(int argc);
 void process_registration_request(char* buffer, char* uid, char* password, char* pdip, char* pdport);
 void process_unregistration_request(char* buffer, char* uid, char* password);
 void process_login_request(char* buffer, char* uid, char* password);
-void process_request_request(char* buffer, char* uid, char* rid, char* fop);
+void process_request_request(char* buffer, char* uid, char* rid, char* fop, char* vc);
+void process_authentication_request(char* buffer, char* uid, char* rid, char* vc);
 void prepare_error_message(char* buffer);
 void prepare_ok_message(char* buffer, const char* command);
 void prepare_nok_message(char* buffer, const char* command);
@@ -59,13 +60,13 @@ Boolean valid_uid(char* uid);
 Boolean only_numbers_or_letters(char* password);
 Boolean valid_password(char* password);
 Boolean fop_has_file(char* fop);
-Boolean send_vc_to_pd(char* uid, char* fop, char* filename);
+Boolean send_vc_to_pd(char* uid, char* fop, char* filename, char* vc);
 void get_user_directory(char* buffer, char *uid);
 void get_filename(char* buffer, char* uid, const char* filename, const char* file_ext);
 void generate_random_vc(char** vc);
 Boolean register_user(char* uid, char* password, char* ip, char* port);
 Boolean unregister_user(char *uid, char *password);
 Boolean login_user(char* uid, char* password);
-int request_user(char* uid, char* fop, char* filename);
+int request_user(char* uid, char* fop, char* filename, char* vc);
 
 #endif /* AS_H */
