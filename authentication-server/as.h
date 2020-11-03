@@ -25,13 +25,15 @@
 
 #define FILE_EXTENSION              ".txt"
 
-
 // Request error codes
-#define USER_REQUEST_OK             0
+#define OK_CODE                     0
 #define INVALID_UID_ERR_CODE        1
-#define INVALID_FOP_ERR_CODE        2
-#define PD_NOT_CONNECTED_ERR_CODE   3
-
+#define INVALID_PASSWORD_ERR_CODE   2
+#define INVALID_FOP_ERR_CODE        3
+#define PD_NOT_CONNECTED_ERR_CODE   4
+#define UID_NOT_FOUND_ERROR         5
+#define INCORRECT_PASSWORD_ERR_CODE 6
+#define UNKNOWN_ERROR               7
 
 void usage();
 int wrong_arguments(int argc);
@@ -66,7 +68,7 @@ Boolean send_vc_to_pd(char* uid, char* fop, char* filename, char** vc);
 void get_user_directory(char* buffer, char *uid);
 void get_filename(char* buffer, char* uid, const char* filename, const char* file_ext);
 void generate_random_vc(char** vc);
-Boolean register_user(char* uid, char* password, char* ip, char* port);
+int register_user(char* uid, char* password, char* ip, char* port);
 Boolean unregister_user(char *uid, char *password);
 Boolean login_user(char* uid, char* password);
 int request_user(char* uid, char* fop, char* filename, char** vc);

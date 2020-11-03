@@ -9,6 +9,8 @@ PD -> ./pd 193.136.128.104 -n tejo.tecnico.ulisboa.pt -p 58011
 
 ### Dúvidas
 - NOS PODEMOS TER OS DIFERENTES FICHEIROS DIVIDIDOS EM PASTAS?
+- Temos duas instancias diferentes do mesmo User. Se uma fizer login a outra tb o tem de fazer?
+- login invalido devolver erro? e se for com uma password de tamanho errado?
 - No AS, quando o utilizador tenta fazer uma ação sem ter feito login mandamos sempre o erro ELOG ou só se tentar fazer REQ?
 - Deixamos o utilizador fazer login depois de já ter feito login?
 - Como eq o userID pode estar errado no comando REQ se fizemos login antes e o user não consegue enviar o UID no comando?

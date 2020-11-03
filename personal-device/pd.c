@@ -3,6 +3,7 @@
 // the buffers where
 // PDIP, PDport, ASIP, ASport are stored
 char *pdip, *pdport, *asip, *asport;
+char registration_success[SIZE];
 
 int main(int argc, char const *argv[]) {
     int fd, errcode, listenfd;
@@ -51,7 +52,7 @@ int main(int argc, char const *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    char command[SIZE], uid[SIZE], password[SIZE], registration_success[SIZE];
+    char command[SIZE], uid[SIZE], password[SIZE];
     memset(buffer, EOS, SIZE);
     memset(command, EOS, SIZE);
     memset(uid, EOS, SIZE);
@@ -71,11 +72,11 @@ int main(int argc, char const *argv[]) {
         }
 
         memset(buffer, EOS, SIZE);
-        if (!prepare_request(buffer, command, uid, password)) {
+        if (!prepare_register_request(buffer, command, uid, password)) {
             continue;
         }
 
-        printf("message sent: %s", buffer);
+        printf("request: %s", buffer);
 
         // sends REG command
         n = udp_write(fd, buffer, client -> ai_addr, client -> ai_addrlen);
@@ -83,11 +84,7 @@ int main(int argc, char const *argv[]) {
         memset(buffer, EOS, SIZE);
         n = udp_read(fd, buffer, SIZE, (struct sockaddr*) &addr);
 
-        write(STDOUT, "response: ", 10);
-        write(STDOUT, buffer, n);
-    } while (strcmp(buffer, registration_success));
-
-    printf("Registration successful\n");
+    } while(!verify_register_response(buffer, n));
 
     char unregistration_success[SIZE];
 
@@ -142,59 +139,59 @@ int main(int argc, char const *argv[]) {
         printf("counter = %d\n", out_fds);
         
         switch (out_fds) {
-        case 0:
-            printf("Timeout event\n");
-            break;
-        
-        case ERROR:
-            /*error*/
-            fprintf(stderr, "Error: select returned %d error code\n", out_fds);
-            exit(EXIT_FAILURE);
-            break;
+            case 0:
+                printf("Timeout event\n");
+                break;
             
-        default:
-            if (FD_ISSET(listenfd, &testfds)) {
-                memset(buffer, EOS, SIZE);
-
-                n = udp_read(listenfd, buffer, SIZE, (struct sockaddr*) &addr);
-
-                write(STDOUT, "response from AS: ", 19);
-                write(STDOUT, buffer, n);
-
-                if (parse_validation_code(buffer)) {
+            case ERROR:
+                /*error*/
+                fprintf(stderr, "Error: select returned %d error code\n", out_fds);
+                exit(EXIT_FAILURE);
+                break;
+                
+            default:
+                if (FD_ISSET(listenfd, &testfds)) {
                     memset(buffer, EOS, SIZE);
-                    strcpy(buffer, VAL_USER_RESPONSE);
-                    strcat(buffer, " ");
-                    strcat(buffer, uid);
-                    strcat(buffer, " ");
-                    strcat(buffer, OK);
-                    strcat(buffer, "\n");
 
-                    n = udp_write(listenfd, buffer, (struct sockaddr*) &addr, sizeof(addr));
+                    n = udp_read(listenfd, buffer, SIZE, (struct sockaddr*) &addr);
 
-                    printf("message sent: %s\n", buffer);
+                    write(STDOUT, "response from AS: ", 19);
+                    write(STDOUT, buffer, n);
+
+                    if (parse_validation_code(buffer)) {
+                        memset(buffer, EOS, SIZE);
+                        strcpy(buffer, VAL_USER_RESPONSE);
+                        strcat(buffer, " ");
+                        strcat(buffer, uid);
+                        strcat(buffer, " ");
+                        strcat(buffer, OK);
+                        strcat(buffer, "\n");
+
+                        n = udp_write(listenfd, buffer, (struct sockaddr*) &addr, sizeof(addr));
+
+                        printf("message sent: %s\n", buffer);
+                    }
                 }
-            }
 
-            if (FD_ISSET(STDIN, &testfds)) {
-                memset(buffer, EOS, SIZE);
-                read_stdin(buffer);
+                if (FD_ISSET(STDIN, &testfds)) {
+                    memset(buffer, EOS, SIZE);
+                    read_stdin(buffer);
 
-                parse_exit_message(buffer, command); 
-                memset(buffer, EOS, SIZE);
-                prepare_request(buffer, command, uid, password);
+                    parse_exit_message(buffer, command); 
+                    memset(buffer, EOS, SIZE);
+                    prepare_register_request(buffer, command, uid, password);
 
-                printf("message sent: %s", buffer);
+                    printf("message sent: %s", buffer);
 
-                n = udp_write(fd, buffer, client -> ai_addr, client -> ai_addrlen);
+                    n = udp_write(fd, buffer, client -> ai_addr, client -> ai_addrlen);
 
-                memset(buffer, EOS, SIZE);
-                n = udp_read(fd, buffer, SIZE, (struct sockaddr*) &addr);
+                    memset(buffer, EOS, SIZE);
+                    n = udp_read(fd, buffer, SIZE, (struct sockaddr*) &addr);
 
-                write(STDOUT, "response: ", 10);
-                write(STDOUT, buffer, n);
-            }
-            break;
+                    write(STDOUT, "response: ", 10);
+                    write(STDOUT, buffer, n);
+                }
+                break;
         }
     } while (strcmp(buffer, unregistration_success));
 
@@ -246,8 +243,6 @@ Boolean parse_register_message(char* buffer, char* command, char* uid, char* pas
     }
     strcpy(password, token);
 
-    printf("command: %s\tuid: %s\tpassword: %s\n", command, uid, password);
-    printf("buffer: %s\n", buffer);
     return true;
 }
 
@@ -371,7 +366,7 @@ Boolean fop_has_file(char* fop) {
             strcmp(fop, FOP_DELETE));
 }
 
-Boolean prepare_request(char* request, char* command, char* uid, char* password) {
+Boolean prepare_register_request(char* request, char* command, char* uid, char* password) {
 
     char aux[SIZE];
     
@@ -401,6 +396,22 @@ Boolean prepare_request(char* request, char* command, char* uid, char* password)
     
     strcat(request, "\n");
     return true;
+}
+
+Boolean verify_register_response(char* buffer, int size) {
+    printf("response: %s\n", buffer);
+    if (!size) {
+        printf("%s\n", SERVER_DOWN_MESSAGE);
+        return false;
+    }
+
+    if (!strcmp(buffer, registration_success)) {
+        printf("%s\n", LOGIN_SUCCESS_MESSAGE);
+        return true;
+    }
+
+    printf("%s\n", LOGIN_FAILURE_MESSAGE);
+    return false;
 }
 
 // parses the arguments given on the command line

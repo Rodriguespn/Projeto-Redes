@@ -275,10 +275,19 @@ int wrong_arguments(int argc) {
 
 void process_registration_request(char* buffer, char* uid, char* password, char* pdip, char* pdport) {
     if (parse_register_message(uid, password, pdip, pdport)) {
-        if (register_user(uid, password, pdip, pdport)) {
-            prepare_ok_message(buffer, REG_RESPONSE);
-        } else {
-            prepare_nok_message(buffer, REG_RESPONSE);
+        int code = register_user(uid, password, pdip, pdport);
+        switch (code) {
+            case OK_CODE:
+                prepare_ok_message(buffer, REG_RESPONSE);
+                break;
+
+            case INCORRECT_PASSWORD_ERR_CODE:
+                prepare_nok_message(buffer, REG_RESPONSE);
+                break;
+
+            default:
+                prepare_error_message(buffer);
+                break;
         }
     } else {
         prepare_error_message(buffer);
@@ -415,7 +424,6 @@ void prepare_request_message(char* buffer, int code) {
     }
 }
 
-
 void prepare_validation_pd_request(char* buffer, char* uid, char* vc, char* fop, char* filename) {
     memset(buffer, EOS, SIZE);
     strcpy(buffer, VALIDATE_USER);
@@ -459,15 +467,15 @@ Boolean parse_register_message(char* uid, char* password, char* pdip, char* pdpo
     char *token;
 
     token = strtok(NULL, " ");
-    if (!valid_uid(token)) {
-        fprintf(stderr, "Invalid user!\n");
+    if (!token) {
+        fprintf(stderr, "Error: user field empty!\n");
         return false;
     }
     strcpy(uid, token);
 
     token = strtok(NULL, " ");
-    if (!valid_password(token)) {
-        fprintf(stderr, "Invalid password!\n");
+    if (!token) {
+        fprintf(stderr, "Error: password field empty!\n");
         return false;
     }
     strcpy(password, token);
@@ -657,11 +665,11 @@ Boolean only_numbers_or_letters(char* password) {
 // false otherwise
 Boolean valid_password(char* password) {
     if (password) {
-        if (strlen(password) > PASSWORD_SIZE || !only_numbers_or_letters(password)) {
-            fprintf(stderr, "Invalid password!\nThe password must have 8 numbers and/or letters\n");
-            return false;
+        if (strlen(password) == (PASSWORD_SIZE-1) && only_numbers_or_letters(password)) {
+            return true;
         }
-        return true;
+        fprintf(stderr, "Invalid password!\nThe password must have 8 numbers and/or letters\n");
+        return false;
     }
 
     fprintf(stderr, "Password missing!\nMust give a password\n");
@@ -814,14 +822,25 @@ void generate_random_vc(char** vc) {
     sprintf(*vc, "%04d", vc_number);
 }
 
-Boolean register_user(char* uid, char* password, char* ip, char* port) {
+int register_user(char* uid, char* password, char* ip, char* port) {
     char* directory = NULL;
     char* full_path; // users_directory/uid/file
+
+    if (!valid_uid(uid)) {
+        fprintf(stderr, "Error: Invalid user!\n");
+        return INVALID_UID_ERR_CODE;
+    }
+
+    printf("%s\n", password);
+    if(!valid_password(password)) {
+        fprintf(stderr, "Error: Invalid password!\n");
+        return INVALID_PASSWORD_ERR_CODE;
+    }
 
     // allocates memory for the relative path for the user with uid
     if (!(directory = (char *) malloc(sizeof(char)*(strlen(users_directory)+ strlen(uid) + 2)))) {
         perror("Error: allocating \"path\" buffer");
-        return false;
+        return UNKNOWN_ERROR;
     }
 
     get_user_directory(directory, uid);
@@ -833,7 +852,7 @@ Boolean register_user(char* uid, char* password, char* ip, char* port) {
             printf("Unable to create directory \"%s\"\n", directory); 
             free(directory);
             free(full_path);
-            return false;
+            return UNKNOWN_ERROR;
         }
 
         // opens the password file
@@ -841,7 +860,7 @@ Boolean register_user(char* uid, char* password, char* ip, char* port) {
             fprintf(stderr, "Error: could not open file: %s\n", full_path);
             free(directory);
             free(full_path);
-            return false;
+            return UNKNOWN_ERROR;
         }
 
         // writes the password on the file
@@ -855,7 +874,7 @@ Boolean register_user(char* uid, char* password, char* ip, char* port) {
             fprintf(stderr, "Error: could not open file %s\n", full_path);
             free(directory);
             free(full_path);
-            return false;
+            return UNKNOWN_ERROR;
         }
         char password_from_file[PASSWORD_SIZE];
         // reads the password from the file
@@ -866,7 +885,7 @@ Boolean register_user(char* uid, char* password, char* ip, char* port) {
             fprintf(stderr, "Error: wrong uid or password\n");
             free(directory);
             free(full_path);
-            return false;
+            return INCORRECT_PASSWORD_ERR_CODE;
         }
 
         // closes the password file
@@ -883,7 +902,7 @@ Boolean register_user(char* uid, char* password, char* ip, char* port) {
         fprintf(stderr, "Error: could not open file %s\n", full_path);
         free(directory);
         free(full_path);
-        return false;
+        return UNKNOWN_ERROR;
     }
 
     // writes the ip and the port like "ip:port"
@@ -895,7 +914,7 @@ Boolean register_user(char* uid, char* password, char* ip, char* port) {
     free(directory);
     free(full_path);
 
-    return true;
+    return OK_CODE;
 }
 
 Boolean unregister_user(char *uid, char *password) {
@@ -1026,7 +1045,7 @@ int request_user(char* uid, char* fop, char* filename, char** vc) {
 
     printf("exiting send_vc_to_pd\tvc=%s\n", *vc);
 
-    return USER_REQUEST_OK;
+    return OK_CODE;
 }
 
 Boolean authenticate_user(char* uid, char* rid, char* vc, char* request_uid, char* request_rid, char* request_vc, char* tid, int* tid_number) {

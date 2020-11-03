@@ -148,9 +148,9 @@ void parse_fs_ip(const char* argv[], int size, char* defaultip, char** fsip) {
 int tcp_write(int sockfd, char* buffer) {
     int n = write(sockfd, buffer, strlen(buffer));
     if (n == ERROR) {
-            //error
-            fprintf(stderr, "Error: could not write \"%s\"\nTo sockfd = %d\n", buffer, sockfd);
-            return false;
+        //error
+        fprintf(stderr, "Error: could not write \"%s\"\nTo sockfd = %d\n", buffer, sockfd);
+        return false;
     }
     return n;
 }
@@ -166,7 +166,6 @@ int tcp_read(int sockfd, char* buffer, int size) {
 }
 
 int udp_write(int sockfd, char* buffer, struct sockaddr *addr, socklen_t addrlen) {
-    printf("%s\n", buffer);
     int n = sendto(sockfd, buffer, strlen(buffer), 0, addr,  addrlen);
     if (n == ERROR) {
         //error
