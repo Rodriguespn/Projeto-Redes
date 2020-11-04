@@ -144,11 +144,16 @@ int main(int argc, char const *argv[]) {
                 addrlen = sizeof(cliaddr);
                 n = udp_read(udpsocket, buffer, SIZE, (struct sockaddr*) &cliaddr);
 
+                char tid[TID_SIZE];
+                memset(tid, EOS, TID_SIZE); 
+
                 if (parse_command(buffer, command)) {
                     if (!strcmp(command, REGISTRATION)) {
                         process_registration_request(buffer, uid, password, pdip, pdport);
                     } else if (!strcmp(command, UNREGISTRATION)) {
                         process_unregistration_request(buffer, uid, password);
+                    } else if (!strcmp(command, VALIDATE_FILE)) {
+                        process_fs_validation_request(buffer, uid, tid);
                     } else {
                         prepare_error_message(buffer);
                     } 
@@ -157,8 +162,7 @@ int main(int argc, char const *argv[]) {
                 }
                 
                 printf("command = %s\n", command);
-                write(STDOUT, "received: ", 10);
-                write(STDOUT, buffer, n);
+                printf("sent: %s", buffer);
 
                 n = udp_write(udpsocket, buffer, (struct sockaddr*) &cliaddr, sizeof(cliaddr));
             }
@@ -414,6 +418,17 @@ void process_authentication_request(char* buffer, char* uid, char* rid, char* vc
     }
 }
 
+void process_fs_validation_request(char* buffer, char* uid, char* tid) {
+    if (parse_fs_validation_message(uid, tid)) {
+        char fop[SIZE];
+        memset(fop, EOS, SIZE);
+        validate_fop(uid, tid, fop);
+        prepare_fs_validation_message(buffer, uid, tid, fop);
+    } else {
+        prepare_error_message(buffer);
+    }
+}
+
 void prepare_error_message(char* buffer) {
     memset(buffer, EOS, SIZE);
     strcpy(buffer, PROTOCOL_ERROR);
@@ -508,6 +523,19 @@ void prepare_authentication_message(char* buffer, char* tid) {
     strcpy(buffer, AUT_RESPONSE);
     strcat(buffer, " ");
     strcat(buffer, tid);
+    strcat(buffer, "\n");
+}
+
+void prepare_fs_validation_message(char* buffer, char* uid, char* tid, char* fop) {
+// CNF UID TID Fop [Fname]
+    memset(buffer, EOS, SIZE);
+    strcpy(buffer, VAL_FILE_RESPONSE);
+    strcat(buffer, " ");
+    strcat(buffer, uid);
+    strcat(buffer, " ");
+    strcat(buffer, tid);
+    strcat(buffer, " ");
+    strcat(buffer, fop);
     strcat(buffer, "\n");
 }
 
@@ -645,6 +673,12 @@ Boolean parse_request_message(char* uid, char* rid, char* fop, char* filename) {
         return false;
     }
 
+    // if the fop needs a filename and none is provided
+    if(token && !fop_has_file(fop)) {
+        fprintf(stderr, "Error: Fop %s doesn't need a file\n", fop);
+        return false;
+    }
+
     if (token) {
         strcpy(filename, token);
     }
@@ -681,6 +715,29 @@ Boolean parse_authentication_message(char* uid, char* rid, char* vc) {
     strcpy(vc, token);
     
     printf("uid: %s\nRID: %s\nVC: %s\n", uid, rid, vc);
+    return true;
+}
+
+Boolean parse_fs_validation_message(char* uid, char* tid) {
+    char* token;
+    
+    token = strtok(NULL, " ");
+    if (!valid_uid(token)) { // the user validation will be performed later
+        fprintf(stderr, "Error: invalid user!\n");
+        return false;
+    }
+    
+    memset(uid, EOS, UID_SIZE);
+    strcpy(uid, token);
+
+    token = strtok(NULL, "\n");
+    if (!token) {
+        fprintf(stderr, "Error: invalid TID!\n");
+        return false;
+    }
+    strcpy(tid, token);
+
+    printf("uid=%s\ntid=%s\n", uid, tid);
     return true;
 }
 
@@ -1110,11 +1167,11 @@ int request_user(char* uid, char* fop, char* filename, char** vc, char* operatio
     printf("exiting send_vc_to_pd\tvc=%s\n", *vc);
 
     memset(operation, EOS, SIZE);
-    strcpy(operation, uid);
-    strcat(operation, " ");
     strcat(operation, fop);
-    strcat(operation, " ");
-    strcat(operation, filename);
+    if (strlen(filename)) {
+        strcat(operation, " ");
+        strcat(operation, filename);
+    }
 
     return OK_CODE;
 }
@@ -1145,6 +1202,7 @@ Boolean authenticate_user(char* uid, char* rid, char* vc, char* request_uid, cha
     }
 
     char* path = NULL;
+    FILE* f;
 
     char tid_file_prefix[TID_SIZE+1];
     memset(tid_file_prefix, EOS, TID_SIZE+1);
@@ -1152,7 +1210,8 @@ Boolean authenticate_user(char* uid, char* rid, char* vc, char* request_uid, cha
 
     get_user_file_path(&path, uid, tid_file_prefix, FILE_EXTENSION);
 
-    while (fopen(path, "r")) { // file exists
+    while ((f = fopen(path, "r"))) { // while file exists
+        fclose(f);
         memset(tid_file_prefix, EOS, TID_SIZE+1);
         sprintf(tid_file_prefix, "_%04d", ++tid_number);
         free(path);
@@ -1176,6 +1235,81 @@ Boolean authenticate_user(char* uid, char* rid, char* vc, char* request_uid, cha
     sprintf(tid, "%04d", tid_number);
 
     return true;
+}
+
+Boolean validate_fop(char* uid, char* tid, char* fop) {
+    FILE* f;
+    char* path = NULL, filename[SIZE];
+
+    memset(filename, EOS, SIZE);
+    strcpy(filename, "_");
+    strcat(filename, tid);
+
+    printf("filename=%s\n", filename);
+    
+    get_user_file_path(&path, uid, filename, FILE_EXTENSION);
+
+    if (!(f = fopen(path, "r"))) {
+        fprintf(stderr, "Error: tid %s does not exist with uid %s\n", tid, uid);
+        free(path);
+        strcpy(fop, "E");
+        return false;
+    }
+
+    int c;
+    for (int i = 0; (c = fgetc(f)) != '\n'; i++) {
+        // reads the fop from the file
+        fop[i] = (char) c;
+    }
+
+    // closes the tid file
+    fclose(f);
+
+    free(path);
+
+    printf("FOP=%s\n", fop);
+
+    if (!strcmp(fop, FOP_REMOVE)) { // remove operation
+        char *directory = NULL;
+        // allocates memory for the relative path for the user with uid
+        if (!(directory = (char *) malloc(sizeof(char) * (strlen(users_directory) + strlen(uid) + 2)))) {
+            perror("Error: allocating \"path\" buffer");
+            return false;
+        }
+        get_user_directory(directory, uid);
+        printf("directory=%s\n", directory);
+        printf("%s\n", remove_all_files(directory) ? "all files removed" : "error removing files");
+        free(directory);
+    }
+
+    return true;
+}
+
+Boolean remove_all_files(char* dirname) {
+    DIR *d;
+    struct dirent *dir;
+    char path[SIZE];
+    d = opendir(dirname);
+    if (d) {
+        while((dir=readdir(d)) != NULL) {
+            if (strcmp(dir->d_name, "..") && strcmp(dir->d_name, ".")) {
+                memset(path, EOS, SIZE);
+                strcpy(path, dirname);
+                strcat(path, dir->d_name);
+                printf("FILE: %s deleted\n", path);
+                if (remove(path)) {
+                    fprintf(stderr, "Error: could not remove file %s\n", path);
+                    return false;
+                }
+            }
+        }
+        rmdir(dirname); // removes the directory
+        closedir(d);
+        return true;
+    } else {
+        return false;
+    }
+    
 }
 
 Boolean get_user_file_path(char** path, char* uid, const char* file_name, const char* file_extension) {

@@ -97,7 +97,7 @@ int main(int argc, char const *argv[]) {
 
     // the socket where the AS will send info
     listenfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (fd == ERROR) {
+    if (listenfd == ERROR) {
         //error
         fprintf(stderr, "Error: socket returned null\n");
         exit(EXIT_FAILURE);

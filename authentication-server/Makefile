@@ -13,8 +13,12 @@ run:
 	./as
 
 user:
-	@echo Compiling Authentication System...
+	@echo Compiling User Dummy...
 	$(LD) $(CFLAGS) $(LDFLAGS) -o user user-pedro.c ../functions.c
+
+fs_dummy:
+	@echo Compiling FS Dummy...
+	$(LD) $(CFLAGS) $(LDFLAGS) -o fs fs-dummy.c ../functions.c
 
 clean:
 	@echo Cleaning...
