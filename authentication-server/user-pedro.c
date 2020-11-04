@@ -68,6 +68,21 @@ int main(int argc, char const *argv[]) {
 
     do {
         memset(buffer, EOS, SIZE);
+        read_stdin(buffer);
+
+        n = tcp_write(fd, buffer);
+
+        printf("request: %s\n", buffer);
+
+        if (!n) continue;
+        
+        memset(buffer, EOS, SIZE);
+        n = tcp_read(fd, buffer, SIZE);
+
+        printf("response: %s\n", buffer);
+
+
+        /* memset(buffer, EOS, SIZE);
         strcpy(buffer, "REQ 90531 1234 U f1.txt\n");
 
         n = tcp_write(fd, buffer);
@@ -128,9 +143,9 @@ int main(int argc, char const *argv[]) {
 
             write(STDOUT, "response: ", 10);
             write(STDOUT, buffer, n);
-        }
+        } */
 
-    } while (false); //strcmp(buffer, unregistration_success));
+    } while (n); //strcmp(buffer, unregistration_success));
 
     freeaddrinfo(res);
     close(fd);

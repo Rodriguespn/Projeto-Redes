@@ -214,7 +214,7 @@ Boolean parse_login_message(char* buffer, char* command, char* uid, char* passwo
 }
 
 Boolean prepare_login_request(char* request, char* command, char* uid, char* password) {
-
+    
     if (strcmp(command, USER_LOGIN)) {
         return false;
     }

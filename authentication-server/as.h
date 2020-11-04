@@ -21,7 +21,6 @@
 #define PASSWORD_FILE_PREFIX        "_pass"
 #define REGISTRATION_FILE_PREFIX    "_reg"
 #define LOGIN_FILE_PREFIX           "_login"
-#define TID_FILE_PREFIX             "_tid"
 
 #define FILE_EXTENSION              ".txt"
 
@@ -40,8 +39,8 @@ int wrong_arguments(int argc);
 void process_registration_request(char* buffer, char* uid, char* password, char* pdip, char* pdport);
 void process_unregistration_request(char* buffer, char* uid, char* password);
 void process_login_request(char* buffer, char* uid, char* password);
-void process_request_request(char* buffer, char* uid, char* rid, char* fop, char** vc);
-void process_authentication_request(char* buffer, char* uid, char* rid, char* vc, int* tid_number);
+void process_request_request(char* buffer, char* uid, char* rid, char* fop, char** vc, char* operation);
+void process_authentication_request(char* buffer, char* uid, char* rid, char* vc, char* operation);
 void prepare_error_message(char* buffer);
 void prepare_ok_message(char* buffer, const char* command);
 void prepare_nok_message(char* buffer, const char* command);
@@ -69,10 +68,10 @@ void get_user_directory(char* buffer, char *uid);
 void get_filename(char* buffer, char* uid, const char* filename, const char* file_ext);
 void generate_random_vc(char** vc);
 int register_user(char* uid, char* password, char* ip, char* port);
-Boolean unregister_user(char *uid, char *password);
-Boolean login_user(char* uid, char* password);
-int request_user(char* uid, char* fop, char* filename, char** vc);
-Boolean authenticate_user(char* uid, char* rid, char* vc, char* request_uid, char* request_rid, char* request_vc, char* tid, int* tid_number);
+int unregister_user(char *uid, char *password);
+int login_user(char* uid, char* password);
+int request_user(char* uid, char* fop, char* filename, char** vc, char* operation);
+Boolean authenticate_user(char* uid, char* rid, char* vc, char* request_uid, char* request_rid, char* request_vc, char* tid, char* request);
 Boolean get_user_file_path(char** path, char* uid, const char* file_name, const char* file_extension);
 
 #endif /* AS_H */

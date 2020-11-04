@@ -12,6 +12,10 @@ all:
 run:
 	./as
 
+user:
+	@echo Compiling Authentication System...
+	$(LD) $(CFLAGS) $(LDFLAGS) -o user user-pedro.c ../functions.c
+
 clean:
 	@echo Cleaning...
 	rm -f *.o as

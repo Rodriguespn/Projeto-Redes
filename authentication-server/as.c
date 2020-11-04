@@ -6,8 +6,7 @@ const char *users_directory = USERS_FOLDER_NAME;
 FILE *userfd; 
 struct stat st = {0};
 
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const *argv[]) {
     int udpsocket, tcpsocket, connectfd, out_fds, childpid, errcode;
     fd_set inputs, testfds;
     struct timeval timeout;
@@ -123,12 +122,12 @@ int main(int argc, char const *argv[])
 
         out_fds = select(FD_SETSIZE, &testfds, (fd_set*) NULL,(fd_set*) NULL, &timeout);
 
+        /*
         printf("timeout time: %ld and %ld\n", timeout.tv_sec, timeout.tv_usec);
         printf("counter = %d\n", out_fds);
-
+        */
         switch (out_fds) {
         case 0:
-            printf("Timeout event\n");
             break;
         
         case ERROR:
@@ -185,6 +184,7 @@ int main(int argc, char const *argv[])
                 strcat(login_succeeded, OK);
                 strcat(login_succeeded, "\n");
 
+            
                 do { // user has to login before anything else
                     memset(buffer, EOS, SIZE);
                     n = tcp_read(connectfd, buffer, SIZE);
@@ -211,39 +211,82 @@ int main(int argc, char const *argv[])
                     puts(buffer);
                 } while (n && strcmp(buffer, login_succeeded)); // while the socket is connected and login not succeeded
 
-                static int tid_number = 1;
+                do { // after logged in, the user can make requests and authorize them
+                    char operation[SIZE];
+                    char request_succeeded[SIZE];
+                    strcpy(request_succeeded, REQ_RESPONSE);
+                    strcat(request_succeeded, " ");
+                    strcat(request_succeeded, OK);
+                    strcat(request_succeeded, "\n");
 
-                while (n) { // until the socket disconnects
-                    memset(buffer, EOS, SIZE);
-                    n = tcp_read(connectfd, buffer, SIZE);
-                    printf("Message from tcp client: ");
-                    puts(buffer);
+                    do { // until the socket disconnects
+                        memset(buffer, EOS, SIZE);
+                        n = tcp_read(connectfd, buffer, SIZE);
+                        printf("Message from tcp client: ");
+                        puts(buffer);
+                        if (!n) { // the socket has disconnected
+                            continue;
+                        }
+                        
+                        if (parse_command(buffer, command)) {
+                            if (!strcmp(command, LOGIN)) {
+                                process_login_request(buffer, uid, password);
+                            } 
+                            else if (!strcmp(command, REQUEST)) {
+                                process_request_request(buffer, uid, rid, fop, &vc, operation);
+                            } 
+                            else {
+                                prepare_error_message(buffer);
+                            } 
+                        } else {
+                            prepare_error_message(buffer);
+                        }
+                        
+                        n = tcp_write(connectfd, buffer);
+                        printf("Message sent to tcp client: ");
+                        puts(buffer);
+
+                    } while (n && strcmp(buffer, request_succeeded)); // while the socket is connected and login not succeeded
+
                     if (!n) { // the socket has disconnected
                         continue;
                     }
-                    
-                    if (parse_command(buffer, command)) {
-                        if (!strcmp(command, LOGIN)) {
-                            process_login_request(buffer, uid, password);
-                        } 
-                        else if (!strcmp(command, REQUEST)) {
-                            process_request_request(buffer, uid, rid, fop, &vc);
-                        } 
-                        else if (!strcmp(command, AUTHENTICATION)) {
-                            printf("entering authentication vc=%s\n", vc);
-                            process_authentication_request(buffer, uid, rid, vc, &tid_number);
+                    char auth_failed[SIZE];
+                    strcpy(auth_failed, AUT_RESPONSE);
+                    strcat(auth_failed, " ");
+                    strcat(auth_failed, NOT_OK);
+                    strcat(auth_failed, "\n");
+
+                    char error_message[SIZE];
+                    prepare_error_message(error_message);
+
+                    do { // user has to login before anything else
+                        memset(buffer, EOS, SIZE);
+                        n = tcp_read(connectfd, buffer, SIZE);
+
+                        if (!n) { // the client has disconnected
+                            continue;
                         }
-                        else {
+
+                        if (parse_command(buffer, command)) {
+                            if (!strcmp(command, AUTHENTICATION)) {
+                                printf("entering authentication vc=%s\n", vc);
+                                process_authentication_request(buffer, uid, rid, vc, operation);
+                            } else {
+                                prepare_error_message(buffer);
+                            } 
+                        } else {
                             prepare_error_message(buffer);
-                        } 
-                    } else {
-                        prepare_error_message(buffer);
-                    }
-                    
-                    n = tcp_write(connectfd, buffer);
-                    printf("Message sent to tcp client: ");
-                    puts(buffer);
-                }
+                        }
+
+                        n = tcp_write(connectfd, buffer);
+                        printf("Message to tcp client: ");
+                        puts(buffer);
+                        
+                    } while (n && (!strcmp(buffer, error_message) || !strcmp(buffer, auth_failed))); // while the socket is connected and login not succeeded
+
+                } while (n);
+
                 printf("Client %d disconnected\n", connectfd);
                 close(connectfd);
                 exit(EXIT_SUCCESS);
@@ -281,7 +324,10 @@ void process_registration_request(char* buffer, char* uid, char* password, char*
                 prepare_ok_message(buffer, REG_RESPONSE);
                 break;
 
+            case INVALID_UID_ERR_CODE:
+            case INVALID_PASSWORD_ERR_CODE:
             case INCORRECT_PASSWORD_ERR_CODE:
+            case UNKNOWN_ERROR:
                 prepare_nok_message(buffer, REG_RESPONSE);
                 break;
 
@@ -296,11 +342,20 @@ void process_registration_request(char* buffer, char* uid, char* password, char*
 
 void process_unregistration_request(char* buffer, char* uid, char* password) {
     if (parse_unregister_message(uid, password)) {
-        printf("uid=%s\npassword=%s\n", uid, password);
-        if (unregister_user(uid, password)) {
-            prepare_ok_message(buffer, UNR_RESPONSE);
-        } else {
-            prepare_nok_message(buffer, UNR_RESPONSE);
+        int code = unregister_user(uid, password);
+        switch (code) {
+            case OK_CODE:
+                prepare_ok_message(buffer, UNR_RESPONSE);
+                break;
+
+            case INCORRECT_PASSWORD_ERR_CODE:
+            case UNKNOWN_ERROR:
+                prepare_nok_message(buffer, UNR_RESPONSE);
+                break;
+            
+            default:
+                prepare_error_message(buffer);
+                break;
         }
     } else {
         prepare_error_message(buffer);
@@ -309,28 +364,38 @@ void process_unregistration_request(char* buffer, char* uid, char* password) {
 
 void process_login_request(char* buffer, char* uid, char* password) {
     if (parse_login_message(uid, password)) {
-        if (login_user(uid, password)) {
-            prepare_ok_message(buffer, LOG_RESPONSE); 
+        int code = login_user(uid, password);
+
+        switch (code) {
+            case OK_CODE:
+                prepare_ok_message(buffer, LOG_RESPONSE); 
+                break;
+            
+            case INCORRECT_PASSWORD_ERR_CODE:
+                prepare_nok_message(buffer, LOG_RESPONSE);
+                break;
+
+            default:
+                prepare_error_message(buffer);
+                break;
         }
-        else {
-            prepare_nok_message(buffer, LOG_RESPONSE);
-        }
+
     } else {
-    prepare_error_message(buffer);
+        prepare_error_message(buffer);
     } 
 }
 
-void process_request_request(char* buffer, char* uid, char* rid, char* fop, char** vc) {
+void process_request_request(char* buffer, char* uid, char* rid, char* fop, char** vc, char* operation) {
     char filename[SIZE];
     if (parse_request_message(uid, rid, fop, filename)) {
-        int code = request_user(uid, fop, filename, vc);
+        int code = request_user(uid, fop, filename, vc, operation);
         prepare_request_message(buffer, code);
     } else {
         prepare_error_message(buffer);
     } 
 }
 
-void process_authentication_request(char* buffer, char* uid, char* rid, char* vc, int* tid_number) {
+void process_authentication_request(char* buffer, char* uid, char* rid, char* vc, char* operation) {
     char request_uid[UID_SIZE], request_rid[TID_SIZE], request_vc[VC_SIZE], tid[TID_SIZE];
 
     memset(request_uid, EOS, UID_SIZE); 
@@ -339,7 +404,7 @@ void process_authentication_request(char* buffer, char* uid, char* rid, char* vc
 
     if (parse_authentication_message(request_uid, request_rid, request_vc)) {
         memset(tid, EOS, TID_SIZE);
-        if (authenticate_user(uid, rid, vc, request_uid, request_rid, request_vc, tid, tid_number)) {
+        if (authenticate_user(uid, rid, vc, request_uid, request_rid, request_vc, tid, operation)) {
             prepare_authentication_message(buffer, tid); 
         } else {
             prepare_error_message(buffer);
@@ -831,7 +896,6 @@ int register_user(char* uid, char* password, char* ip, char* port) {
         return INVALID_UID_ERR_CODE;
     }
 
-    printf("%s\n", password);
     if(!valid_password(password)) {
         fprintf(stderr, "Error: Invalid password!\n");
         return INVALID_PASSWORD_ERR_CODE;
@@ -917,7 +981,7 @@ int register_user(char* uid, char* password, char* ip, char* port) {
     return OK_CODE;
 }
 
-Boolean unregister_user(char *uid, char *password) {
+int unregister_user(char *uid, char *password) {
     char* full_path; // users_directory/uid/file
 
     get_user_file_path(&full_path, uid, PASSWORD_FILE_PREFIX, FILE_EXTENSION);
@@ -925,7 +989,7 @@ Boolean unregister_user(char *uid, char *password) {
     if (!(userfd = fopen(full_path, "r"))) {
         fprintf(stderr, "Error: could not open file %s\n", full_path);
         free(full_path);
-        return false;
+        return UNKNOWN_ERROR;
     }
 
     char password_from_file[PASSWORD_SIZE];
@@ -936,7 +1000,7 @@ Boolean unregister_user(char *uid, char *password) {
     if (strcmp(password, password_from_file)) {
         fprintf(stderr, "Error: wrong uid or password\n");
         free(full_path);
-        return false;
+        return INCORRECT_PASSWORD_ERR_CODE;
     }
 
     // closes the password file
@@ -952,22 +1016,22 @@ Boolean unregister_user(char *uid, char *password) {
     if (remove(full_path)) {
         fprintf(stderr, "Error: could not remove file %s\n", full_path);
         free(full_path);
-        return false;
+        return UNKNOWN_ERROR;
     };
 
     free(full_path);
 
-    return true;
+    return OK_CODE;
 }
 
-Boolean login_user(char* uid, char* password) {
+int login_user(char* uid, char* password) {
     char* directory = NULL;
     char* full_path = NULL; // users_directory/uid/file
 
     // allocates memory for the relative path for the user with uid
     if (!(directory = (char *) malloc(sizeof(char)*(strlen(users_directory)+ strlen(uid) + 2)))) {
         perror("Error: allocating \"path\" buffer");
-        return false;
+        return UNKNOWN_ERROR;
     }
 
     get_user_directory(directory, uid);
@@ -976,7 +1040,7 @@ Boolean login_user(char* uid, char* password) {
     if (stat(directory, &st) == ERROR) { // if directory doesn't exists
         fprintf(stderr, "Error: user was not registered\n");
         free(directory);
-        return false;
+        return UID_NOT_FOUND_ERROR ;
     }
 
     get_user_file_path(&full_path, uid, PASSWORD_FILE_PREFIX, FILE_EXTENSION);
@@ -987,7 +1051,7 @@ Boolean login_user(char* uid, char* password) {
         fprintf(stderr, "Error: could not open file %s\n", full_path);
         free(directory);
         free(full_path);
-        return false;
+        return UNKNOWN_ERROR;
     }
 
     char password_from_file[PASSWORD_SIZE];
@@ -999,7 +1063,7 @@ Boolean login_user(char* uid, char* password) {
         fprintf(stderr, "Error: wrong uid or password\n");
         free(directory);
         free(full_path);
-        return false;
+        return INCORRECT_PASSWORD_ERR_CODE;
     }
 
     // closes the password file
@@ -1014,7 +1078,7 @@ Boolean login_user(char* uid, char* password) {
         fprintf(stderr, "Error: could not open file %s\n", full_path);
         free(directory);
         free(full_path);
-        return false;
+        return UNKNOWN_ERROR;
     }
 
     // writes the uid and the password on the file
@@ -1024,10 +1088,10 @@ Boolean login_user(char* uid, char* password) {
 
     free(directory);
     free(full_path);
-    return true;
+    return OK_CODE;
 }
 
-int request_user(char* uid, char* fop, char* filename, char** vc) {
+int request_user(char* uid, char* fop, char* filename, char** vc, char* operation) {
     // if the uid is invalid
     if (!valid_uid(uid)) {
         return INVALID_UID_ERR_CODE;
@@ -1045,10 +1109,18 @@ int request_user(char* uid, char* fop, char* filename, char** vc) {
 
     printf("exiting send_vc_to_pd\tvc=%s\n", *vc);
 
+    memset(operation, EOS, SIZE);
+    strcpy(operation, uid);
+    strcat(operation, " ");
+    strcat(operation, fop);
+    strcat(operation, " ");
+    strcat(operation, filename);
+
     return OK_CODE;
 }
 
-Boolean authenticate_user(char* uid, char* rid, char* vc, char* request_uid, char* request_rid, char* request_vc, char* tid, int* tid_number) {
+Boolean authenticate_user(char* uid, char* rid, char* vc, char* request_uid, char* request_rid, char* request_vc, char* tid, char* request) {
+    int tid_number = 1;
     strcpy(tid, "0");
     // if user, rid or vc are not initialized
     if (!(uid && rid && vc)) {
@@ -1072,9 +1144,36 @@ Boolean authenticate_user(char* uid, char* rid, char* vc, char* request_uid, cha
         return false;
     }
 
+    char* path = NULL;
+
+    char tid_file_prefix[TID_SIZE+1];
+    memset(tid_file_prefix, EOS, TID_SIZE+1);
+    sprintf(tid_file_prefix, "_%04d", tid_number);
+
+    get_user_file_path(&path, uid, tid_file_prefix, FILE_EXTENSION);
+
+    while (fopen(path, "r")) { // file exists
+        memset(tid_file_prefix, EOS, TID_SIZE+1);
+        sprintf(tid_file_prefix, "_%04d", ++tid_number);
+        free(path);
+        get_user_file_path(&path, uid, tid_file_prefix, FILE_EXTENSION);
+    }
+    printf("tid=%d\n", tid_number);
+
+    // opens the password file
+    if (!(userfd = fopen(path, "w"))) {
+        fprintf(stderr, "Error: could not open file %s\n", path);
+        free(path);
+        return false;
+    }
+
+    fprintf(userfd, "%s\n", request);
+
+    fclose(userfd);
+
     memset(tid, EOS, TID_SIZE);
     // converts the number into a string
-    sprintf(tid, "%d", *tid_number++);
+    sprintf(tid, "%04d", tid_number);
 
     return true;
 }

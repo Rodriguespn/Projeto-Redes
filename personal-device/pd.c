@@ -135,12 +135,13 @@ int main(int argc, char const *argv[]) {
 
         out_fds = select(FD_SETSIZE, &testfds, (fd_set*) NULL,(fd_set*) NULL, &timeout);
 
+        /*
         printf("timeout time: %ld and %ld\n", timeout.tv_sec, timeout.tv_usec);
         printf("counter = %d\n", out_fds);
+        */
         
         switch (out_fds) {
             case 0:
-                printf("Timeout event\n");
                 break;
             
             case ERROR:
@@ -167,10 +168,18 @@ int main(int argc, char const *argv[]) {
                         strcat(buffer, OK);
                         strcat(buffer, "\n");
 
-                        n = udp_write(listenfd, buffer, (struct sockaddr*) &addr, sizeof(addr));
 
                         printf("message sent: %s\n", buffer);
+                    } else {
+                        memset(buffer, EOS, SIZE);
+                        strcpy(buffer, VAL_USER_RESPONSE);
+                        strcat(buffer, " ");
+                        strcat(buffer, uid);
+                        strcat(buffer, " ");
+                        strcat(buffer, NOT_OK);
+                        strcat(buffer, "\n");
                     }
+                    n = udp_write(listenfd, buffer, (struct sockaddr*) &addr, sizeof(addr));
                 }
 
                 if (FD_ISSET(STDIN, &testfds)) {
@@ -273,7 +282,7 @@ Boolean parse_validation_code(char* buffer) {
     // Validation Code instruction
     if(!(token = strtok(buffer, " "))) {
         fprintf(stderr, "Command missing!\nMust give a command\n");
-        exit(EXIT_FAILURE);
+        return false;
     }
 
     if (strcmp(token, VALIDATE_USER)) {
@@ -284,14 +293,14 @@ Boolean parse_validation_code(char* buffer) {
     // UID
     if(!(token = strtok(NULL, " "))) {
         fprintf(stderr, "Error: invalid UID\n");
-        exit(EXIT_FAILURE);
+        return false;
     }
 
 
     // Validation Code
     if(!(token = strtok(NULL, " "))) {
         fprintf(stderr, "Error: invalid VC\n");
-        exit(EXIT_FAILURE);
+        return false;
     }
 
     strcpy(vc, token);
@@ -299,7 +308,7 @@ Boolean parse_validation_code(char* buffer) {
     // Rest of the message
     if(!(token = strtok(NULL, "\n"))) {
         fprintf(stderr, "Error: invalid Fop\n");
-        exit(EXIT_FAILURE);
+        return false;
     }
 
     strcpy(aux, token);
@@ -307,7 +316,7 @@ Boolean parse_validation_code(char* buffer) {
     // Fop
     if(!(token = strtok(aux, " "))) {
         fprintf(stderr, "Error: invalid Fop\n");
-        exit(EXIT_FAILURE);
+        return false;
     }
 
     strcpy(fop, token);
@@ -319,7 +328,7 @@ Boolean parse_validation_code(char* buffer) {
     // if the fop needs a filename and none is provided
     if(!(token = strtok(NULL, "\0")) && fop_has_file(fop)) {
         fprintf(stderr, "Error: Fop %s needs a file\n", fop);
-        exit(EXIT_FAILURE);
+        return false;
     }
 
     if (token) {

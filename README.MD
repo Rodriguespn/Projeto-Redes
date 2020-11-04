@@ -4,19 +4,22 @@ Projeto de redes 2020/21
 
 ### Comandos Sigma
 file transfer -> scp -r -C ../Projeto-Redes/ ist1XXXX@sigma.tecnico.ulisboa.pt:~
-login -> ssh ist1XXXX@sigma04.tecnico.ulisboa.pt
+login -> ssh ist1XXXX@sigma02.tecnico.ulisboa.pt
 PD -> ./pd 193.136.128.104 -n tejo.tecnico.ulisboa.pt -p 58011
 
 ### Dúvidas
-- NOS PODEMOS TER OS DIFERENTES FICHEIROS DIVIDIDOS EM PASTAS?
-- Temos duas instancias diferentes do mesmo User. Se uma fizer login a outra tb o tem de fazer?
-- login invalido devolver erro? e se for com uma password de tamanho errado?
-- No AS, quando o utilizador tenta fazer uma ação sem ter feito login mandamos sempre o erro ELOG ou só se tentar fazer REQ?
-- Deixamos o utilizador fazer login depois de já ter feito login?
-- Como eq o userID pode estar errado no comando REQ se fizemos login antes e o user não consegue enviar o UID no comando?
-- Apenas devemos devolver EPD se não obtiveremos comunicação com o PD ou em todos os casos de erro durante o processo de comunicação com o PD?
-- O TID é gerado aleatóriamente? E pode ser repetido para diferentes users? Ou para o mesmo user?
-- Se tivermos duas instancias do User a autenticarem-se, o que devemos fazer?
+- Q: ~~NOS PODEMOS TER OS DIFERENTES FICHEIROS DIVIDIDOS EM PASTAS?~~
+  R: Sim podemos
+- Q: Temos duas instancias diferentes do mesmo User. Se uma fizer login a outra tb o tem de fazer?
+  R: Não sabe, espero resposta
+- Q: ~~login invalido devolver erro? e se for com uma password de tamanho errado? ~
+  R: Se a password tiver menos de 8 caracteres mandar ERR. Se tiver 8 caracteres mas estiver errada para aquele UID devolver NOK
+- Q: No AS, quando o utilizador tenta fazer uma ação sem ter feito login mandamos sempre o erro ELOG ou só se tentar fazer REQ?
+- Q: Deixamos o utilizador fazer login depois de já ter feito login?
+- Q: Como eq o userID pode estar errado no comando REQ se fizemos login antes e o user não consegue enviar o UID no comando?
+- Q: Apenas devemos devolver EPD se não obtiveremos comunicação com o PD ou em todos os casos de erro durante o processo de comunicação com o PD?
+- Q: O TID é gerado aleatóriamente? E pode ser repetido para diferentes users? Ou para o mesmo user?
+- Q: Se tivermos duas instancias do User a autenticarem-se, o que devemos fazer?
 
 ### ToDos
 Gastão:
@@ -33,9 +36,10 @@ Pedro:
 - ~~criar um socket TCP~~
 - ~~Implementar select~~
 - ~~Implementar Request command~~
-- Implementar o comando authenticate
-- Fazer a comunicação com o User
+- ~~Implementar o comando authenticate~~
+- ~~Fazer a comunicação com o User~~
 - Fazer a comunicação com o FS
+- IMPEDIR PROCESSOS ZOMBIE
 - Ativar a flag verbose
 
 Vicente:
