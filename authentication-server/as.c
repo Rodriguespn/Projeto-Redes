@@ -2,6 +2,7 @@
 
 // the buffer where ASport is stored
 char *asport;
+Boolean verbose = false;
 const char *users_directory = USERS_FOLDER_NAME;
 FILE *userfd; 
 struct stat st = {0};
@@ -12,9 +13,10 @@ int main(int argc, char const *argv[]) {
     struct timeval timeout;
     ssize_t n;
     socklen_t addrlen;
-    struct addrinfo hints,*res;
+    struct addrinfo hints, *res;
     struct sockaddr_in cliaddr;
     char buffer[SIZE];
+    void (*old_handler) (int);
     
     // checks if the number of arguments is correct
     if (wrong_arguments(argc)) {
@@ -22,18 +24,26 @@ int main(int argc, char const *argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    // treats the SIGINT signal
     signal(SIGINT, handler_sigint);
+
+    // Ignores SIGCHLD signals
+    if((old_handler = signal(SIGCHLD, SIG_IGN)) == SIG_ERR) {
+        fprintf(stderr, "could not set handler to %d signal\n", SIGCHLD);
+        exit(EXIT_FAILURE);
+    }
 
     // parses the argv arguments
     parse_arguments(argv, argc);
 
-    printf("ASport=%s\n", asport);
+    printf("Verbose flag %s\n", verbose ? "true" : "false");
+    verbose_message(verbose, "AS running on port %s\n", asport);
 
     // create and bind the UDP Socket
     udpsocket = socket(AF_INET, SOCK_DGRAM, 0);
 
     if(udpsocket == ERROR) {
-        /*error*/
+        // error
         fprintf(stderr, "Error: it was not possible to create udp socket\n");
         exit(EXIT_FAILURE);
     }
@@ -46,14 +56,14 @@ int main(int argc, char const *argv[]) {
     errcode = getaddrinfo(NULL, asport, &hints, &res);
 
     if (errcode != 0) {
-        /*error*/ 
+        // error
         fprintf(stderr, "Error: udp socket getaddrinfo returned %d error code\n", errcode);
         exit(EXIT_FAILURE);
     }
 
     n = bind(udpsocket, res -> ai_addr, res -> ai_addrlen);
     if (n == ERROR)  {
-        /*error*/
+        // error
         fprintf(stderr, "Error: udp socket bind returned %ld error code\n", n);
         exit(EXIT_FAILURE);
     }
@@ -77,7 +87,7 @@ int main(int argc, char const *argv[]) {
     //TCP socket
     errcode = getaddrinfo(NULL, asport, &hints, &res);
     if (errcode != 0) {
-        /*error*/
+        // error
         fprintf(stderr, "Error: tcp socket getaddrinfo returned %d error code\n", errcode);
         exit(EXIT_FAILURE); 
     }
@@ -85,12 +95,12 @@ int main(int argc, char const *argv[]) {
     n = bind(tcpsocket, res -> ai_addr, res -> ai_addrlen);
     if (n == ERROR) {
         fprintf(stderr, "Error: tcp socket bind returned %ld error code\n", n);
-        /*error*/ 
+        // error 
         exit(EXIT_FAILURE);
     } 
         
     if (listen(tcpsocket, 5) == ERROR) {
-        /*error*/
+        // error
         fprintf(stderr, "Error: tcp socket listen returned %d error code\n", ERROR);
         exit(EXIT_FAILURE);
     }
@@ -99,7 +109,7 @@ int main(int argc, char const *argv[]) {
     if (stat(users_directory, &st) == -1) { // if directory doesn t exists
         // check if directory is created or not 
         if (mkdir(users_directory, 0777)) { 
-            printf("Unable to create directory \"%s\"\n", users_directory); 
+            fprintf(stderr, "Unable to create directory \"%s\"\n", users_directory); 
             exit(EXIT_FAILURE); 
         }
     }
@@ -111,28 +121,25 @@ int main(int argc, char const *argv[]) {
     memset(pdip, EOS, SIZE);
     memset(pdport, EOS, SIZE);
 
+    // prepare the sockets which are going to the select function
     FD_ZERO(&inputs);
     FD_SET(udpsocket, &inputs);
     FD_SET(tcpsocket, &inputs);
 
     while (true) {
         testfds = inputs;
-        timeout.tv_sec = 10;
-        timeout.tv_usec = 0;
+        timeout.tv_sec = SELECT_TIMEOUT_SECS;
+        timeout.tv_usec = SELECT_TIMEOUT_USECS;
 
         out_fds = select(FD_SETSIZE, &testfds, (fd_set*) NULL,(fd_set*) NULL, &timeout);
 
-        /*
-        printf("timeout time: %ld and %ld\n", timeout.tv_sec, timeout.tv_usec);
-        printf("counter = %d\n", out_fds);
-        */
         switch (out_fds) {
-        case 0:
+        case TIMEOUT:
             break;
         
         case ERROR:
-            /*error*/
-            fprintf(stderr, "Error: select returned %d error code\n", out_fds);
+            // error
+            fprintf(stderr, "Error: select returned %d error code\n", ERROR);
             exit(EXIT_FAILURE);
             break;
 
@@ -150,20 +157,26 @@ int main(int argc, char const *argv[]) {
                 if (parse_command(buffer, command)) {
                     if (!strcmp(command, REGISTRATION)) {
                         process_registration_request(buffer, uid, password, pdip, pdport);
+                        verbose_message(verbose, "Request %s received\nUID=%s, password=%s\n", command, uid, password);
                     } else if (!strcmp(command, UNREGISTRATION)) {
                         process_unregistration_request(buffer, uid, password);
+                        verbose_message(verbose, "Request %s received\nUID=%s, password=%s\n", command, uid, password);
                     } else if (!strcmp(command, VALIDATE_FILE)) {
                         process_fs_validation_request(buffer, uid, tid);
+                        verbose_message(verbose, "Request %s received\nUID=%s, TID=%s\n", command, uid, tid);
                     } else {
+                        verbose_message(verbose, "Unknown request %s received\n");
                         prepare_error_message(buffer);
                     } 
                 } else {
                     prepare_error_message(buffer);
+                    verbose_message(verbose, "Error: Request with wrong format\n");
                 }
-                
-                printf("command = %s\n", command);
-                printf("sent: %s", buffer);
 
+                char client_ip[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, &(((struct sockaddr_in *) &cliaddr) -> sin_addr), client_ip, INET_ADDRSTRLEN);
+                verbose_message(verbose, "Received from IP: %s, Port: %u\n", client_ip, ntohs((&cliaddr) -> sin_port));
+                
                 n = udp_write(udpsocket, buffer, (struct sockaddr*) &cliaddr, sizeof(cliaddr));
             }
             break;
@@ -211,8 +224,6 @@ int main(int argc, char const *argv[]) {
                     }
 
                     n = tcp_write(connectfd, buffer);
-                    printf("Message to tcp client: ");
-                    puts(buffer);
                 } while (n && strcmp(buffer, login_succeeded)); // while the socket is connected and login not succeeded
 
                 do { // after logged in, the user can make requests and authorize them
@@ -274,7 +285,7 @@ int main(int argc, char const *argv[]) {
 
                         if (parse_command(buffer, command)) {
                             if (!strcmp(command, AUTHENTICATION)) {
-                                printf("entering authentication vc=%s\n", vc);
+                               
                                 process_authentication_request(buffer, uid, rid, vc, operation);
                             } else {
                                 prepare_error_message(buffer);
@@ -284,15 +295,13 @@ int main(int argc, char const *argv[]) {
                         }
 
                         n = tcp_write(connectfd, buffer);
-                        printf("Message to tcp client: ");
-                        puts(buffer);
-                        
                     } while (n && (!strcmp(buffer, error_message) || !strcmp(buffer, auth_failed))); // while the socket is connected and login not succeeded
 
                 } while (n);
 
                 printf("Client %d disconnected\n", connectfd);
                 close(connectfd);
+                remove_file(uid, LOGIN_FILE_PREFIX, FILE_EXTENSION);
                 exit(EXIT_SUCCESS);
 
             } else if (childpid == ERROR) {
@@ -317,7 +326,7 @@ void usage() {
 
 // returns true if the arguments given on the command line are on an invalid format, and false otherwise
 int wrong_arguments(int argc) {
-    return argc != 1 && argc != 3 && argc != 4;
+    return !(argc >= 1 && argc <= 4);
 }
 
 void process_registration_request(char* buffer, char* uid, char* password, char* pdip, char* pdport) {
@@ -484,7 +493,7 @@ void prepare_pd_error_message(char* buffer) {
 }
 
 void prepare_request_message(char* buffer, int code) {
-    printf("request code=%d\n", code);
+   
     switch (code) {
         case INVALID_UID_ERR_CODE:
             prepare_invalid_user_message(buffer);
@@ -542,6 +551,7 @@ void prepare_fs_validation_message(char* buffer, char* uid, char* tid, char* fop
 // parses the arguments given on the command line
 void parse_arguments(const char* argv[], int size) {
     parse_as_port(argv, size, &asport);
+    verbose = parse_verbose_flag(argv, size);
 }
 
 Boolean parse_command(char* buffer, char* command) {
@@ -587,7 +597,7 @@ Boolean parse_register_message(char* uid, char* password, char* pdip, char* pdpo
     }
     strcpy(pdport, token);
 
-    printf("uid: %s\npassword: %s\nPDIP: %s\nPDPort: %s\n", uid, password, pdip, pdport);
+   
     return true;
 }
 
@@ -595,7 +605,7 @@ Boolean parse_unregister_message(char* uid, char* password) {
     char *token;
 
     token = strtok(NULL, " ");
-    printf("uid=%s\n", token);
+   
     if (!valid_uid(token)) {
         fprintf(stderr, "Invalid user!\n");
         return false;
@@ -603,7 +613,7 @@ Boolean parse_unregister_message(char* uid, char* password) {
     strcpy(uid, token);
 
     token = strtok(NULL, "\n");
-    printf("password=%s\n", token);
+   
     if (!valid_password(token)) {
         fprintf(stderr, "Invalid password!\n");
         return false;
@@ -640,7 +650,7 @@ Boolean parse_request_message(char* uid, char* rid, char* fop, char* filename) {
         fprintf(stderr, "Error: invalid user!\n");
         return false;
     }
-    printf("token=%s\n", token);
+   
     memset(uid, EOS, UID_SIZE);
     strcpy(uid, token);
 
@@ -683,7 +693,7 @@ Boolean parse_request_message(char* uid, char* rid, char* fop, char* filename) {
         strcpy(filename, token);
     }
 
-    printf("uid: %s\nRID: %s\nFop: %s\nFilename: %s\n", uid, rid, fop, filename);
+   
     return true;
 }
 
@@ -714,7 +724,7 @@ Boolean parse_authentication_message(char* uid, char* rid, char* vc) {
 
     strcpy(vc, token);
     
-    printf("uid: %s\nRID: %s\nVC: %s\n", uid, rid, vc);
+   
     return true;
 }
 
@@ -737,7 +747,7 @@ Boolean parse_fs_validation_message(char* uid, char* tid) {
     }
     strcpy(tid, token);
 
-    printf("uid=%s\ntid=%s\n", uid, tid);
+   
     return true;
 }
 
@@ -869,8 +879,8 @@ Boolean send_vc_to_pd(char* uid, char* fop, char* filename, char** vc) {
     }
 
     struct timeval tv;
-    tv.tv_sec = 5;
-    tv.tv_usec = 0; 
+    tv.tv_sec = PD_TIMEOUT_SECS;
+    tv.tv_usec = PD_TIMEOUT_USECS; 
 
     // sets socket timeout as 5s
     if ((errcode = setsockopt(pdsocket, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv))) < 0) {
@@ -911,8 +921,6 @@ void get_user_directory(char* buffer, char *uid) {
     strcat(buffer, users_directory);
     strcat(buffer, uid);
     strcat(buffer, "/");
-
-    printf("get_directory = %s\n", buffer);
 }
 
 void get_filename(char* buffer, char* uid, const char* filename, const char* file_ext) {
@@ -920,8 +928,6 @@ void get_filename(char* buffer, char* uid, const char* filename, const char* fil
     strcat(buffer, uid);
     strcat(buffer, filename);
     strcat(buffer, file_ext);
-
-    printf("get_filename = %s\n", buffer);
 }
 
 void generate_random_vc(char** vc) {
@@ -1000,7 +1006,6 @@ int register_user(char* uid, char* password, char* ip, char* port) {
         char password_from_file[PASSWORD_SIZE];
         // reads the password from the file
         fscanf(userfd, "%s\n", password_from_file);
-        printf("password_from_file=%s\n", password_from_file);
 
         if (strcmp(password, password_from_file)) {
             fprintf(stderr, "Error: wrong uid or password\n");
@@ -1015,8 +1020,6 @@ int register_user(char* uid, char* password, char* ip, char* port) {
 
     free(full_path);
     get_user_file_path(&full_path, uid, REGISTRATION_FILE_PREFIX, FILE_EXTENSION);
-
-    printf("reg_path = %s\n", full_path);
 
     // opens the registration file
     if (!(userfd = fopen(full_path, "w"))) {
@@ -1052,7 +1055,6 @@ int unregister_user(char *uid, char *password) {
     char password_from_file[PASSWORD_SIZE];
     // reads the password from the file
     fscanf(userfd, "%s\n", password_from_file);
-    printf("password_from_file=%s\n", password_from_file);
 
     if (strcmp(password, password_from_file)) {
         fprintf(stderr, "Error: wrong uid or password\n");
@@ -1067,8 +1069,6 @@ int unregister_user(char *uid, char *password) {
     free(full_path);
 
     get_user_file_path(&full_path, uid, REGISTRATION_FILE_PREFIX, FILE_EXTENSION);
-
-    printf("reg_path = %s\n", full_path);
 
     if (remove(full_path)) {
         fprintf(stderr, "Error: could not remove file %s\n", full_path);
@@ -1101,7 +1101,7 @@ int login_user(char* uid, char* password) {
     }
 
     get_user_file_path(&full_path, uid, PASSWORD_FILE_PREFIX, FILE_EXTENSION);
-    printf("path = %s\n", full_path);
+   
 
     // opens the password file
     if (!(userfd = fopen(full_path, "r"))) {
@@ -1114,7 +1114,7 @@ int login_user(char* uid, char* password) {
     char password_from_file[PASSWORD_SIZE];
     // reads the password from the file
     fscanf(userfd, "%s\n", password_from_file);
-    printf("password_from_file=%s\n", password_from_file);
+   
 
     if (strcmp(password, password_from_file)) {
         fprintf(stderr, "Error: wrong uid or password\n");
@@ -1217,7 +1217,7 @@ Boolean authenticate_user(char* uid, char* rid, char* vc, char* request_uid, cha
         free(path);
         get_user_file_path(&path, uid, tid_file_prefix, FILE_EXTENSION);
     }
-    printf("tid=%d\n", tid_number);
+   
 
     // opens the password file
     if (!(userfd = fopen(path, "w"))) {
@@ -1245,7 +1245,7 @@ Boolean validate_fop(char* uid, char* tid, char* fop) {
     strcpy(filename, "_");
     strcat(filename, tid);
 
-    printf("filename=%s\n", filename);
+   
     
     get_user_file_path(&path, uid, filename, FILE_EXTENSION);
 
@@ -1267,8 +1267,6 @@ Boolean validate_fop(char* uid, char* tid, char* fop) {
 
     free(path);
 
-    printf("FOP=%s\n", fop);
-
     if (!strcmp(fop, FOP_REMOVE)) { // remove operation
         char *directory = NULL;
         // allocates memory for the relative path for the user with uid
@@ -1277,8 +1275,8 @@ Boolean validate_fop(char* uid, char* tid, char* fop) {
             return false;
         }
         get_user_directory(directory, uid);
-        printf("directory=%s\n", directory);
-        printf("%s\n", remove_all_files(directory) ? "all files removed" : "error removing files");
+       
+        remove_all_files(directory);
         free(directory);
     }
 
@@ -1296,7 +1294,7 @@ Boolean remove_all_files(char* dirname) {
                 memset(path, EOS, SIZE);
                 strcpy(path, dirname);
                 strcat(path, dir->d_name);
-                printf("FILE: %s deleted\n", path);
+               
                 if (remove(path)) {
                     fprintf(stderr, "Error: could not remove file %s\n", path);
                     return false;
@@ -1348,4 +1346,19 @@ Boolean get_user_file_path(char** path, char* uid, const char* file_name, const 
     free(filename);
 
     return return_value;
+}
+
+Boolean remove_file(char* uid, const char* filename, const char* file_extension) {
+    char* path = NULL;
+    if (!get_user_file_path(&path, uid, filename, file_extension)) {
+        return false;
+    }
+
+    if (remove(path)) {
+        fprintf(stderr, "Error: could not remove file %s\n", path);
+        free(path);
+        return false;
+    };
+    free(path);
+    return true;
 }

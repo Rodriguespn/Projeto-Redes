@@ -10,16 +10,31 @@ PD -> ./pd 193.136.128.104 -n tejo.tecnico.ulisboa.pt -p 58011
 ### Dúvidas
 - Q: ~~NOS PODEMOS TER OS DIFERENTES FICHEIROS DIVIDIDOS EM PASTAS?~~
   R: Sim podemos
+
 - Q: Temos duas instancias diferentes do mesmo User. Se uma fizer login a outra tb o tem de fazer?
   R: Não sabe, espero resposta
+
 - Q: ~~login invalido devolver erro? e se for com uma password de tamanho errado? ~
   R: Se a password tiver menos de 8 caracteres mandar ERR. Se tiver 8 caracteres mas estiver errada para aquele UID devolver NOK
+
 - Q: No AS, quando o utilizador tenta fazer uma ação sem ter feito login mandamos sempre o erro ELOG ou só se tentar fazer REQ?
+  R:
+
 - Q: Deixamos o utilizador fazer login depois de já ter feito login?
+  R:
+
 - Q: Como eq o userID pode estar errado no comando REQ se fizemos login antes e o user não consegue enviar o UID no comando?
+  R:
+
 - Q: Apenas devemos devolver EPD se não obtiveremos comunicação com o PD ou em todos os casos de erro durante o processo de comunicação com o PD?
+  R:
+
 - Q: O TID é gerado aleatóriamente? E pode ser repetido para diferentes users? Ou para o mesmo user?
+  R:
+
 - Q: Se tivermos duas instancias do User a autenticarem-se, o que devemos fazer?
+  R:
+
 
 ### ToDos
 Gastão:
@@ -38,16 +53,21 @@ Pedro:
 - ~~Implementar Request command~~
 - ~~Implementar o comando authenticate~~
 - ~~Fazer a comunicação com o User~~
-- Fazer a comunicação com o FS
-- IMPEDIR PROCESSOS ZOMBIE
+- ~~Fazer a comunicação com o FS~~
+- ~~IMPEDIR PROCESSOS ZOMBIE~~
 - Ativar a flag verbose
+
+Geral:
+- verificar se há processos zombie ou mem leaks
+- Comentar o codigo
+- Colocar timers em todos os sockets
 
 Vicente:
 - teste
 
 ### Primeira Reunião (Divisão):
 - AS    (Pedro)
-- PD    (Pedro)
+- ~~PD    (Pedro)~~
 - User  (Gastão)
 - FS    (Vicente)
 

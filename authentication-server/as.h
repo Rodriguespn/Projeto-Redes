@@ -25,6 +25,8 @@
 
 #define FILE_EXTENSION              ".txt"
 
+#define TIMEOUT                     0
+
 // Request error codes
 #define OK_CODE                     0
 #define INVALID_UID_ERR_CODE        1
@@ -34,6 +36,11 @@
 #define UID_NOT_FOUND_ERROR         5
 #define INCORRECT_PASSWORD_ERR_CODE 6
 #define UNKNOWN_ERROR               7
+
+#define SELECT_TIMEOUT_SECS         10
+#define SELECT_TIMEOUT_USECS        0
+#define PD_TIMEOUT_SECS             2
+#define PD_TIMEOUT_USECS            0
 
 void usage();
 int wrong_arguments(int argc);
@@ -79,5 +86,6 @@ Boolean authenticate_user(char* uid, char* rid, char* vc, char* request_uid, cha
 Boolean validate_fop(char* uid, char* tid, char* fop);
 Boolean remove_all_files(char* dirname);
 Boolean get_user_file_path(char** path, char* uid, const char* file_name, const char* file_extension);
+Boolean remove_file(char* uid, const char* filename, const char* file_extension);
 
 #endif /* AS_H */

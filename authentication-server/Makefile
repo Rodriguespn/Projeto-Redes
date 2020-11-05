@@ -10,7 +10,7 @@ all:
 	$(LD) $(CFLAGS) $(LDFLAGS) -o as as.c ../functions.c
 
 run:
-	./as
+	./as -v
 
 user:
 	@echo Compiling User Dummy...
