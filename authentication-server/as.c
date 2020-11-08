@@ -154,29 +154,30 @@ int main(int argc, char const *argv[]) {
         default:
             //  if udp socket is ready to listen
             if (FD_ISSET(udpsocket, &testfds)) {
-                char client_ip[INET_ADDRSTRLEN];
-                inet_ntop(AF_INET, &(((struct sockaddr_in *) &cliaddr) -> sin_addr), client_ip, INET_ADDRSTRLEN);
-                verbose_message(verbose, "\nINFORM: Received UDP connection from IP=%s Port=%u\n", client_ip, ntohs((&cliaddr) -> sin_port));
                 memset(buffer, EOS, SIZE);
                 addrlen = sizeof(cliaddr);
                 n = udp_read(udpsocket, buffer, SIZE, (struct sockaddr*) &cliaddr);
+
+                char client_ip[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, &(((struct sockaddr_in *) &cliaddr) -> sin_addr), client_ip, INET_ADDRSTRLEN);
+                verbose_message(verbose, "\nINFORM: Received UDP connection from IP=%s Port=%u\n", client_ip, ntohs((&cliaddr) -> sin_port));
 
                 char tid[TID_SIZE];
                 memset(tid, EOS, TID_SIZE); 
 
                 if (parse_command(buffer, command)) {
                     if (!strcmp(command, REGISTRATION)) {
-                        verbose_message(verbose, "INFORM: Processing Command=%s UID=%s password=%s registration\n", command, uid, password);
                         process_registration_request(buffer, uid, password, pdip, pdport);
+                        verbose_message(verbose, "INFORM: Processed Command=%s UID=%s password=%s registration\n", command, uid, password);
                     } else if (!strcmp(command, UNREGISTRATION)) {
-                        verbose_message(verbose, "INFORM: Processing Command=%s UID=%s password=%s unregistration\n", command, uid, password);
                         process_unregistration_request(buffer, uid, password);
+                        verbose_message(verbose, "INFORM: Processed Command=%s UID=%s password=%s unregistration\n", command, uid, password);
                     } else if (!strcmp(command, VALIDATE_FILE)) {
-                        verbose_message(verbose, "INFORM: Processing Command=%s UID=%s TID=%s validation\n", command, uid, tid);
                         process_fs_validation_request(buffer, uid, tid);
+                        verbose_message(verbose, "INFORM: Processed Command=%s UID=%s TID=%s validation\n", command, uid, tid);
                     } else {
-                        verbose_message(verbose, "INFORM: Request=%s could not be processed\n", buffer);
                         prepare_error_message(buffer);
+                        verbose_message(verbose, "INFORM: Request=%s could not be processed\n", buffer);
                     } 
                 } else {
                     prepare_error_message(buffer);
@@ -191,11 +192,12 @@ int main(int argc, char const *argv[]) {
         //  if tcp socket is ready to listen
         if (FD_ISSET(tcpsocket, &testfds)) {
             connectfd = accept(tcpsocket, (struct sockaddr*) &cliaddr, &addrlen);
+            addrlen = sizeof(cliaddr);
+            char rid[TID_SIZE], fop[FOP_SIZE], *vc = NULL;
+
             char client_ip[INET_ADDRSTRLEN];
             inet_ntop(AF_INET, &(((struct sockaddr_in *) &cliaddr) -> sin_addr), client_ip, INET_ADDRSTRLEN);
             verbose_message(verbose, "\nINFORM: Received TCP connection from IP=%s Port=%u\n", client_ip, ntohs((&cliaddr) -> sin_port));    
-            addrlen = sizeof(cliaddr);
-            char rid[TID_SIZE], fop[FOP_SIZE], *vc = NULL;
 
             memset(rid, EOS, TID_SIZE);
             memset(fop, EOS, FOP_SIZE);
@@ -208,7 +210,6 @@ int main(int argc, char const *argv[]) {
                 strcat(login_succeeded, OK);
                 strcat(login_succeeded, "\n");
 
-            
                 do { // user has to login before anything else
                     memset(buffer, EOS, SIZE);
                     n = tcp_read(connectfd, buffer, SIZE);
@@ -219,15 +220,15 @@ int main(int argc, char const *argv[]) {
 
                     if (parse_command(buffer, command)) {
                         if (!strcmp(command, LOGIN)) {
-                            verbose_message(verbose, "INFORM: Processing Command=%s UID=%s password=%s login\n", command, uid, password);
                             process_login_request(buffer, uid, password);
+                            verbose_message(verbose, "INFORM: Processed Command=%s UID=%s password=%s login\n", command, uid, password);
                         } else if (!strcmp(command, REQUEST)) {
-                            verbose_message(verbose, "INFORM: Request=%s could not be processed without login\n", buffer);
                             prepare_not_logged_in_message(buffer);
+                            verbose_message(verbose, "INFORM: Request=%s could not be processed without login\n", buffer);
                         }
                         else {
-                            verbose_message(verbose, "INFORM: Request=%s is invalid", buffer);
                             prepare_error_message(buffer);
+                            verbose_message(verbose, "INFORM: Request=%s is invalid", buffer);
                         } 
                     } else {
                         prepare_error_message(buffer);
@@ -253,16 +254,16 @@ int main(int argc, char const *argv[]) {
                         
                         if (parse_command(buffer, command)) {
                             if (!strcmp(command, LOGIN)) {
-                                verbose_message(verbose, "INFORM: Processing Command=%s UID=%s password=%s login\n", command, uid, password);
+                                verbose_message(verbose, "INFORM: Processed Command=%s UID=%s password=%s login\n", command, uid, password);
                                 process_login_request(buffer, uid, password);
                             } 
                             else if (!strcmp(command, REQUEST)) {
                                 process_request_request(buffer, uid, rid, fop, &vc, operation);
-                                verbose_message(verbose, "INFORM: Processing Command=%s UID=%s RID=%s Fop=%s VC=%s request\n", command, uid, rid, fop, vc);
+                                verbose_message(verbose, "INFORM: Processed Command=%s UID=%s RID=%s Fop=%s VC=%s request\n", command, uid, rid, fop, vc);
                             } 
                             else {
-                                verbose_message(verbose, "INFORM: Request=%s is invalid", buffer);
                                 prepare_error_message(buffer);
+                                verbose_message(verbose, "INFORM: Request=%s is invalid", buffer);
                             } 
                         } else {
                             prepare_error_message(buffer);
@@ -294,11 +295,11 @@ int main(int argc, char const *argv[]) {
 
                         if (parse_command(buffer, command)) {
                             if (!strcmp(command, AUTHENTICATION)) {
-                                verbose_message(verbose, "INFORM: Processing Command=%s UID=%s, RID=%s, VC=%s authentication\n", command, uid, rid, vc);
                                 process_authentication_request(buffer, uid, rid, vc, operation);
+                                verbose_message(verbose, "INFORM: Processed Command=%s UID=%s, RID=%s, VC=%s authentication\n", command, uid, rid, vc);
                             } else {
-                                verbose_message(verbose, "INFORM: Request=%s is invalid", buffer);
                                 prepare_error_message(buffer);
+                                verbose_message(verbose, "INFORM: Request=%s is invalid", buffer);
                             } 
                         } else {
                             prepare_error_message(buffer);
