@@ -27,10 +27,8 @@ int main(int argc, char const *argv[]) {
     // parses the argv arguments
     parse_arguments(argv, argc);
 
-    printf("\nPDIP=%s\n", pdip);
-    printf("PDport=%s\n", pdport);
-    printf("ASIP=%s\n", asip);
-    printf("ASport=%s\n\n", asport);
+    printf("PD is running on IP=%s Port=%s\n", pdip, pdport);
+    printf("AS is running on IP=%s Port=%s\n", asip, asport);
     
     // sets the socket
     fd = socket(AF_INET, SOCK_DGRAM, 0);
