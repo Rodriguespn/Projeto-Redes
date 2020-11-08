@@ -423,13 +423,6 @@ Boolean verify_register_response(char* buffer, int size) {
 
 // parses the arguments given on the command line
 void parse_arguments(const char* argv[], int size) {
-    if (!(pdip = (char *) malloc(sizeof(char)*strlen(argv[1])))){
-        perror("Error: allocating \"port\" buffer");
-        exit(EXIT_FAILURE);
-    }
-
-    strcpy(pdip, argv[1]);
-
     parse_pd_port(argv, size, &pdport);
     parse_as_ip(argv, size, pdip, &asip);
     parse_as_port(argv, size, &asport);
