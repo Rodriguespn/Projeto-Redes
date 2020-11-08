@@ -157,6 +157,7 @@ int main(int argc, char const *argv[]) {
                 memset(buffer, EOS, SIZE);
                 addrlen = sizeof(cliaddr);
                 n = udp_read(udpsocket, buffer, SIZE, (struct sockaddr*) &cliaddr);
+                verbose_message(verbose, "INFORM: Message received: %s\n", buffer);
 
                 char client_ip[INET_ADDRSTRLEN];
                 inet_ntop(AF_INET, &(((struct sockaddr_in *) &cliaddr) -> sin_addr), client_ip, INET_ADDRSTRLEN);
@@ -185,6 +186,7 @@ int main(int argc, char const *argv[]) {
                 }
 
                 n = udp_write(udpsocket, buffer, (struct sockaddr*) &cliaddr, sizeof(cliaddr));
+                verbose_message(verbose, "INFORM: Message sent: %s\n", buffer);
             }
             break;
         }
@@ -213,6 +215,7 @@ int main(int argc, char const *argv[]) {
                 do { // user has to login before anything else
                     memset(buffer, EOS, SIZE);
                     n = tcp_read(connectfd, buffer, SIZE);
+                    verbose_message(verbose, "INFORM: Message received: %s\n", buffer);
 
                     if (!n) { // the client has disconnected
                         continue;
@@ -235,6 +238,7 @@ int main(int argc, char const *argv[]) {
                     }
 
                     n = tcp_write(connectfd, buffer);
+                    verbose_message(verbose, "INFORM: Message sent: %s\n", buffer);
                 } while (n && strcmp(buffer, login_succeeded)); // while the socket is connected and login not succeeded
 
                 do { // after logged in, the user can make requests and authorize them
@@ -248,6 +252,7 @@ int main(int argc, char const *argv[]) {
                     do { // until the socket disconnects
                         memset(buffer, EOS, SIZE);
                         n = tcp_read(connectfd, buffer, SIZE);
+                        verbose_message(verbose, "INFORM: Message received: %s\n", buffer);
                         if (!n) { // the socket has disconnected
                             continue;
                         }
@@ -270,6 +275,7 @@ int main(int argc, char const *argv[]) {
                         }
                         
                         n = tcp_write(connectfd, buffer);
+                        verbose_message(verbose, "INFORM: Message sent: %s\n", buffer);
 
                     } while (n && strcmp(buffer, request_succeeded)); // while the socket is connected and login not succeeded
 
@@ -288,6 +294,7 @@ int main(int argc, char const *argv[]) {
                     do { // user has to login before anything else
                         memset(buffer, EOS, SIZE);
                         n = tcp_read(connectfd, buffer, SIZE);
+                        verbose_message(verbose, "INFORM: Message received: %s\n", buffer);
 
                         if (!n) { // the client has disconnected
                             continue;
@@ -306,6 +313,7 @@ int main(int argc, char const *argv[]) {
                         }
 
                         n = tcp_write(connectfd, buffer);
+                        verbose_message(verbose, "INFORM: Message sent: %s\n", buffer);
                     } while (n && (!strcmp(buffer, error_message) || !strcmp(buffer, auth_failed))); // while the socket is connected and login not succeeded
 
                 } while (n);
