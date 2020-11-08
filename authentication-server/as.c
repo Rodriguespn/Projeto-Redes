@@ -209,11 +209,15 @@ int main(int argc, char const *argv[]) {
                     if (!n) { // the client has disconnected
                         continue;
                     }
+                    printf("Message from tcp client: ");
+                    puts(buffer);
 
                     if (parse_command(buffer, command)) {
                         if (!strcmp(command, LOGIN)) {
                             process_login_request(buffer, uid, password);
+                            verbose_message(verbose, "Request %s received\nUID=%s, password=%s\n", command, uid, password);
                         } else if (!strcmp(command, REQUEST)) {
+                            verbose_message(verbose, "Request %s received\n", command);
                             prepare_not_logged_in_message(buffer);
                         }
                         else {
@@ -224,6 +228,8 @@ int main(int argc, char const *argv[]) {
                     }
 
                     n = tcp_write(connectfd, buffer);
+                    printf("Message sent to tcp client: ");
+                    puts(buffer);
                 } while (n && strcmp(buffer, login_succeeded)); // while the socket is connected and login not succeeded
 
                 do { // after logged in, the user can make requests and authorize them
@@ -237,18 +243,20 @@ int main(int argc, char const *argv[]) {
                     do { // until the socket disconnects
                         memset(buffer, EOS, SIZE);
                         n = tcp_read(connectfd, buffer, SIZE);
-                        printf("Message from tcp client: ");
-                        puts(buffer);
                         if (!n) { // the socket has disconnected
                             continue;
                         }
+                        printf("Message from tcp client: ");
+                        puts(buffer);
                         
                         if (parse_command(buffer, command)) {
                             if (!strcmp(command, LOGIN)) {
                                 process_login_request(buffer, uid, password);
+                                verbose_message(verbose, "Request %s received\nUID=%s, password=%s\n", command, uid, password);
                             } 
                             else if (!strcmp(command, REQUEST)) {
                                 process_request_request(buffer, uid, rid, fop, &vc, operation);
+                                verbose_message(verbose, "Request %s received\nUID=%s, RID=%s, Fop=%s, VC=%s\n", command, uid, rid, fop, vc);
                             } 
                             else {
                                 prepare_error_message(buffer);
@@ -282,11 +290,13 @@ int main(int argc, char const *argv[]) {
                         if (!n) { // the client has disconnected
                             continue;
                         }
+                        printf("Message from tcp client: ");
+                        puts(buffer);
 
                         if (parse_command(buffer, command)) {
                             if (!strcmp(command, AUTHENTICATION)) {
-                               
                                 process_authentication_request(buffer, uid, rid, vc, operation);
+                                verbose_message(verbose, "Request %s received\nUID=%s, RID=%s, VC=%s\n", command, uid, rid, vc);
                             } else {
                                 prepare_error_message(buffer);
                             } 
@@ -295,6 +305,8 @@ int main(int argc, char const *argv[]) {
                         }
 
                         n = tcp_write(connectfd, buffer);
+                        printf("Message sent to tcp client: ");
+                        puts(buffer);
                     } while (n && (!strcmp(buffer, error_message) || !strcmp(buffer, auth_failed))); // while the socket is connected and login not succeeded
 
                 } while (n);
@@ -522,8 +534,10 @@ void prepare_validation_pd_request(char* buffer, char* uid, char* vc, char* fop,
     strcat(buffer, vc);
     strcat(buffer, " ");
     strcat(buffer, fop);
-    strcat(buffer, " ");
-    strcat(buffer, filename);
+    if (strlen(filename) > 0) {
+        strcat(buffer, " ");
+        strcat(buffer, filename);
+    }
     strcat(buffer, "\n");
 }
 
@@ -908,7 +922,7 @@ Boolean send_vc_to_pd(char* uid, char* fop, char* filename, char** vc) {
     strcat(error_message, "\n");
 
     if (!strcmp(buffer, error_message)) {
-        fprintf(stderr, "Error: PD sent %s error message", PROTOCOL_ERROR);
+        fprintf(stderr, "Error: PD sent %s error message\n", PROTOCOL_ERROR);
         return false;
     }
 
