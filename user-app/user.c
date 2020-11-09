@@ -2,13 +2,13 @@
 
 char *asip, *asport, *fsip, *fsport;
 char login_success[SIZE];
-char req_success[SIZE]
+char req_success[SIZE];
 
 int main(int argc, char const *argv[]) {
-    int as_fd, fs_fd, errcode;
-    ssize_t n, m;
+    int as_fd, errcode;
+    ssize_t n;
     socklen_t addrlen;
-    struct addrinfo hints_as, *res_as, hints_fs, *res_fs;
+    struct addrinfo hints_as, *res_as;
     struct sockaddr_in addr;
     char buffer[SIZE];
 
@@ -46,32 +46,6 @@ int main(int argc, char const *argv[]) {
     //TCP socket
     n = connect(as_fd, res_as->ai_addr, res_as->ai_addrlen);
     if (n == ERROR) {
-        //error
-        fprintf(stderr, "Error: could not connect\n");
-        exit(EXIT_FAILURE);
-    }
-
-
-    //connection to FS
-    fs_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fs_fd == ERROR)
-        exit(EXIT_FAILURE); //error
-
-    memset(&hints_fs, 0, sizeof hints_fs);
-    hints_fs.ai_family = AF_INET;
-    hints_fs.ai_socktype = SOCK_STREAM;
-
-    errcode = getaddrinfo(fsip, fsport, &hints_fs, &res_fs);
-    if (errcode != 0) {
-        //error
-        fprintf(stderr, "Error: could not get address info\n");
-        exit(EXIT_FAILURE);
-    }
-    //TCP socket
-    //IPv4
-    //TCP socket
-    m = connect(fs_fd, res_fs->ai_addr, res_fs->ai_addrlen);
-    if (m == ERROR) {
         //error
         fprintf(stderr, "Error: could not connect\n");
         exit(EXIT_FAILURE);
@@ -122,7 +96,7 @@ int main(int argc, char const *argv[]) {
 
     while(1){
         read_stdin(buffer);
-        command = strtok(buffer, " ");
+        strcpy(command, strtok(buffer, " "));
 
         if (strcmp(command, "exit") == 0){
             break;
@@ -151,10 +125,6 @@ int main(int argc, char const *argv[]) {
 
     }
 
-   
-    freeaddrinfo(res_fs);
-    close(as_fd);
-    //close(fs_fd);
 
     exit(EXIT_SUCCESS);
 }
@@ -191,7 +161,7 @@ Boolean parse_login_message(char* buffer, char* command, char* uid, char* passwo
         return false;
     }
     else if(strcmp(token, "login")!=0){
-        fprintf("You did not login.\nDid you mean to use command 'login'?\n");
+        fprintf(stderr, "You did not login.\nDid you mean to use command 'login'?\n");
         return false;
     }
     strcpy(command, token);
@@ -371,4 +341,32 @@ void verify_command_response(char* buffer, int size) {
 
     printf("%s\n", FAILURE_MESSAGE);
     //printf("response: %s\n", buffer);
+}
+
+void socket_to_fs(){
+    ssize_t m;
+    struct addrinfo hints_fs, *res_fs;
+    int errcode, fs_fd = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (fs_fd == ERROR)
+        exit(EXIT_FAILURE); //error
+
+    memset(&hints_fs, 0, sizeof hints_fs);
+    hints_fs.ai_family = AF_INET;
+    hints_fs.ai_socktype = SOCK_STREAM;
+
+    errcode = getaddrinfo(fsip, fsport, &hints_fs, &res_fs);
+    if (errcode != 0) {
+        //error
+        fprintf(stderr, "Error: could not get address info\n");
+        exit(EXIT_FAILURE);
+    }
+    //TCP socket
+    //IPv4
+    //TCP socket
+    m = connect(fs_fd, res_fs->ai_addr, res_fs->ai_addrlen);
+    if (m == ERROR) {
+        //error
+        fprintf(stderr, "Error: could not connect\n");
+        exit(EXIT_FAILURE);
 }
