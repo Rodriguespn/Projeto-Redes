@@ -23,30 +23,35 @@ void parse_arguments(const char* argv[], int size);
 
 //TODO: alterar os prepares
 
+/*login*/
 Boolean parse_login_message(char* buffer, char* command, char* uid, char* password);
 Boolean prepare_login_request(char* request, char* command, char* uid, char* password);
 Boolean verify_login_response(char* buffer, int size);
 
+/*req*/
 Boolean parse_req(char* buffer, char* command, char* fop, char* fname);
 void prepare_req_request(char* request, char* uid, char* fop, char* fname);
 
+/*val*/
 Boolean parse_val(char* buffer, char* command, char* vc);
-void prepare_val_request(char* request, char* uid, char* password);
+void prepare_val_request(char* request, char* uid, char* rid, char* vc);
 
-Boolean parse_list(char* buffer, char* command);
-void prepare_list_request(char* request, char* uid, char* password);
+/*list*/
+void prepare_list_request(char* request, char* uid, char* tid);
 
-Boolean parse_retrieve(char* buffer, char* command, char* filename);
-void prepare_retrieve_request(char* request, char* uid, char* password);
+/*retrieve*/
+Boolean parse_retrieve_upload_delete(char* buffer, char* command, char* fname);
+void prepare_retrieve_request(char* request, char* uid, char* tid, char* fname);
 
-Boolean parse_upload(char* buffer, char* command, char* filename);
-void prepare_upload_request(char* request, char* uid, char* password);
+/*upload*/
+void prepare_upload_request(char* request, char* uid, char* tid, char* fname,
+                                char* fsize, char* data);
 
-Boolean parse_delete(char* buffer, char* command, char* filename);
-void prepare_delete_request(char* request, char* uid, char* password);
+/*delete*/
+void prepare_delete_request(char* request, char* uid, char* tid, char* fname);
 
-Boolean parse_remove(char* buffer, char* command);
-Boolean prepare_remove_request(char* request, char* uid, char* password);
+/*remove*/
+void prepare_remove_request(char* request, char* uid, char* tid);
 
 void verify_command_response(char* buffer, int size);
 

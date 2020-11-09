@@ -100,7 +100,7 @@ typedef enum { false, true } Boolean;
 // User-FS Protocol 
 #define LIST                "LST"
 #define LIS_RESPONSE        "RLS"
-#define RETRIVE             "RTV"
+#define RETRIEVE             "RTV"
 #define RET_RESPONSE        "RRT"
 #define UPLOAD              "UPL"
 #define UPL_RESPONSE        "RUP"
