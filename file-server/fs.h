@@ -27,5 +27,10 @@
 #define PD_TIMEOUT_SECS             2
 #define PD_TIMEOUT_USECS            0
 
+void usage();
+int wrong_arguments(int argc);
+void parse_arguments(const char* argv[], int size);
+Boolean parse_command(char* buffer, char* command);
+
 
 #endif /* FS_H */

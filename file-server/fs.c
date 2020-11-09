@@ -166,15 +166,20 @@ int main(int argc, char const *argv[]) {
                 n = udp_read(udpsocket, buffer, SIZE, (struct sockaddr*) &cliaddr);
 
                 char tid[TID_SIZE];
-                memset(tid, EOS, TID_SIZE); 
+                char fop[FOP_SIZE];
+                char fname[FILENAME_MAX]; 
+                memset(tid, EOS, TID_SIZE);
+                memset(fop, EOS, FOP_SIZE);
+                memset(fname, EOS, FILENAME_MAX);
 
                 if (parse_command(buffer, command)) {
                     if (!strcmp(command, VAL_FILE_RESPONSE)) {
+                        // recebe a validacao do pedido do user e executa o pedido no fs
+                        process_val_file_response(buffer, uid, tid, fop, fname);
                         verbose_message(verbose, "INFORM: Processing Command=%s UID=%s password=%s registration\n", command, uid, password);
-                        process_val_file_response(buffer, uid, password, pdip, pdport);
                     } else {
-                        verbose_message(verbose, "INFORM: Request=%s could not be processed\n", buffer);
                         prepare_error_message(buffer);
+                        verbose_message(verbose, "INFORM: Request=%s could not be processed\n", buffer);
                     } 
                 } else {
                     prepare_error_message(buffer);
@@ -199,6 +204,7 @@ int main(int argc, char const *argv[]) {
             memset(fop, EOS, FOP_SIZE);
             
             if ((childpid = fork()) == 0) {
+                // child process that will handle the conversation USER-FS
                 close(tcpsocket);
                 char login_succeeded[SIZE];
                 strcpy(login_succeeded, LOG_RESPONSE);
@@ -207,111 +213,36 @@ int main(int argc, char const *argv[]) {
                 strcat(login_succeeded, "\n");
 
             
-                do { // user has to login before anything else
-                    memset(buffer, EOS, SIZE);
-                    n = tcp_read(connectfd, buffer, SIZE);
+                memset(buffer, EOS, SIZE);
+                n = tcp_read(connectfd, buffer, SIZE);
 
-                    if (!n) { // the client has disconnected
-                        continue;
-                    }
+                if (!n) { // the client has disconnected
+                    continue;
+                }
 
-                    if (parse_command(buffer, command)) {
-                        if (!strcmp(command, LOGIN)) {
-                            verbose_message(verbose, "INFORM: Processing Command=%s UID=%s password=%s login\n", command, uid, password);
-                            process_login_request(buffer, uid, password);
-                        } else if (!strcmp(command, REQUEST)) {
-                            verbose_message(verbose, "INFORM: Request=%s could not be processed without login\n", buffer);
-                            prepare_not_logged_in_message(buffer);
-                        }
-                        else {
-                            verbose_message(verbose, "INFORM: Request=%s is invalid", buffer);
-                            prepare_error_message(buffer);
-                        } 
+                if (parse_command(buffer, command)) {
+                    if (!strcmp(command, RETRIEVE)) {
+                        process_retrieve_file_request(buffer, uid, password);
+                        verbose_message(verbose, "INFORM: Processing Command=%s UID=%s password=%s login\n", command, uid, password);
+                    } else if (!strcmp(command, UPLOAD)) {
+                        prepare_upload_file_request(buffer);
+                        verbose_message(verbose, "INFORM: Request=%s could not be processed without login\n", buffer);
+                    } else if (!strcmp(command, DELETE)) {
+                        prepare_delete_file_request(buffer);
+                        verbose_message(verbose, "INFORM: Request=%s could not be processed without login\n", buffer);
+                    } else if (!strcmp(command, REMOVE)) {
+                        prepare_not_logged_in_message(buffer);
+                        verbose_message(verbose, "INFORM: Request=%s could not be processed without login\n", buffer);
                     } else {
                         prepare_error_message(buffer);
-                    }
+                        verbose_message(verbose, "INFORM: Request=%s is invalid", buffer);
+                    } 
+                } else {
+                    prepare_error_message(buffer);
+                }
 
-                    n = tcp_write(connectfd, buffer);
-                } while (n && strcmp(buffer, login_succeeded)); // while the socket is connected and login not succeeded
-
-                do { // after logged in, the user can make requests and authorize them
-                    char operation[SIZE];
-                    char request_succeeded[SIZE];
-                    strcpy(request_succeeded, REQ_RESPONSE);
-                    strcat(request_succeeded, " ");
-                    strcat(request_succeeded, OK);
-                    strcat(request_succeeded, "\n");
-
-                    do { // until the socket disconnects
-                        memset(buffer, EOS, SIZE);
-                        n = tcp_read(connectfd, buffer, SIZE);
-                        if (!n) { // the socket has disconnected
-                            continue;
-                        }
-                        
-                        if (parse_command(buffer, command)) {
-                            if (!strcmp(command, LOGIN)) {
-                                verbose_message(verbose, "INFORM: Processing Command=%s UID=%s password=%s login\n", command, uid, password);
-                                process_login_request(buffer, uid, password);
-                            } 
-                            else if (!strcmp(command, REQUEST)) {
-                                process_request_request(buffer, uid, rid, fop, &vc, operation);
-                                verbose_message(verbose, "INFORM: Processing Command=%s UID=%s RID=%s Fop=%s VC=%s request\n", command, uid, rid, fop, vc);
-                            } 
-                            else {
-                                verbose_message(verbose, "INFORM: Request=%s is invalid", buffer);
-                                prepare_error_message(buffer);
-                            } 
-                        } else {
-                            prepare_error_message(buffer);
-                        }
-                        
-                        n = tcp_write(connectfd, buffer);
-
-                    } while (n && strcmp(buffer, request_succeeded)); // while the socket is connected and login not succeeded
-
-                    if (!n) { // the socket has disconnected
-                        continue;
-                    }
-                    char auth_failed[SIZE];
-                    strcpy(auth_failed, AUT_RESPONSE);
-                    strcat(auth_failed, " ");
-                    strcat(auth_failed, NOT_OK);
-                    strcat(auth_failed, "\n");
-
-                    char error_message[SIZE];
-                    prepare_error_message(error_message);
-
-                    do { // user has to login before anything else
-                        memset(buffer, EOS, SIZE);
-                        n = tcp_read(connectfd, buffer, SIZE);
-
-                        if (!n) { // the client has disconnected
-                            continue;
-                        }
-
-                        if (parse_command(buffer, command)) {
-                            if (!strcmp(command, AUTHENTICATION)) {
-                                verbose_message(verbose, "INFORM: Processing Command=%s UID=%s, RID=%s, VC=%s authentication\n", command, uid, rid, vc);
-                                process_authentication_request(buffer, uid, rid, vc, operation);
-                            } else {
-                                verbose_message(verbose, "INFORM: Request=%s is invalid", buffer);
-                                prepare_error_message(buffer);
-                            } 
-                        } else {
-                            prepare_error_message(buffer);
-                        }
-
-                        n = tcp_write(connectfd, buffer);
-                    } while (n && (!strcmp(buffer, error_message) || !strcmp(buffer, auth_failed))); // while the socket is connected and login not succeeded
-
-                } while (n);
-
-                verbose_message(verbose, "INFORM: Disconnected TCP connection from IP=%s Port=%u\n", client_ip, ntohs((&cliaddr) -> sin_port));    
-                close(connectfd);
-                remove_file(uid, LOGIN_FILE_PREFIX, FILE_EXTENSION);
-                exit(EXIT_SUCCESS);
-
+                n = tcp_write(connectfd, buffer);
+      
             } else if (childpid == ERROR) {
                 fprintf(stderr, "ERROR: could not create child process for tcp connection");
                 exit(EXIT_FAILURE);
@@ -329,6 +260,12 @@ int main(int argc, char const *argv[]) {
 // +------------------------------------------+
 // | Arguments Functions                      |
 // +------------------------------------------+
+
+// diplays a message with the correct usage of the file
+void usage() {
+    printf("usage: ./as [-p ASport] [-v]\n");
+    printf("example: ./as -p 58011 -v\n");
+}
 
 // returns true if the arguments given on the command line are on an invalid format, and false otherwise
 int wrong_arguments(int argc) {
