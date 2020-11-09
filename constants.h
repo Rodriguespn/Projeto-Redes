@@ -16,6 +16,7 @@ typedef enum { false, true } Boolean;
 #define VC_SIZE         5       // Size of the Validation Code
 #define FOP_SIZE        2       // Size of the File Operation
 #define TID_SIZE        5       // Size of the TID
+#define MAX_RID         10000   // Maximum combinations of RID
 
 #define LOCALHOST       "127.0.0.1"
 

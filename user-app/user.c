@@ -12,6 +12,8 @@ int main(int argc, char const *argv[]) {
     struct sockaddr_in addr;
     char buffer[SIZE];
 
+    int rid_list[MAX_RID];
+
     // checks if the number of arguments is correct
     if (wrong_arguments(argc)) {
         usage();
@@ -51,16 +53,19 @@ int main(int argc, char const *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    char command[SIZE], uid[SIZE], password[SIZE], fop[SIZE], fname[SIZE], filename[SIZE],
-        vc[SIZE];
+    char command[SIZE], uid[SIZE], password[SIZE], rid[SIZE], fop[SIZE], fname[SIZE], 
+         vc[SIZE], tid[SIZE], fsize[SIZE], data[SIZE];
+
     memset(buffer, EOS, SIZE);
     memset(command, EOS, SIZE);
     memset(uid, EOS, SIZE);
     memset(password, EOS, SIZE);
     memset(fop, EOS, SIZE);
     memset(fname, EOS, SIZE);
-    memset(filename, EOS, SIZE);
     memset(vc, EOS, SIZE);
+    memset(tid, EOS, SIZE);
+    memset(fsize, EOS, SIZE);
+    memset(data, EOS, SIZE);
     
     // writes the "registration success" message
     memset(login_success, EOS, SIZE);
@@ -102,25 +107,27 @@ int main(int argc, char const *argv[]) {
             break;
         }
         if (strcmp(command, "req") == 0){
-            parse_req(buffer, command, fop, fname);
+            if(parse_req(buffer, command, fop, fname)){
+                prepare_req_request(buffer, uid, fop, fname);
+            };
         }
         if (strcmp(command, "val") == 0){
-            parse_val(buffer, command, vc);
+            if(parse_val(buffer, command, vc));
         }
         if (strcmp(command, "list") == 0 || strcmp(command, "l") == 0){
-            parse_list(buffer, command);
+            if(parse_list(buffer, command));
         }
         if (strcmp(command, "retrieve") == 0 || strcmp(command, "r") == 0){
-            parse_retrieve(buffer, command, filename);
+            if(parse_retrieve(buffer, command, fname));
         }
         if(strcmp(command, "upload") == 0 || strcmp(command, "u") == 0){
-            parse_upload(buffer, command, filename);
+            if(parse_upload(buffer, command, fname));
         }
         if(strcmp(command, "delete") == 0 || strcmp(command, "d") == 0){
-            parse_delete(buffer, command, filename);
+            if(parse_delete(buffer, command, fname));
         }
         if(strcmp(command, "remove") == 0 || strcmp(command, "x") == 0){
-            parse_remove(buffer, command);
+            if(parse_remove(buffer, command));
         }
 
     }
@@ -150,9 +157,9 @@ void parse_arguments(const char *argv[], int size)
     parse_fs_port(argv, size, &fsport);
 }
 
-/*PARSERS*/
 
-/*parse login*/
+
+/*login*/
 Boolean parse_login_message(char* buffer, char* command, char* uid, char* password) {
     char *token = strtok(buffer, " ");
 
@@ -183,119 +190,6 @@ Boolean parse_login_message(char* buffer, char* command, char* uid, char* passwo
     return true;
 }
 
-/*parse req*/
-Boolean parse_req(char* buffer, char* command, char* fop, char* fname){
-    char *token;
-
-    if(!(token = strtok(buffer, " "))) {
-        fprintf(stderr, "Command missing!\nMust give a command\n");
-        return false;
-    }
-    strcpy(command, token);
-
-    token = strtok(NULL, " ");
-    if (!token) {
-        fprintf(stderr, "Fop missing!\nMust give a Fop\n");
-        return false;
-    }
-    strcpy(fop, token);
-
-    token = strtok(NULL, " ");
-    if (!token) {
-        fprintf(stderr, "Fname not given\nIt is not necessary\n");
-    }
-    else{
-        strcpy(fname, token);
-    }
-    
-    return true;
-}
-
-/*parse val*/
-Boolean parse_val(char* buffer, char* command, char* vc){
-    char *token;
-
-    if(!(token = strtok(buffer, " "))) {
-        fprintf(stderr, "Command missing!\nMust give a command\n");
-        return false;
-    }
-    strcpy(command, token);
-
-    token = strtok(NULL, " ");
-    if (!token) {
-        fprintf(stderr, "VC missing!\nMust give a VC\n");
-        return false;
-    }
-    strcpy(vc, token);
-
-    return true;
-}
-
-/*parse list*/
-Boolean parse_list(char* buffer, char* command){
-    char *token;
-
-    if(!(token = strtok(buffer, " "))) {
-        fprintf(stderr, "Command missing!\nMust give a command\n");
-        return false;
-    }
-    strcpy(command, token);
-
-    return true;
-}
-
-/*parse retrieve*/
-Boolean parse_retrieve(char* buffer, char* command, char* filename){
-    char *token;
-
-    if(!(token = strtok(buffer, " "))) {
-        fprintf(stderr, "Command missing!\nMust give a command\n");
-        return false;
-    }
-    strcpy(command, token);
-
-    return true;
-}
-
-/*parse upload*/
-Boolean parse_upload(char* buffer, char* command, char* filename){
-    char *token;
-
-    if(!(token = strtok(buffer, " "))) {
-        fprintf(stderr, "Command missing!\nMust give a command\n");
-        return false;
-    }
-    strcpy(command, token);
-
-    return true;
-}
-
-/*parse delete*/
-Boolean parse_delete(char* buffer, char* command, char* filename){
-    char *token;
-
-    if(!(token = strtok(buffer, " "))) {
-        fprintf(stderr, "Command missing!\nMust give a command\n");
-        return false;
-    }
-    strcpy(command, token);
-
-    return true;
-}
-
-/*parse remove*/
-Boolean parse_remove(char* buffer, char* command){
-    char *token;
-
-    if(!(token = strtok(buffer, " "))) {
-        fprintf(stderr, "Command missing!\nMust give a command\n");
-        return false;
-    }
-
-    return true;
-}
-
-/*login*/
 Boolean prepare_login_request(char* request, char* command, char* uid, char* password) {
 
     if (strcmp(command, USER_LOGIN)) {
@@ -328,6 +222,149 @@ Boolean verify_login_response(char* buffer, int size) {
     //printf("response: %s\n", buffer);
     return false;
 }
+
+/*req*/
+Boolean parse_req(char* buffer, char* command, char* fop, char* fname){
+    char *token;
+
+    if(!(token = strtok(buffer, " "))) {
+        fprintf(stderr, "Command missing!\nMust give a command\n");
+        return false;
+    }
+    strcpy(command, token);
+
+    token = strtok(NULL, " ");
+    if (!token) {
+        fprintf(stderr, "Fop missing!\nMust give a Fop\n");
+        return false;
+    }
+    strcpy(fop, token);
+
+    token = strtok(NULL, " ");
+
+    if(fop == 'L' || fop == 'X'){
+        if(token){
+            frprintf(stderr, "File operation given does not need file.\n");
+            return false;
+        }
+        else{
+            strcpy(fname, token);
+        }
+    }
+    else{
+        if(!token){
+            fprintf(stderr, "File operation give needs a file.\n");
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+void prepare_req_request(char* request, char* uid, char* fop, char* fname){
+    char rid[4];
+
+    for(int i=0; i<4; i++){
+        rid[i]=itoa(rand());
+    }
+
+    strcpy(request, REQUEST);
+    strcat(request, " ");
+    strcat(request, uid);
+    strcat(request, " ");
+    strcat(request, rid);
+    strcat(request, " ");
+    strcat(request, fop);
+    strcat(request, " ");
+    strcat(request, fname);
+    strcat(request, "\n");
+}
+
+/*val*/
+Boolean parse_val(char* buffer, char* command, char* vc){
+    char *token;
+
+    if(!(token = strtok(buffer, " "))) {
+        fprintf(stderr, "Command missing!\nMust give a command\n");
+        return false;
+    }
+    strcpy(command, token);
+
+    token = strtok(NULL, " ");
+    if (!token) {
+        fprintf(stderr, "VC missing!\nMust give a VC\n");
+        return false;
+    }
+    strcpy(vc, token);
+
+    return true;
+}
+
+/*list*/
+Boolean parse_list(char* buffer, char* command){
+    char *token;
+
+    if(!(token = strtok(buffer, " "))) {
+        fprintf(stderr, "Command missing!\nMust give a command\n");
+        return false;
+    }
+    strcpy(command, token);
+
+    return true;
+}
+
+/*retrieve*/
+Boolean parse_retrieve(char* buffer, char* command, char* filename){
+    char *token;
+
+    if(!(token = strtok(buffer, " "))) {
+        fprintf(stderr, "Command missing!\nMust give a command\n");
+        return false;
+    }
+    strcpy(command, token);
+
+    return true;
+}
+
+/*upload*/
+Boolean parse_upload(char* buffer, char* command, char* filename){
+    char *token;
+
+    if(!(token = strtok(buffer, " "))) {
+        fprintf(stderr, "Command missing!\nMust give a command\n");
+        return false;
+    }
+    strcpy(command, token);
+
+    return true;
+}
+
+/*delete*/
+Boolean parse_delete(char* buffer, char* command, char* filename){
+    char *token;
+
+    if(!(token = strtok(buffer, " "))) {
+        fprintf(stderr, "Command missing!\nMust give a command\n");
+        return false;
+    }
+    strcpy(command, token);
+
+    return true;
+}
+
+/*remove*/
+Boolean parse_remove(char* buffer, char* command){
+    char *token;
+
+    if(!(token = strtok(buffer, " "))) {
+        fprintf(stderr, "Command missing!\nMust give a command\n");
+        return false;
+    }
+
+    return true;
+}
+
+
 
 void verify_command_response(char* buffer, int size) {
     printf("response: %s\n", buffer);
@@ -369,4 +406,5 @@ void socket_to_fs(){
         //error
         fprintf(stderr, "Error: could not connect\n");
         exit(EXIT_FAILURE);
+    }
 }
