@@ -121,6 +121,7 @@ void parse_fs_port(const char* argv[], int size, char** fsport) {
     }
 }
 
+
 // parses the FSIP value, given with the FS_IP flag
 // if no ip given, sets the default value equals to DEFAULTIP
 void parse_fs_ip(const char* argv[], int size, char* defaultip, char** fsip) {
@@ -142,6 +143,26 @@ void parse_fs_ip(const char* argv[], int size, char* defaultip, char** fsip) {
                 exit(EXIT_FAILURE);
         }
         strcpy(*fsip, defaultip);
+    }
+}
+
+// parses the FSport value, given with the FS_PORT flag
+// if no port given, sets the default value of 59000+GN
+Boolean parse_verbose_flag(const char* argv[], int size) {
+    for (int i = 0; i < size; ++i) {   
+        if (!strcmp(argv[i], VERBOSE_FLAG)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void verbose_message(Boolean verbose_flag, const char* message, ... ) {
+    if (verbose_flag) {
+        va_list argptr;
+        va_start(argptr, message);
+        vfprintf(stderr, message, argptr);
+        va_end(argptr);
     }
 }
 

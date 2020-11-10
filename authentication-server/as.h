@@ -13,6 +13,7 @@
 #include <netdb.h>
 #include <signal.h> 
 #include <time.h>
+#include <dirent.h>
 #include "../constants.h"
 #include "../functions.h"
 
@@ -21,9 +22,10 @@
 #define PASSWORD_FILE_PREFIX        "_pass"
 #define REGISTRATION_FILE_PREFIX    "_reg"
 #define LOGIN_FILE_PREFIX           "_login"
-#define TID_FILE_PREFIX             "_tid"
 
 #define FILE_EXTENSION              ".txt"
+
+#define TIMEOUT                     0
 
 // Request error codes
 #define OK_CODE                     0
@@ -35,13 +37,19 @@
 #define INCORRECT_PASSWORD_ERR_CODE 6
 #define UNKNOWN_ERROR               7
 
+#define SELECT_TIMEOUT_SECS         10
+#define SELECT_TIMEOUT_USECS        0
+#define PD_TIMEOUT_SECS             2
+#define PD_TIMEOUT_USECS            0
+
 void usage();
 int wrong_arguments(int argc);
 void process_registration_request(char* buffer, char* uid, char* password, char* pdip, char* pdport);
 void process_unregistration_request(char* buffer, char* uid, char* password);
 void process_login_request(char* buffer, char* uid, char* password);
-void process_request_request(char* buffer, char* uid, char* rid, char* fop, char** vc);
-void process_authentication_request(char* buffer, char* uid, char* rid, char* vc, int* tid_number);
+void process_request_request(char* buffer, char* uid, char* rid, char* fop, char** vc, char* operation);
+void process_authentication_request(char* buffer, char* uid, char* rid, char* vc, char* operation);
+void process_fs_validation_request(char* buffer, char* uid, char* tid);
 void prepare_error_message(char* buffer);
 void prepare_ok_message(char* buffer, const char* command);
 void prepare_nok_message(char* buffer, const char* command);
@@ -52,6 +60,7 @@ void prepare_pd_error_message(char* buffer);
 void prepare_request_message(char* buffer, int code);
 void prepare_validation_pd_request(char* buffer, char* uid, char* vc, char* fop, char* filename);
 void prepare_authentication_message(char* buffer, char* tid);
+void prepare_fs_validation_message(char* buffer, char* uid, char* tid, char* fop);
 void parse_arguments(const char* argv[], int size);
 Boolean parse_command(char* buffer, char* command);
 Boolean parse_register_message(char* uid, char* password, char* pdip, char* pdport);
@@ -59,6 +68,7 @@ Boolean parse_unregister_message(char* uid, char* password);
 Boolean parse_login_message(char* uid, char* password);
 Boolean parse_request_message(char* uid, char* rid, char* fop, char*filename);
 Boolean parse_authentication_message(char* uid, char* rid, char* vc);
+Boolean parse_fs_validation_message(char* uid, char* tid);
 Boolean all_numbers(char* uid);
 Boolean valid_uid(char* uid);
 Boolean only_numbers_or_letters(char* password);
@@ -69,10 +79,13 @@ void get_user_directory(char* buffer, char *uid);
 void get_filename(char* buffer, char* uid, const char* filename, const char* file_ext);
 void generate_random_vc(char** vc);
 int register_user(char* uid, char* password, char* ip, char* port);
-Boolean unregister_user(char *uid, char *password);
-Boolean login_user(char* uid, char* password);
-int request_user(char* uid, char* fop, char* filename, char** vc);
-Boolean authenticate_user(char* uid, char* rid, char* vc, char* request_uid, char* request_rid, char* request_vc, char* tid, int* tid_number);
+int unregister_user(char *uid, char *password);
+int login_user(char* uid, char* password);
+int request_user(char* uid, char* fop, char* filename, char** vc, char* operation);
+Boolean authenticate_user(char* uid, char* rid, char* vc, char* request_uid, char* request_rid, char* request_vc, char* tid, char* request);
+Boolean validate_fop(char* uid, char* tid, char* fop);
+Boolean remove_all_files(char* dirname);
 Boolean get_user_file_path(char** path, char* uid, const char* file_name, const char* file_extension);
+Boolean remove_file(char* uid, const char* filename, const char* file_extension);
 
 #endif /* AS_H */
