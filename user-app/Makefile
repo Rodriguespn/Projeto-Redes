@@ -10,7 +10,7 @@ all:
 	$(LD) $(CFLAGS) $(LDFLAGS) -o user user.c ../functions.c
 
 run:
-	./user -n tejo.tecnico.ulisboa.pt -p 58011
+	./user -n 193.136.128.109 -p 58038
 
 clean:
 	@echo Cleaning...

@@ -7,7 +7,6 @@ typedef enum { false, true } Boolean;
 #define STDOUT          1
 #define STDERR          2
 
-
 #define EOS             '\0'    // End of String
 #define ERROR           -1      // Error code
 #define GN              38      // Group number
@@ -16,7 +15,7 @@ typedef enum { false, true } Boolean;
 #define VC_SIZE         5       // Size of the Validation Code
 #define FOP_SIZE        2       // Size of the File Operation
 #define TID_SIZE        5       // Size of the TID
-#define MAX_RID         10000   // Maximum combinations of RID
+#define RID_SIZE        5       // Maximum combinations of RID
 
 #define LOCALHOST       "127.0.0.1"
 
@@ -100,7 +99,7 @@ typedef enum { false, true } Boolean;
 // User-FS Protocol 
 #define LIST                "LST"
 #define LIS_RESPONSE        "RLS"
-#define RETRIEVE             "RTV"
+#define RETRIEVE            "RTV"
 #define RET_RESPONSE        "RRT"
 #define UPLOAD              "UPL"
 #define UPL_RESPONSE        "RUP"

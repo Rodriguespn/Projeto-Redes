@@ -13,10 +13,6 @@ int main(int argc, char const *argv[])
     //struct sockaddr_in addr;
     char buffer[SIZE];
 
-    //array for used RIDs and its length
-    int rid_list[MAX_RID];
-    int j = 0;
-
     // checks if the number of arguments is correct
     if (wrong_arguments(argc))
     {
@@ -62,13 +58,14 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    char command[SIZE], uid[SIZE], password[SIZE], rid[SIZE], fop[1], fname[SIZE],
+    char command[SIZE], uid[SIZE], password[SIZE], rid[SIZE], fop[FOP_SIZE], fname[SIZE],
         vc[SIZE], tid[SIZE], fsize[SIZE], data[SIZE];
 
     memset(buffer, EOS, SIZE);
     memset(command, EOS, SIZE);
     memset(uid, EOS, SIZE);
     memset(password, EOS, SIZE);
+    memset(rid, EOS, SIZE);
     memset(fname, EOS, SIZE);
     memset(vc, EOS, SIZE);
     memset(tid, EOS, SIZE);
@@ -102,6 +99,8 @@ int main(int argc, char const *argv[])
 
         // sends the login message to AS via tcp connection
         n = tcp_write(as_fd, buffer);
+        printf("message sent to AS = %s", buffer);
+        printf("message received from AS = %s", buffer);
 
         // receives the AS response message
         memset(buffer, EOS, SIZE);
@@ -119,14 +118,16 @@ int main(int argc, char const *argv[])
         {
             if (parse_req(buffer, fop, fname))
             {
-                prepare_req_request(buffer, uid, fop, fname, rid_list[], j);
+                prepare_req_request(buffer, uid, fop, fname, rid);
 
                 // sends the login message to AS via tcp connection
                 n = tcp_write(as_fd, buffer);
+                printf("message sent to AS = %s", buffer);
 
                 // receives the AS response message
                 memset(buffer, EOS, SIZE);
                 n = tcp_read(as_fd, buffer, SIZE);
+                printf("message received from AS = %s", buffer);
             };
         }
         if (strcmp(command, "val") == 0)
@@ -134,7 +135,7 @@ int main(int argc, char const *argv[])
             if (parse_val(buffer, vc))
             {
                 prepare_val_request(buffer, uid, rid, vc);
-                
+
                 // sends the login message to AS via tcp connection
                 n = tcp_write(as_fd, buffer);
 
@@ -178,9 +179,18 @@ int main(int argc, char const *argv[])
             prepare_remove_request(buffer, uid, tid);
             //socket FS
         }
-        if(strcmp(command, "exit") == 0){
+        if (strcmp(command, "exit") == 0)
+        {
             exit(EXIT_SUCCESS);
         }
+
+        memset(buffer, EOS, SIZE);
+        memset(command, EOS, SIZE);
+        memset(fname, EOS, SIZE);
+        memset(vc, EOS, SIZE);
+        memset(tid, EOS, SIZE);
+        memset(fsize, EOS, SIZE);
+        memset(data, EOS, SIZE);
     }
 }
 
@@ -238,6 +248,7 @@ Boolean parse_login_message(char *buffer, char *command, char *uid, char *passwo
     }
     strcpy(password, token);
 
+
     return true;
 }
 
@@ -293,17 +304,11 @@ Boolean parse_req(char *buffer, char *fop, char *fname)
     strcpy(fop, token);
 
     token = strtok(NULL, " ");
-
-    if (strcmp(fop, USER_LIST_SHORT) == 0 || strcmp(fop, USER_REMOVE_SHORT) == 0)
+    if (strcmp(fop, "L") == 0 || strcmp(fop, "X") == 0)
     {
-        if (token)
-        {
+        if(token){
             fprintf(stderr, "File operation given does not need file.\n");
             return false;
-        }
-        else
-        {
-            strcpy(fname, token);
         }
     }
     else
@@ -313,26 +318,22 @@ Boolean parse_req(char *buffer, char *fop, char *fname)
             fprintf(stderr, "File operation give needs a file.\n");
             return false;
         }
+        else
+        {
+            strcpy(fname, token);
+        }
     }
+
+    printf("fop = %s\nfname = %s\n", fop, fname);
 
     return true;
 }
 
-void prepare_req_request(char *request, char *uid, char *fop, char *fname
-                         int rid_list[], int j)
-{
-    char rid[4];
-    int rid_used = 0, random;
+void prepare_req_request(char *request, char *uid, char *fop, char *fname, char* rid)
+{   
+    generate_random_rid(rid, RID_SIZE);
 
-    for (int i = 0; i < 4; i++)
-    {
-        random = rand();
-
-        rid[i] = random + '0';
-        rid_used += random * (1000 / (i + 1));
-    }
-    rid_list[j] = rid_used;
-
+    memset(request, EOS, SIZE);
     strcpy(request, REQUEST);
     strcat(request, " ");
     strcat(request, uid);
@@ -340,9 +341,18 @@ void prepare_req_request(char *request, char *uid, char *fop, char *fname
     strcat(request, rid);
     strcat(request, " ");
     strcat(request, fop);
-    strcat(request, " ");
-    strcat(request, fname);
+    if (strlen(fname) > 0)
+    {
+        strcat(request, " ");
+        strcat(request, fname);
+    }
     strcat(request, "\n");
+
+    printf("uid = %s\n", uid);
+    printf("rid = %s\n", rid);
+    printf("fop = %s\n", fop);
+    printf("fname = %s\n", fname);
+    printf("request = %s\n", request);
 }
 
 /*val*/
@@ -509,4 +519,20 @@ void socket_to_fs()
         fprintf(stderr, "Error: could not connect\n");
         exit(EXIT_FAILURE);
     }
+}
+
+void generate_random_rid(char rid[], int size) {
+    int rid_alg, rid_number = 0;
+
+    // uses the current time as seed for random generator
+    srand(time(NULL));
+    memset(rid, EOS, size);
+    for (int i = 0; i < (size - 1); i++) {
+        rid_alg = rand() % 10;
+        rid_number = rid_number * 10 + rid_alg;
+        printf("rid_alg=%d\trid_number=%d\n", rid_alg, rid_number);
+    }
+
+    // converts the random number into a string with 4 digits
+    sprintf(rid, "%04d", rid_number);
 }

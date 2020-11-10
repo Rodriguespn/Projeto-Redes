@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <time.h>
 #include "../constants.h"
 #include "../functions.h"
 
@@ -29,8 +30,7 @@ Boolean verify_login_response(char *buffer, int size);
 
 /*req*/
 Boolean parse_req(char *buffer, char *fop, char *fname);
-void prepare_req_request(char *request, char *uid, char *fop, char *fname,
-                         int rid_list[], int j);
+void prepare_req_request(char *request, char *uid, char *fop, char *fname, char *rid);
 
 /*val*/
 Boolean parse_val(char *buffer, char *vc);
@@ -56,5 +56,6 @@ void prepare_remove_request(char *request, char *uid, char *tid);
 void verify_command_response(char *buffer, int size);
 
 void socket_to_fs();
+void generate_random_rid(char rid[], int size);
 
 #endif /* USER_H */
