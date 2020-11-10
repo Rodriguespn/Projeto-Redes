@@ -12,7 +12,6 @@
 #include "../constants.h"
 #include "../functions.h"
 
-#define RAND_MAX 9
 #define SUCCESS_MESSAGE   "Command successful."
 #define FAILURE_MESSAGE   "Command unsuccessful."
 #define SERVER_DOWN_MESSAGE     "Server disconnected."

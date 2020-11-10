@@ -22,6 +22,9 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
+    // treats the SIGINT signal
+    signal(SIGINT, handler_sigint);
+
     // parses the argv arguments
     parse_arguments(argv, argc);
 
@@ -202,9 +205,9 @@ Boolean parse_login_message(char *buffer, char *command, char *uid, char *passwo
         fprintf(stderr, "Command missing!\nMust give a command\n");
         return false;
     }
-    else if (strcmp(token, "login") != 0)
+    else if (strcmp(token, USER_LOGIN) != 0)
     {
-        fprintf(stderr, "You did not login.\nDid you mean to use command 'login'?\n");
+        fprintf(stderr, "You did not login.\nDid you mean to use command '%s'?\n", USER_LOGIN);
         return false;
     }
     strcpy(command, token);
@@ -287,7 +290,7 @@ Boolean parse_req(char *buffer, char *fop, char *fname)
 
     token = strtok(NULL, " ");
 
-    if (strcmp(fop, "l") == 0 || strcmp(fop, "x") == 0)
+    if (strcmp(fop, USER_LIST_SHORT) == 0 || strcmp(fop, USER_REMOVE_SHORT) == 0)
     {
         if (token)
         {

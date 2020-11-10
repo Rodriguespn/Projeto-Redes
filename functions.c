@@ -34,8 +34,8 @@ void parse_pd_port(const char* argv[], int size, char** pdport) {
     }
     if (!flag) {
         if (!(*pdport = (char *) malloc(sizeof(char)*5))) {
-                perror("Error: allocating \"PDport\" buffer");
-                exit(EXIT_FAILURE);
+            perror("Error: allocating \"PDport\" buffer");
+            exit(EXIT_FAILURE);
         }
 
         int port = PDPORT+GN;
@@ -61,8 +61,8 @@ void parse_as_ip(const char* argv[], int size, char* defaultip, char** asip) {
     }
     if (!flag) {
         if (!(*asip = (char *) malloc(sizeof(char)*strlen(defaultip)))) {
-                perror("Error: allocating \"PDport\" buffer");
-                exit(EXIT_FAILURE);
+            perror("Error: allocating \"PDport\" buffer");
+            exit(EXIT_FAILURE);
         }
         strcpy(*asip, defaultip);
     }
@@ -86,8 +86,8 @@ void parse_as_port(const char* argv[], int size, char** asport) {
     }
     if (!flag) {
         if (!(*asport = (char *) malloc(sizeof(char)*5))) {
-                perror("Error: allocating \"PDport\" buffer");
-                exit(EXIT_FAILURE);
+            perror("Error: allocating \"PDport\" buffer");
+            exit(EXIT_FAILURE);
         }
 
         int port = ASPORT+GN;
@@ -112,8 +112,8 @@ void parse_fs_port(const char* argv[], int size, char** fsport) {
     }
     if (!flag) {
         if (!(*fsport = (char *) malloc(sizeof(char)*5))) {
-                perror("Error: allocating \"PDport\" buffer");
-                exit(EXIT_FAILURE);
+            perror("Error: allocating \"PDport\" buffer");
+            exit(EXIT_FAILURE);
         }
 
         int port = FSPORT+GN;
