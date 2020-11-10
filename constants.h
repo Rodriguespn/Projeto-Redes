@@ -7,7 +7,6 @@ typedef enum { false, true } Boolean;
 #define STDOUT          1
 #define STDERR          2
 
-
 #define EOS             '\0'    // End of String
 #define ERROR           -1      // Error code
 #define GN              38      // Group number
@@ -19,6 +18,7 @@ typedef enum { false, true } Boolean;
 #define IP_SIZE         16      // Max. size of a ip address
 #define HOSTNAME_SIZE   24      // Max. hostname size
 #define COMMAND_SIZE    4       // Size of the command
+#define RID_SIZE        5       // Maximum combinations of RID
 
 #define LOCALHOST       "127.0.0.1"
 
@@ -102,7 +102,7 @@ typedef enum { false, true } Boolean;
 // User-FS Protocol 
 #define LIST                "LST"
 #define LIS_RESPONSE        "RLS"
-#define RETRIEVE             "RTV"
+#define RETRIEVE            "RTV"
 #define RET_RESPONSE        "RRT"
 #define UPLOAD              "UPL"
 #define UPL_RESPONSE        "RUP"
