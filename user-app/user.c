@@ -13,7 +13,9 @@ int main(int argc, char const *argv[])
     //struct sockaddr_in addr;
     char buffer[SIZE];
 
-    //int rid_list[MAX_RID];
+    //array for used RIDs and its length
+    int rid_list[MAX_RID];
+    int j = 0;
 
     // checks if the number of arguments is correct
     if (wrong_arguments(argc))
@@ -113,16 +115,18 @@ int main(int argc, char const *argv[])
         read_stdin(buffer);
         strcpy(command, strtok(buffer, " "));
 
-        if (strcmp(command, "exit") == 0)
-        {
-            break;
-        }
         if (strcmp(command, "req") == 0)
         {
             if (parse_req(buffer, fop, fname))
             {
-                prepare_req_request(buffer, uid, fop, fname);
-                //socket
+                prepare_req_request(buffer, uid, fop, fname, rid_list[], j);
+
+                // sends the login message to AS via tcp connection
+                n = tcp_write(as_fd, buffer);
+
+                // receives the AS response message
+                memset(buffer, EOS, SIZE);
+                n = tcp_read(as_fd, buffer, SIZE);
             };
         }
         if (strcmp(command, "val") == 0)
@@ -130,20 +134,26 @@ int main(int argc, char const *argv[])
             if (parse_val(buffer, vc))
             {
                 prepare_val_request(buffer, uid, rid, vc);
-                //socket
+                
+                // sends the login message to AS via tcp connection
+                n = tcp_write(as_fd, buffer);
+
+                // receives the AS response message
+                memset(buffer, EOS, SIZE);
+                n = tcp_read(as_fd, buffer, SIZE);
             }
         }
         if (strcmp(command, "list") == 0 || strcmp(command, "l") == 0)
         {
             prepare_list_request(buffer, uid, tid);
-            //socket
+            //socket FS
         }
         if (strcmp(command, "retrieve") == 0 || strcmp(command, "r") == 0)
         {
             if (parse_retrieve_upload_delete(buffer, fname))
             {
                 prepare_retrieve_request(buffer, uid, tid, fname);
-                //socket
+                //socket FS
             }
         }
         if (strcmp(command, "upload") == 0 || strcmp(command, "u") == 0)
@@ -151,7 +161,7 @@ int main(int argc, char const *argv[])
             if (parse_retrieve_upload_delete(buffer, fname))
             {
                 prepare_upload_request(buffer, uid, tid, fname, fsize, data);
-                //socket
+                //socket FS
             }
         }
         if (strcmp(command, "delete") == 0 || strcmp(command, "d") == 0)
@@ -159,14 +169,14 @@ int main(int argc, char const *argv[])
             if (parse_retrieve_upload_delete(buffer, fname))
             {
                 prepare_delete_request(buffer, uid, tid, fname);
-                //socket
+                //socket FS
             }
         }
         if (strcmp(command, "remove") == 0 || strcmp(command, "x") == 0)
         {
             printf("Programa fechado.\n");
             prepare_remove_request(buffer, uid, tid);
-            //socket
+            //socket FS
         }
         if(strcmp(command, "exit") == 0){
             exit(EXIT_SUCCESS);
@@ -274,12 +284,6 @@ Boolean parse_req(char *buffer, char *fop, char *fname)
 {
     char *token;
 
-    if (!(token = strtok(buffer, " ")))
-    {
-        fprintf(stderr, "Command missing!\nMust give a command\n");
-        return false;
-    }
-
     token = strtok(NULL, " ");
     if (!token)
     {
@@ -314,14 +318,20 @@ Boolean parse_req(char *buffer, char *fop, char *fname)
     return true;
 }
 
-void prepare_req_request(char *request, char *uid, char *fop, char *fname)
+void prepare_req_request(char *request, char *uid, char *fop, char *fname
+                         int rid_list[], int j)
 {
     char rid[4];
+    int rid_used = 0, random;
 
     for (int i = 0; i < 4; i++)
     {
-        rid[1] = rand() + '0';
+        random = rand();
+
+        rid[i] = random + '0';
+        rid_used += random * (1000 / (i + 1));
     }
+    rid_list[j] = rid_used;
 
     strcpy(request, REQUEST);
     strcat(request, " ");
@@ -339,12 +349,6 @@ void prepare_req_request(char *request, char *uid, char *fop, char *fname)
 Boolean parse_val(char *buffer, char *vc)
 {
     char *token;
-
-    if (!(token = strtok(buffer, " ")))
-    {
-        fprintf(stderr, "Command missing!\nMust give a command\n");
-        return false;
-    }
 
     token = strtok(NULL, " ");
     if (!token)
@@ -386,12 +390,6 @@ void prepare_list_request(char *request, char *uid, char *tid)
 Boolean parse_retrieve_upload_delete(char *buffer, char *fname)
 {
     char *token;
-
-    if (!(token = strtok(buffer, " ")))
-    {
-        fprintf(stderr, "Command missing!\nMust give a command\n");
-        return false;
-    }
 
     token = strtok(NULL, " ");
     if (!token)
