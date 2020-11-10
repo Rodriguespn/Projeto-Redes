@@ -4,18 +4,20 @@ char *asip, *asport, *fsip, *fsport;
 char login_success[SIZE];
 char req_success[SIZE];
 
-int main(int argc, char const *argv[]) {
+int main(int argc, char const *argv[])
+{
     int as_fd, errcode;
     ssize_t n;
-    socklen_t addrlen;
+    //socklen_t addrlen;
     struct addrinfo hints_as, *res_as;
-    struct sockaddr_in addr;
+    //struct sockaddr_in addr;
     char buffer[SIZE];
 
-    int rid_list[MAX_RID];
+    //int rid_list[MAX_RID];
 
     // checks if the number of arguments is correct
-    if (wrong_arguments(argc)) {
+    if (wrong_arguments(argc))
+    {
         usage();
         exit(EXIT_FAILURE);
     }
@@ -38,7 +40,8 @@ int main(int argc, char const *argv[]) {
     hints_as.ai_socktype = SOCK_STREAM;
 
     errcode = getaddrinfo(asip, asport, &hints_as, &res_as);
-    if (errcode != 0) {
+    if (errcode != 0)
+    {
         //error
         fprintf(stderr, "Error: could not get address info\n");
         exit(EXIT_FAILURE);
@@ -47,26 +50,26 @@ int main(int argc, char const *argv[]) {
     //IPv4
     //TCP socket
     n = connect(as_fd, res_as->ai_addr, res_as->ai_addrlen);
-    if (n == ERROR) {
+    if (n == ERROR)
+    {
         //error
         fprintf(stderr, "Error: could not connect\n");
         exit(EXIT_FAILURE);
     }
 
-    char command[SIZE], uid[SIZE], password[SIZE], rid[SIZE], fop[SIZE], fname[SIZE], 
-         vc[SIZE], tid[SIZE], fsize[SIZE], data[SIZE];
+    char command[SIZE], uid[SIZE], password[SIZE], rid[SIZE], fop[1], fname[SIZE],
+        vc[SIZE], tid[SIZE], fsize[SIZE], data[SIZE];
 
     memset(buffer, EOS, SIZE);
     memset(command, EOS, SIZE);
     memset(uid, EOS, SIZE);
     memset(password, EOS, SIZE);
-    memset(fop, EOS, SIZE);
     memset(fname, EOS, SIZE);
     memset(vc, EOS, SIZE);
     memset(tid, EOS, SIZE);
     memset(fsize, EOS, SIZE);
     memset(data, EOS, SIZE);
-    
+
     // writes the "registration success" message
     memset(login_success, EOS, SIZE);
     strcpy(login_success, LOG_RESPONSE);
@@ -74,82 +77,98 @@ int main(int argc, char const *argv[]) {
     strcat(login_success, OK);
     strcat(login_success, "\n");
 
-    do {
+    do
+    {
         // reads the stdin and checks for login command
         read_stdin(buffer);
-        if (!parse_login_message(buffer, command, uid, password)) {
+        if (!parse_login_message(buffer, command, uid, password))
+        {
             continue;
         }
 
         // if there is a login command prepares the login message to be sent
         memset(buffer, EOS, SIZE);
-        if (!prepare_login_request(buffer, command, uid, password)) {
+        if (!prepare_login_request(buffer, command, uid, password))
+        {
             continue;
         }
 
         printf("request: %s\n", buffer);
-        
+
         // sends the login message to AS via tcp connection
         n = tcp_write(as_fd, buffer);
-        
+
         // receives the AS response message
         memset(buffer, EOS, SIZE);
         n = tcp_read(as_fd, buffer, SIZE);
 
         // checks if the response is OK. If so the loop ends
-    } while(!verify_login_response(buffer, n));
+    } while (!verify_login_response(buffer, n));
 
-    while(1){
+    while (1)
+    {
         read_stdin(buffer);
         strcpy(command, strtok(buffer, " "));
 
-        if (strcmp(command, "exit") == 0){
+        if (strcmp(command, "exit") == 0)
+        {
             break;
         }
-        if (strcmp(command, "req") == 0){
-            if(parse_req(buffer, command, fop, fname)){
+        if (strcmp(command, "req") == 0)
+        {
+            if (parse_req(buffer, fop, fname))
+            {
                 prepare_req_request(buffer, uid, fop, fname);
                 //socket
             };
         }
-        if (strcmp(command, "val") == 0){
-            if(parse_val(buffer, command, vc)){
-                void prepare_val_request(buffer, uid, rid, vc);
+        if (strcmp(command, "val") == 0)
+        {
+            if (parse_val(buffer, vc))
+            {
+                prepare_val_request(buffer, uid, rid, vc);
                 //socket
             }
         }
-        if (strcmp(command, "list") == 0 || strcmp(command, "l") == 0){
-            void prepare_list_request(buffer, uid, tid);
+        if (strcmp(command, "list") == 0 || strcmp(command, "l") == 0)
+        {
+            prepare_list_request(buffer, uid, tid);
             //socket
-            
         }
-        if (strcmp(command, "retrieve") == 0 || strcmp(command, "r") == 0){
-            if(parse_retrieve_upload_delete(buffer, command, fname)){
+        if (strcmp(command, "retrieve") == 0 || strcmp(command, "r") == 0)
+        {
+            if (parse_retrieve_upload_delete(buffer, fname))
+            {
                 prepare_retrieve_request(buffer, uid, tid, fname);
                 //socket
             }
         }
-        if(strcmp(command, "upload") == 0 || strcmp(command, "u") == 0){
-            if(parse_retrieve_upload_delete(buffer, command, fname)){
-                void prepare_upload_request(buffer, uid, tid, fname, fsize, data);
+        if (strcmp(command, "upload") == 0 || strcmp(command, "u") == 0)
+        {
+            if (parse_retrieve_upload_delete(buffer, fname))
+            {
+                prepare_upload_request(buffer, uid, tid, fname, fsize, data);
                 //socket
             }
         }
-        if(strcmp(command, "delete") == 0 || strcmp(command, "d") == 0){
-            if(parse_retrieve_upload_delete(buffer, command, fname)){
-                void prepare_delete_request(buffer, uid, tid, fname);
+        if (strcmp(command, "delete") == 0 || strcmp(command, "d") == 0)
+        {
+            if (parse_retrieve_upload_delete(buffer, fname))
+            {
+                prepare_delete_request(buffer, uid, tid, fname);
                 //socket
             }
         }
-        if(strcmp(command, "remove") == 0 || strcmp(command, "x") == 0){
-            void prepare_remove_request(buffer, uid, tid);
+        if (strcmp(command, "remove") == 0 || strcmp(command, "x") == 0)
+        {
+            printf("Programa fechado.\n");
+            prepare_remove_request(buffer, uid, tid);
             //socket
         }
-
+        if(strcmp(command, "exit") == 0){
+            exit(EXIT_SUCCESS);
+        }
     }
-
-
-    exit(EXIT_SUCCESS);
 }
 
 void usage()
@@ -173,31 +192,34 @@ void parse_arguments(const char *argv[], int size)
     parse_fs_port(argv, size, &fsport);
 }
 
-
-
 /*login*/
-Boolean parse_login_message(char* buffer, char* command, char* uid, char* password) {
+Boolean parse_login_message(char *buffer, char *command, char *uid, char *password)
+{
     char *token = strtok(buffer, " ");
 
-    if(!token) {
+    if (!token)
+    {
         fprintf(stderr, "Command missing!\nMust give a command\n");
         return false;
     }
-    else if(strcmp(token, "login")!=0){
+    else if (strcmp(token, "login") != 0)
+    {
         fprintf(stderr, "You did not login.\nDid you mean to use command 'login'?\n");
         return false;
     }
     strcpy(command, token);
 
     token = strtok(NULL, " ");
-    if (!token) {
+    if (!token)
+    {
         fprintf(stderr, "UID missing!\nMust give a UID\n");
         return false;
     }
     strcpy(uid, token);
 
     token = strtok(NULL, " ");
-    if (!token) {
+    if (!token)
+    {
         fprintf(stderr, "Password missing!\nMust give a password\n");
         return false;
     }
@@ -206,9 +228,11 @@ Boolean parse_login_message(char* buffer, char* command, char* uid, char* passwo
     return true;
 }
 
-Boolean prepare_login_request(char* request, char* command, char* uid, char* password) {
+Boolean prepare_login_request(char *request, char *command, char *uid, char *password)
+{
 
-    if (strcmp(command, USER_LOGIN)) {
+    if (strcmp(command, USER_LOGIN))
+    {
         return false;
     }
 
@@ -222,34 +246,40 @@ Boolean prepare_login_request(char* request, char* command, char* uid, char* pas
     return true;
 }
 
-Boolean verify_login_response(char* buffer, int size) {
+Boolean verify_login_response(char *buffer, int size)
+{
     printf("response: %s\n", buffer);
-    if (!size) {
-        printf("%s\n", SERVER_DOWN_MESSAGE);
+    if (!size)
+    {
+        printf("%s\n\n", SERVER_DOWN_MESSAGE);
         return false;
     }
 
-    if (!strcmp(buffer, login_success)) {
-        printf("%s\n", SUCCESS_MESSAGE);
+    if (!strcmp(buffer, login_success))
+    {
+        printf("%s\n\n", SUCCESS_MESSAGE);
         return true;
     }
 
-    printf("%s\n", FAILURE_MESSAGE);
+    printf("%s\n\n", FAILURE_MESSAGE);
     //printf("response: %s\n", buffer);
     return false;
 }
 
 /*req*/
-Boolean parse_req(char* buffer, char* command, char* fop, char* fname){
+Boolean parse_req(char *buffer, char *fop, char *fname)
+{
     char *token;
 
-    if(!(token = strtok(buffer, " "))) {
+    if (!(token = strtok(buffer, " ")))
+    {
         fprintf(stderr, "Command missing!\nMust give a command\n");
         return false;
     }
 
     token = strtok(NULL, " ");
-    if (!token) {
+    if (!token)
+    {
         fprintf(stderr, "Fop missing!\nMust give a Fop\n");
         return false;
     }
@@ -257,30 +287,37 @@ Boolean parse_req(char* buffer, char* command, char* fop, char* fname){
 
     token = strtok(NULL, " ");
 
-    if(fop == 'L' || fop == 'X'){
-        if(token){
-            frprintf(stderr, "File operation given does not need file.\n");
+    if (strcmp(fop, "l") == 0 || strcmp(fop, "x") == 0)
+    {
+        if (token)
+        {
+            fprintf(stderr, "File operation given does not need file.\n");
             return false;
         }
-        else{
+        else
+        {
             strcpy(fname, token);
         }
     }
-    else{
-        if(!token){
+    else
+    {
+        if (!token)
+        {
             fprintf(stderr, "File operation give needs a file.\n");
             return false;
         }
     }
-    
+
     return true;
 }
 
-void prepare_req_request(char* request, char* uid, char* fop, char* fname){
+void prepare_req_request(char *request, char *uid, char *fop, char *fname)
+{
     char rid[4];
 
-    for(int i=0; i<4; i++){
-        rid[i]=itoa(rand());
+    for (int i = 0; i < 4; i++)
+    {
+        rid[1] = rand() + '0';
     }
 
     strcpy(request, REQUEST);
@@ -296,16 +333,19 @@ void prepare_req_request(char* request, char* uid, char* fop, char* fname){
 }
 
 /*val*/
-Boolean parse_val(char* buffer, char* command, char* vc){
+Boolean parse_val(char *buffer, char *vc)
+{
     char *token;
 
-    if(!(token = strtok(buffer, " "))) {
+    if (!(token = strtok(buffer, " ")))
+    {
         fprintf(stderr, "Command missing!\nMust give a command\n");
         return false;
     }
 
     token = strtok(NULL, " ");
-    if (!token) {
+    if (!token)
+    {
         fprintf(stderr, "VC missing!\nMust give a VC\n");
         return false;
     }
@@ -314,7 +354,8 @@ Boolean parse_val(char* buffer, char* command, char* vc){
     return true;
 }
 
-void prepare_val_request(char* request, char* uid, char* rid, char* vc){
+void prepare_val_request(char *request, char *uid, char *rid, char *vc)
+{
     strcpy(request, AUTHENTICATION);
     strcat(request, " ");
     strcat(request, uid);
@@ -328,7 +369,8 @@ void prepare_val_request(char* request, char* uid, char* rid, char* vc){
 /*list*/
 //nao precisa de parser
 
-void prepare_list_request(char* request, char* uid, char* tid){
+void prepare_list_request(char *request, char *uid, char *tid)
+{
     strcpy(request, LIST);
     strcat(request, " ");
     strcat(request, uid);
@@ -337,18 +379,20 @@ void prepare_list_request(char* request, char* uid, char* tid){
     strcat(request, "\n");
 }
 
-
 /*retrieve*/
-Boolean parse_retrieve_upload_delete(char* buffer, char* command, char* fname){
+Boolean parse_retrieve_upload_delete(char *buffer, char *fname)
+{
     char *token;
 
-    if(!(token = strtok(buffer, " "))) {
+    if (!(token = strtok(buffer, " ")))
+    {
         fprintf(stderr, "Command missing!\nMust give a command\n");
         return false;
     }
 
     token = strtok(NULL, " ");
-    if (!token) {
+    if (!token)
+    {
         fprintf(stderr, "UID missing!\nMust give a UID\n");
         return false;
     }
@@ -357,7 +401,8 @@ Boolean parse_retrieve_upload_delete(char* buffer, char* command, char* fname){
     return true;
 }
 
-void prepare_retrieve_request(char* request, char* uid, char* tid, char* fname){
+void prepare_retrieve_request(char *request, char *uid, char *tid, char *fname)
+{
     strcpy(request, RETRIEVE);
     strcat(request, " ");
     strcat(request, uid);
@@ -370,8 +415,9 @@ void prepare_retrieve_request(char* request, char* uid, char* tid, char* fname){
 
 /*upload*/
 //usa parser do retrieve
-void prepare_upload_request(char* request, char* uid, char* tid, char* fname,
-                                char* fsize, char* data){
+void prepare_upload_request(char *request, char *uid, char *tid, char *fname,
+                            char *fsize, char *data)
+{
     strcpy(request, UPLOAD);
     strcat(request, " ");
     strcat(request, uid);
@@ -388,7 +434,8 @@ void prepare_upload_request(char* request, char* uid, char* tid, char* fname,
 
 /*delete*/
 //usa parser do retrieve
-void prepare_delete_request(char* request, char* uid, char* tid, char* fname){
+void prepare_delete_request(char *request, char *uid, char *tid, char *fname)
+{
     strcpy(request, DELETE);
     strcat(request, " ");
     strcat(request, uid);
@@ -399,10 +446,10 @@ void prepare_delete_request(char* request, char* uid, char* tid, char* fname){
     strcat(request, "\n");
 }
 
-
 /*remove*/
 //nao precisa de parser
-void prepare_remove_request(char* request, char* uid, char* tid){
+void prepare_remove_request(char *request, char *uid, char *tid)
+{
     strcpy(request, REMOVE);
     strcat(request, " ");
     strcat(request, uid);
@@ -414,15 +461,16 @@ void prepare_remove_request(char* request, char* uid, char* tid){
 /*exit*/
 //nao precisa de nada
 
-
-
-void verify_command_response(char* buffer, int size) {
+void verify_command_response(char *buffer, int size)
+{
     printf("response: %s\n", buffer);
-    if (!size) {
+    if (!size)
+    {
         printf("%s\n", SERVER_DOWN_MESSAGE);
     }
 
-    if (!strcmp(buffer, req_success)) {
+    if (!strcmp(buffer, req_success))
+    {
         printf("%s\n", SUCCESS_MESSAGE);
     }
 
@@ -430,7 +478,8 @@ void verify_command_response(char* buffer, int size) {
     //printf("response: %s\n", buffer);
 }
 
-void socket_to_fs(){
+void socket_to_fs()
+{
     ssize_t m;
     struct addrinfo hints_fs, *res_fs;
     int errcode, fs_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -443,7 +492,8 @@ void socket_to_fs(){
     hints_fs.ai_socktype = SOCK_STREAM;
 
     errcode = getaddrinfo(fsip, fsport, &hints_fs, &res_fs);
-    if (errcode != 0) {
+    if (errcode != 0)
+    {
         //error
         fprintf(stderr, "Error: could not get address info\n");
         exit(EXIT_FAILURE);
@@ -452,7 +502,8 @@ void socket_to_fs(){
     //IPv4
     //TCP socket
     m = connect(fs_fd, res_fs->ai_addr, res_fs->ai_addrlen);
-    if (m == ERROR) {
+    if (m == ERROR)
+    {
         //error
         fprintf(stderr, "Error: could not connect\n");
         exit(EXIT_FAILURE);
