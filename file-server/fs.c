@@ -146,108 +146,109 @@ int main(int argc, char const *argv[]) {
         out_fds = select(FD_SETSIZE, &testfds, (fd_set*) NULL,(fd_set*) NULL, &timeout);
 
         switch (out_fds) {
-        case TIMEOUT:
-            break;
+            case TIMEOUT:
+                break;
         
-        case ERROR:
-            // error
-            fprintf(stderr, "ERROR: select returned %d error code\n", ERROR);
-            exit(EXIT_FAILURE);
-            break;
-
-        default:
-            //  if udp socket is ready to listen
-            if (FD_ISSET(udpsocket, &testfds)) {
-                char client_ip[INET_ADDRSTRLEN];
-                inet_ntop(AF_INET, &(((struct sockaddr_in *) &cliaddr) -> sin_addr), client_ip, INET_ADDRSTRLEN);
-                verbose_message(verbose, "\nINFORM: Received UDP connection from IP=%s Port=%u\n", client_ip, ntohs((&cliaddr) -> sin_port));
-                memset(buffer, EOS, SIZE);
-                addrlen = sizeof(cliaddr);
-                n = udp_read(udpsocket, buffer, SIZE, (struct sockaddr*) &cliaddr);
-
-                char tid[TID_SIZE];
-                char fop[FOP_SIZE];
-                char fname[FILENAME_MAX]; 
-                memset(tid, EOS, TID_SIZE);
-                memset(fop, EOS, FOP_SIZE);
-                memset(fname, EOS, FILENAME_MAX);
-
-                if (parse_command(buffer, command)) {
-                    if (!strcmp(command, VAL_FILE_RESPONSE)) {
-                        // recebe a validacao do pedido do user e executa o pedido no fs
-                        process_val_file_response(buffer, uid, tid, fop, fname);
-                        verbose_message(verbose, "INFORM: Processing Command=%s UID=%s password=%s registration\n", command, uid, password);
-                    } else {
-                        prepare_error_message(buffer);
-                        verbose_message(verbose, "INFORM: Request=%s could not be processed\n", buffer);
-                    } 
-                } else {
-                    prepare_error_message(buffer);
-                    verbose_message(verbose, "ERROR: Request=%s with wrong format\n", buffer);
-                }
-
-                n = udp_write(udpsocket, buffer, (struct sockaddr*) &cliaddr, sizeof(cliaddr));
-            }
-            break;
-        }
-
-        //  if tcp socket is ready to listen
-        if (FD_ISSET(tcpsocket, &testfds)) {
-            connectfd = accept(tcpsocket, (struct sockaddr*) &cliaddr, &addrlen);
-            char client_ip[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET, &(((struct sockaddr_in *) &cliaddr) -> sin_addr), client_ip, INET_ADDRSTRLEN);
-            verbose_message(verbose, "\nINFORM: Received TCP connection from IP=%s Port=%u\n", client_ip, ntohs((&cliaddr) -> sin_port));    
-            addrlen = sizeof(cliaddr);
-            char rid[TID_SIZE], fop[FOP_SIZE], *vc = NULL;
-
-            memset(rid, EOS, TID_SIZE);
-            memset(fop, EOS, FOP_SIZE);
-            
-            if ((childpid = fork()) == 0) {
-                // child process that will handle the conversation USER-FS
-                close(tcpsocket);
-                char login_succeeded[SIZE];
-                strcpy(login_succeeded, LOG_RESPONSE);
-                strcat(login_succeeded, " ");
-                strcat(login_succeeded, OK);
-                strcat(login_succeeded, "\n");
-
-            
-                memset(buffer, EOS, SIZE);
-                n = tcp_read(connectfd, buffer, SIZE);
-
-                if (!n) { // the client has disconnected
-                    continue;
-                }
-
-                if (parse_command(buffer, command)) {
-                    if (!strcmp(command, RETRIEVE)) {
-                        process_retrieve_file_request(buffer, uid, password);
-                        verbose_message(verbose, "INFORM: Processing Command=%s UID=%s password=%s login\n", command, uid, password);
-                    } else if (!strcmp(command, UPLOAD)) {
-                        prepare_upload_file_request(buffer);
-                        verbose_message(verbose, "INFORM: Request=%s could not be processed without login\n", buffer);
-                    } else if (!strcmp(command, DELETE)) {
-                        prepare_delete_file_request(buffer);
-                        verbose_message(verbose, "INFORM: Request=%s could not be processed without login\n", buffer);
-                    } else if (!strcmp(command, REMOVE)) {
-                        prepare_not_logged_in_message(buffer);
-                        verbose_message(verbose, "INFORM: Request=%s could not be processed without login\n", buffer);
-                    } else {
-                        prepare_error_message(buffer);
-                        verbose_message(verbose, "INFORM: Request=%s is invalid", buffer);
-                    } 
-                } else {
-                    prepare_error_message(buffer);
-                }
-
-                n = tcp_write(connectfd, buffer);
-      
-            } else if (childpid == ERROR) {
-                fprintf(stderr, "ERROR: could not create child process for tcp connection");
+            case ERROR:
+                // error
+                fprintf(stderr, "ERROR: select returned %d error code\n", ERROR);
                 exit(EXIT_FAILURE);
-            }
-            close(connectfd);
+                break;
+
+            default:
+                //  if udp socket is ready to listen
+                if (FD_ISSET(udpsocket, &testfds)) {
+                    char client_ip[INET_ADDRSTRLEN];
+                    inet_ntop(AF_INET, &(((struct sockaddr_in *) &cliaddr) -> sin_addr), client_ip, INET_ADDRSTRLEN);
+                    verbose_message(verbose, "\nINFORM: Received UDP connection from IP=%s Port=%u\n", client_ip, ntohs((&cliaddr) -> sin_port));
+                    memset(buffer, EOS, SIZE);
+                    addrlen = sizeof(cliaddr);
+                    n = udp_read(udpsocket, buffer, SIZE, (struct sockaddr*) &cliaddr);
+
+                    char tid[TID_SIZE];
+                    char fop[FOP_SIZE];
+                    char fname[FILENAME_MAX]; 
+                    memset(tid, EOS, TID_SIZE);
+                    memset(fop, EOS, FOP_SIZE);
+                    memset(fname, EOS, FILENAME_MAX);
+
+                    if (parse_command(buffer, command)) {
+                        if (!strcmp(command, VAL_FILE_RESPONSE)) {
+                            // recebe a validacao do pedido do user e executa o pedido no fs
+                            process_val_file_response(buffer, uid, tid, fop, fname);
+                            verbose_message(verbose, "INFORM: Processing Command=%s UID=%s password=%s registration\n", command, uid, password);
+                        } else {
+                            prepare_error_message(buffer);
+                            verbose_message(verbose, "INFORM: Request=%s could not be processed\n", buffer);
+                        } 
+                    } else {
+                        prepare_error_message(buffer);
+                        verbose_message(verbose, "ERROR: Request=%s with wrong format\n", buffer);
+                    }
+
+                    n = udp_write(udpsocket, buffer, (struct sockaddr*) &cliaddr, sizeof(cliaddr));
+                }
+             
+
+                //  if tcp socket is ready to listen
+                if (FD_ISSET(tcpsocket, &testfds)) {
+                    connectfd = accept(tcpsocket, (struct sockaddr*) &cliaddr, &addrlen);
+                    char client_ip[INET_ADDRSTRLEN];
+                    inet_ntop(AF_INET, &(((struct sockaddr_in *) &cliaddr) -> sin_addr), client_ip, INET_ADDRSTRLEN);
+                    verbose_message(verbose, "\nINFORM: Received TCP connection from IP=%s Port=%u\n", client_ip, ntohs((&cliaddr) -> sin_port));    
+                    addrlen = sizeof(cliaddr);
+                    char rid[TID_SIZE], fop[FOP_SIZE], *vc = NULL;
+
+                    memset(rid, EOS, TID_SIZE);
+                    memset(fop, EOS, FOP_SIZE);
+                    
+                    if ((childpid = fork()) == 0) {
+                        // child process that will handle the conversation USER-FS
+                        close(tcpsocket);
+                        char login_succeeded[SIZE];
+                        strcpy(login_succeeded, LOG_RESPONSE);
+                        strcat(login_succeeded, " ");
+                        strcat(login_succeeded, OK);
+                        strcat(login_succeeded, "\n");
+
+                    
+                        memset(buffer, EOS, SIZE);
+                        n = tcp_read(connectfd, buffer, SIZE);
+
+                        if (!n) { // the client has disconnected
+                            continue;
+                        }
+
+                        if (parse_command(buffer, command)) {
+                            if (!strcmp(command, RETRIEVE)) {
+                                process_retrieve_file_request(buffer, uid, password);
+                                verbose_message(verbose, "INFORM: Processing Command=%s UID=%s password=%s login\n", command, uid, password);
+                            } else if (!strcmp(command, UPLOAD)) {
+                                process_upload_file_request(buffer);
+                                verbose_message(verbose, "INFORM: Request=%s could not be processed without login\n", buffer);
+                            } else if (!strcmp(command, DELETE)) {
+                                process_delete_file_request(buffer);
+                                verbose_message(verbose, "INFORM: Request=%s could not be processed without login\n", buffer);
+                            } else if (!strcmp(command, REMOVE)) {
+                                process_not_logged_in_message(buffer);
+                                verbose_message(verbose, "INFORM: Request=%s could not be processed without login\n", buffer);
+                            } else {
+                                prepare_error_message(buffer);
+                                verbose_message(verbose, "INFORM: Request=%s is invalid", buffer);
+                            } 
+                        } else {
+                            prepare_error_message(buffer);
+                        }
+
+                        n = tcp_write(connectfd, buffer);
+            
+                    } else if (childpid == ERROR) {
+                        fprintf(stderr, "ERROR: could not create child process for tcp connection");
+                        exit(EXIT_FAILURE);
+                    }
+                    close(connectfd);
+                }
+            break;
         }
     }
 
