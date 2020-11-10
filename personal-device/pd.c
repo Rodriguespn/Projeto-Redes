@@ -27,10 +27,8 @@ int main(int argc, char const *argv[]) {
     // parses the argv arguments
     parse_arguments(argv, argc);
 
-    printf("\nPDIP=%s\n", pdip);
-    printf("PDport=%s\n", pdport);
-    printf("ASIP=%s\n", asip);
-    printf("ASport=%s\n\n", asport);
+    printf("PD is running on IP=%s Port=%s\n", pdip, pdport);
+    printf("AS is running on IP=%s Port=%s\n", asip, asport);
     
     // sets the socket
     fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -425,13 +423,6 @@ Boolean verify_register_response(char* buffer, int size) {
 
 // parses the arguments given on the command line
 void parse_arguments(const char* argv[], int size) {
-    if (!(pdip = (char *) malloc(sizeof(char)*strlen(argv[1])))){
-        perror("Error: allocating \"port\" buffer");
-        exit(EXIT_FAILURE);
-    }
-
-    strcpy(pdip, argv[1]);
-
     parse_pd_port(argv, size, &pdport);
     parse_as_ip(argv, size, pdip, &asip);
     parse_as_port(argv, size, &asport);
