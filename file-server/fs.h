@@ -11,9 +11,10 @@
 #include <errno.h>
 #include "../constants.h"
 #include "../functions.h"
+#include <dirent.h>
 
 #define MAIN_DIR_NAME       "USERS/"    // Main directory name
-#define USER_DIR_NAME       "UID"       // User directory name (inside main directory name)
+#define MAIN_DIR_NAME_SIZE  6
 
 #define FILENAME_SIZE       24          // Max. filename size
 #define USERS_DIR_SIZE      15          // Max. files per user
