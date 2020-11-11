@@ -41,7 +41,7 @@ int main(int argc, char const *argv[])
     fs_port = parse_argument_int(argc, argv, FS_PORT_FLAG, FSPORT+GN);
     as_port = parse_argument_int(argc, argv, AS_PORT_FLAG, ASPORT+GN);
     verbose = parse_argument_flag(argc, argv, VERBOSE_FLAG);
-    parse_argument_string(argc, argv, AS_IP_FLAG, fs_ip, as_ip);
+    parse_argument_string(argc, argv, AS_IP_FLAG, LOCALHOST, as_ip);
     
     // Define TCP socket variables (Communication with User)
     struct sockaddr_in tcp_servaddr;
