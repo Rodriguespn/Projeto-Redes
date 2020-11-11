@@ -22,10 +22,10 @@ int main(int argc, char const *argv[]) {
     // parses the argv arguments
     parse_arguments(argv, argc);
 
-    printf("ASIP=%s\n", asip);
-    printf("ASport=%s\n", asport);
+    printf("FSIP=%s\n", asip);
+    printf("FSport=%s\n", asport);
 
-    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd == ERROR) {
         //error
         fprintf(stderr, "Error: socket returned null\n");
@@ -66,14 +66,14 @@ int main(int argc, char const *argv[]) {
         memset(buffer, EOS, SIZE);
         read_stdin(buffer);
 
-        n = udp_write(fd, buffer, res -> ai_addr, res -> ai_addrlen);
+        n = tcp_write(fd, buffer);
 
         printf("request: %s\n", buffer);
 
         if (!n) continue;
         
         memset(buffer, EOS, SIZE);
-        n = udp_read(fd, buffer, SIZE,  (struct sockaddr*) &addr);
+        n = tcp_read(fd, buffer, SIZE);
 
         printf("response: %s\n", buffer);
     } while (n); //strcmp(buffer, unregistration_success));
@@ -88,6 +88,6 @@ int main(int argc, char const *argv[]) {
 
 // parses the arguments given on the command line
 void parse_arguments(const char *argv[], int size) {
-    parse_as_ip(argv, size, LOCALHOST, &asip);
-    parse_as_port(argv, size, &asport);
+    parse_fs_ip(argv, size, LOCALHOST, &asip);
+    parse_fs_port(argv, size, &asport);
 }

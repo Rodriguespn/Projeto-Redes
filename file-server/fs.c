@@ -44,6 +44,7 @@ int main(int argc, char const *argv[])
     parse_argument_string(argc, argv, AS_IP_FLAG, fs_ip, as_ip);
     
     // Define TCP socket variables (Communication with User)
+    struct addrinfo hints, *res;
     struct sockaddr_in tcp_servaddr;
 
     // Create TCP socket
@@ -59,9 +60,26 @@ int main(int argc, char const *argv[])
     tcp_servaddr.sin_family = AF_INET; 
     tcp_servaddr.sin_addr.s_addr = inet_addr(fs_ip); 
     tcp_servaddr.sin_port = fs_port; 
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+
+    char fs_port_char[SIZE];
+    bzero(fs_port_char, SIZE);
+    sprintf(fs_port_char, "%d", fs_port);
+
+    int errcode = getaddrinfo(NULL, fs_port_char, &hints, &res);
+    if (errcode != 0) {
+        // error
+        fprintf(stderr, "ERROR: tcp socket getaddrinfo returned %d error code\n", errcode);
+        exit(EXIT_FAILURE); 
+    } 
   
     // Bind TCP socket to the assigned IP address and Port 
-    if ((bind(tcp_sockfd, (struct sockaddr*) &tcp_servaddr, sizeof(tcp_servaddr))) != 0)
+    // (bind(tcp_sockfd, (struct sockaddr*) &tcp_servaddr, sizeof(tcp_servaddr))
+    if ((bind(tcp_sockfd, res -> ai_addr, res -> ai_addrlen)) != 0)
     { 
         fprintf(stderr, "Unable to bind the tcp socket.\n");
         exit(EXIT_FAILURE);  
