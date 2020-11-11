@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include "../constants.h"
 #include "../functions.h"
@@ -26,6 +27,17 @@ Boolean wrong_arguments(int argc);
 void parse_argument_string(int argc, char const* argv[], char* flag, char* default_buffer, char* argument_buffer);
 int parse_argument_int(int argc, char const* argv[], char* flag, int default_int);
 Boolean parse_argument_flag(int argc, char const* argv[], char* flag);
+
+// Directory functions
+Boolean make_main_directory();
+Boolean find_user_directory(char* uid);
+Boolean make_user_directory(char* uid);
+Boolean find_user_filename(char* uid, char* filename);
+Boolean reached_user_file_limit(char* uid, int max);
+Boolean create_user_file(char* uid, char* filename, char* data);
+Boolean delete_user_file(char* uid, char* filename);
+Boolean remove_user_dir(char* uid);
+
 
 // Internet Functions
 void get_localhost_info(char* hostname_buffer, char* ip_buffer);

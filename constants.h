@@ -19,6 +19,7 @@ typedef enum { false, true } Boolean;
 #define HOSTNAME_SIZE   24      // Max. hostname size
 #define COMMAND_SIZE    4       // Size of the command
 #define RID_SIZE        5       // Maximum combinations of RID
+#define TID_ERROR       "0"     // TID when authentication fails
 #define STATUS_SIZE     5       // Max. status size
 
 #define LOCALHOST       "127.0.0.1"
@@ -77,6 +78,8 @@ typedef enum { false, true } Boolean;
 #define PD_NOT_AVAILABLE    "EPD"
 #define INVALID_UID         "EUSER"
 #define INVALID_FOP         "EFOP"
+#define DUPLICATED_FILE     "DUP"
+#define LIMIT_FILES_REACHED "FULL"
 
 // PD-AS Protocol
 #define REGISTRATION        "REG"
@@ -93,6 +96,7 @@ typedef enum { false, true } Boolean;
 #define REQ_RESPONSE        "RRQ"
 #define AUTHENTICATION      "AUT"
 #define AUT_RESPONSE        "RAU"
+#define FILE_UNAVAILABLE    "EOF"
 
 // FS-AS Protocol 
 #define VALIDATE_FILE       "VLD"

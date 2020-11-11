@@ -6,12 +6,15 @@ char req_success[SIZE];
 
 int main(int argc, char const *argv[])
 {
-    int as_fd, errcode;
+    //User-AS variables
+    int as_fd, errcode_as;
     ssize_t n;
-    //socklen_t addrlen;
     struct addrinfo hints_as, *res_as;
-    //struct sockaddr_in addr;
-    char buffer[SIZE];
+
+    //User-FS variables
+    int fs_fd, errcode_fs;
+    ssize_t m;
+    struct addrinfo hints_fs, *res_fs;
 
     // checks if the number of arguments is correct
     if (wrong_arguments(argc))
@@ -40,8 +43,8 @@ int main(int argc, char const *argv[])
     hints_as.ai_family = AF_INET;
     hints_as.ai_socktype = SOCK_STREAM;
 
-    errcode = getaddrinfo(asip, asport, &hints_as, &res_as);
-    if (errcode != 0)
+    errcode_as = getaddrinfo(asip, asport, &hints_as, &res_as);
+    if (errcode_as != 0)
     {
         //error
         fprintf(stderr, "Error: could not get address info\n");
@@ -58,8 +61,8 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    char command[SIZE], uid[SIZE], password[SIZE], rid[SIZE], fop[FOP_SIZE], fname[SIZE],
-        vc[SIZE], tid[SIZE], fsize[SIZE], data[SIZE];
+    char buffer[SIZE], command[SIZE], uid[SIZE], password[SIZE], rid[SIZE],
+        fop[FOP_SIZE], fname[SIZE], vc[SIZE], tid[SIZE], fsize[SIZE], data[SIZE];
 
     memset(buffer, EOS, SIZE);
     memset(command, EOS, SIZE);
@@ -114,7 +117,7 @@ int main(int argc, char const *argv[])
         read_stdin(buffer);
         strcpy(command, strtok(buffer, " "));
 
-        if (strcmp(command, "req") == 0)
+        if (strcmp(command, USER_REQUEST) == 0)
         {
             if (parse_req(fop, fname))
             {
@@ -130,7 +133,7 @@ int main(int argc, char const *argv[])
                 printf("message received from AS = %s", buffer);
             };
         }
-        if (strcmp(command, "val") == 0)
+        if (strcmp(command, USER_VAL) == 0)
         {
             if (parse_val(vc))
             {
@@ -146,53 +149,129 @@ int main(int argc, char const *argv[])
                 printf("message received from AS = %s", buffer);
 
                 //sets TID
-                char* token = strtok(buffer, " ");
+                char *token = strtok(buffer, " ");
                 token = strtok(NULL, " ");
                 strcpy(tid, token);
                 printf("TID is now: %s\n", tid);
 
-                if (strcmp(tid, "0000") == 0)
+                if (strcmp(tid, "0") == 0)
                 {
                     printf("Authentication failed.\n");
                 }
             }
         }
-        if (strcmp(command, "list") == 0 || strcmp(command, "l") == 0)
+        if (strcmp(command, USER_LIST) == 0 || strcmp(command, USER_LIST_SHORT) == 0)
         {
+            init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
+
             prepare_list_request(buffer, uid, tid);
-            //socket FS
+
+            // sends the login message to FS via tcp connection
+            n = tcp_write(fs_fd, buffer);
+            printf("message sent to AS = %s", buffer);
+
+            // receives the FS response message
+            memset(buffer, EOS, SIZE);
+            n = tcp_read(fs_fd, buffer, SIZE);
+            printf("message received from AS = %s", buffer);
+
+            //treat received message
+            treat_rls(buffer);
         }
-        if (strcmp(command, "retrieve") == 0 || strcmp(command, "r") == 0)
+        if (strcmp(command, USER_RETRIEVE) == 0 || strcmp(command, USER_RETRIEVE_SHORT) == 0)
         {
             if (parse_retrieve_upload_delete(fname))
             {
+                init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
+
                 prepare_retrieve_request(buffer, uid, tid, fname);
-                //socket FS
+
+                // sends the login message to FS via tcp connection
+                n = tcp_write(fs_fd, buffer);
+                printf("message sent to AS = %s", buffer);
+
+                // receives the FS response message
+                memset(buffer, EOS, SIZE);
+                n = tcp_read(fs_fd, buffer, SIZE);
+                printf("message received from AS = %s", buffer);
+
+                //TODO: display name and path of file
+                //treat received message
+                treat_rrt(buffer);
+
+                close(fs_fd);
             }
         }
-        if (strcmp(command, "upload") == 0 || strcmp(command, "u") == 0)
+        if (strcmp(command, USER_UPLOAD) == 0 || strcmp(command, USER_UPLOAD_SHORT) == 0)
         {
             if (parse_retrieve_upload_delete(fname))
             {
+                init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
+
                 prepare_upload_request(buffer, uid, tid, fname, fsize, data);
-                //socket FS
+
+                // sends the login message to FS via tcp connection
+                n = tcp_write(fs_fd, buffer);
+                printf("message sent to AS = %s", buffer);
+
+                // receives the FS response message
+                memset(buffer, EOS, SIZE);
+                n = tcp_read(fs_fd, buffer, SIZE);
+                printf("message received from AS = %s", buffer);
+
+                //TODO: display succes/failure
+                //treat received message
+                treat_rup(buffer);
+
+                close(fs_fd);
             }
         }
-        if (strcmp(command, "delete") == 0 || strcmp(command, "d") == 0)
+        if (strcmp(command, USER_DELETE) == 0 || strcmp(command, USER_DELETE_SHORT) == 0)
         {
             if (parse_retrieve_upload_delete(fname))
             {
+                init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
+
                 prepare_delete_request(buffer, uid, tid, fname);
-                //socket FS
+
+                // sends the login message to FS via tcp connection
+                n = tcp_write(fs_fd, buffer);
+                printf("message sent to AS = %s", buffer);
+
+                // receives the FS response message
+                memset(buffer, EOS, SIZE);
+                n = tcp_read(fs_fd, buffer, SIZE);
+                printf("message received from AS = %s", buffer);
+
+                //TODO: display succes/failure
+                //treat received message
+                treat_rdl(buffer);
+
+                close(fs_fd);
             }
         }
-        if (strcmp(command, "remove") == 0 || strcmp(command, "x") == 0)
+        if (strcmp(command, USER_REMOVE) == 0 || strcmp(command, USER_REMOVE_SHORT) == 0)
         {
-            printf("Programa fechado.\n");
+            init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
+
             prepare_remove_request(buffer, uid, tid);
-            //socket FS
+
+            // sends the login message to FS via tcp connection
+            n = tcp_write(fs_fd, buffer);
+            printf("message sent to AS = %s", buffer);
+
+            // receives the FS response message
+            memset(buffer, EOS, SIZE);
+            n = tcp_read(fs_fd, buffer, SIZE);
+            printf("message received from AS = %s", buffer);
+
+            //display succes/failure
+            //treat received message
+            treat_rrm(buffer);
+
+            close(fs_fd);
         }
-        if (strcmp(command, "exit") == 0)
+        if (strcmp(command, USER_EXIT) == 0)
         {
             exit(EXIT_SUCCESS);
         }
@@ -263,7 +342,7 @@ Boolean parse_login_message(char *buffer, char *command, char *uid, char *passwo
     token = strtok(NULL, " ");
     if (token)
     {
-        fprintf(stderr, "To many arguments!\n");
+        fprintf(stderr, "Too many arguments!\n");
         return false;
     }
 
@@ -293,17 +372,17 @@ Boolean verify_login_response(char *buffer, int size)
     printf("response: %s\n", buffer);
     if (!size)
     {
-        printf("%s\n\n", SERVER_DOWN_MESSAGE);
+        printf("%s\n", SERVER_DOWN_MESSAGE);
         return false;
     }
 
     if (!strcmp(buffer, login_success))
     {
-        printf("%s\n\n", SUCCESS_MESSAGE);
+        printf("%s\n", SUCCESS_MESSAGE);
         return true;
     }
 
-    printf("%s\n\n", FAILURE_MESSAGE);
+    printf("%s\n", FAILURE_MESSAGE);
     //printf("response: %s\n", buffer);
     return false;
 }
@@ -311,9 +390,8 @@ Boolean verify_login_response(char *buffer, int size)
 /*req*/
 Boolean parse_req(char *fop, char *fname)
 {
-    char *token;
+    char *token = strtok(NULL, " ");
 
-    token = strtok(NULL, " ");
     if (!token)
     {
         fprintf(stderr, "Fop missing!\nMust give a Fop\n");
@@ -346,7 +424,7 @@ Boolean parse_req(char *fop, char *fname)
     token = strtok(NULL, " ");
     if (token)
     {
-        fprintf(stderr, "To many arguments!\n");
+        fprintf(stderr, "Too many arguments!\n");
         return false;
     }
 
@@ -384,9 +462,8 @@ void prepare_req_request(char *request, char *uid, char *fop, char *fname, char 
 /*val*/
 Boolean parse_val(char *vc)
 {
-    char *token;
+    char *token = strtok(NULL, " ");
 
-    token = strtok(NULL, " ");
     if (!token)
     {
         fprintf(stderr, "VC missing!\nMust give a VC\n");
@@ -397,7 +474,7 @@ Boolean parse_val(char *vc)
     token = strtok(NULL, " ");
     if (token)
     {
-        fprintf(stderr, "To many arguments!\n");
+        fprintf(stderr, "Too many arguments!\n");
         return false;
     }
 
@@ -429,12 +506,39 @@ void prepare_list_request(char *request, char *uid, char *tid)
     strcat(request, "\n");
 }
 
+void treat_rls(char *buffer)
+{
+    char *token = strtok(buffer, " ");
+
+    if (strcmp(token, LIS_RESPONSE) != 0)
+    {
+        fprintf(stderr, "Did not receive RLS!\n");
+        return;
+    }
+
+    token = strtok(NULL, " ");
+    if (!token)
+    {
+        fprintf(stderr, "Did not receive number of files!\n");
+        return;
+    }
+    int i = atoi(token);
+
+    token = strtok(NULL, " ");
+
+    for (int j = 0; j < i; i++)
+    {
+        printf("%d - filename: %s\t", j + 1, token);
+        token = strtok(NULL, " ");
+        printf("filesize: %s\n", token);
+        token = strtok(NULL, " ");
+    }
+}
+
 /*retrieve*/
 Boolean parse_retrieve_upload_delete(char *fname)
 {
-    char *token;
-
-    token = strtok(NULL, " ");
+    char *token = strtok(NULL, " ");
     if (!token)
     {
         fprintf(stderr, "UID missing!\nMust give a UID\n");
@@ -445,7 +549,7 @@ Boolean parse_retrieve_upload_delete(char *fname)
     token = strtok(NULL, " ");
     if (token)
     {
-        fprintf(stderr, "To many arguments!\n");
+        fprintf(stderr, "Too many arguments!\n");
         return false;
     }
 
@@ -462,6 +566,42 @@ void prepare_retrieve_request(char *request, char *uid, char *tid, char *fname)
     strcat(request, " ");
     strcat(request, fname);
     strcat(request, "\n");
+}
+
+void treat_rrt(char *buffer)
+{
+    char *token = strtok(buffer, " ");
+
+    if (strcmp(token, RET_RESPONSE) != 0)
+    {
+        fprintf(stderr, "Did not receive UPL!\n");
+        return;
+    }
+    token = strtok(NULL, " ");
+
+    //OK
+    if(strcmp(token, OK)){
+        token = strtok((NULL), " ");
+        printf("filename: %s\t", token);
+        token = strtok(NULL, " ");
+        printf("filesize: %s\n", token);
+    }
+    //EOF
+    else if(strcmp(token, FILE_UNAVAILABLE)){
+        fprintf(stderr, "File is not available.\n");
+    }
+    //NOK
+    else if(strcmp(token, NOT_OK)){
+        fprintf(stderr, "No content available for current UID.\n");
+    }
+    //INV
+    else if(strcmp(token, AS_VALIDATION_ERROR)){
+        fprintf(stderr, "Validation error.\n");
+    }
+    //ERR
+    else if(strcmp(token, PROTOCOL_ERROR)){
+        fprintf(stderr, "Request is not correctly formulated.\n");
+    }
 }
 
 /*upload*/
@@ -483,6 +623,44 @@ void prepare_upload_request(char *request, char *uid, char *tid, char *fname,
     strcat(request, "\n");
 }
 
+void treat_rup(char* buffer)
+{
+    char *token = strtok(buffer, " ");
+
+    if (strcmp(token, UPL_RESPONSE) != 0)
+    {
+        fprintf(stderr, "Did not receive UPL!\n");
+        return;
+    }
+    token = strtok(NULL, " ");
+
+    //OK
+    if(strcmp(token, OK)){
+        printf(SUCCESS_MESSAGE);
+        printf("\n");
+    }
+    //DUP
+    else if(strcmp(token, FILE_UNAVAILABLE)){
+        printf(FAILURE_MESSAGE);
+        fprintf(stderr, " File already exists.\n");
+    }
+    //FULL
+    else if(strcmp(token, NOT_OK)){
+        printf(FAILURE_MESSAGE);
+        fprintf(stderr, " FS is full, user already uploaded 15 files.\n");
+    }
+    //INV
+    else if(strcmp(token, AS_VALIDATION_ERROR)){
+        printf(FAILURE_MESSAGE);
+        fprintf(stderr, " Validation error.\n");
+    }
+    //ERR
+    else if(strcmp(token, PROTOCOL_ERROR)){
+        printf(FAILURE_MESSAGE);
+        fprintf(stderr, " Request is not correctly formulated.\n");
+    }
+}
+
 /*delete*/
 //usa parser do retrieve
 void prepare_delete_request(char *request, char *uid, char *tid, char *fname)
@@ -497,6 +675,39 @@ void prepare_delete_request(char *request, char *uid, char *tid, char *fname)
     strcat(request, "\n");
 }
 
+void treat_rdl(char* buffer)
+{
+    char *token = strtok(buffer, " ");
+
+    if (strcmp(token, DEL_RESPONSE) != 0)
+    {
+        fprintf(stderr, "Did not receive DEL!\n");
+        return;
+    }
+    token = strtok(NULL, " ");
+
+    //OK
+    if(strcmp(token, OK)){
+        printf(SUCCESS_MESSAGE);
+        printf("\n");
+    }
+    //NOK
+    else if(strcmp(token, NOT_OK)){
+        printf(FAILURE_MESSAGE);
+        fprintf(stderr, " UID does not exist.\n");
+    }
+    //INV
+    else if(strcmp(token, AS_VALIDATION_ERROR)){
+        printf(FAILURE_MESSAGE);
+        fprintf(stderr, " Validation error.\n");
+    }
+    //ERR
+    else if(strcmp(token, PROTOCOL_ERROR)){
+        printf(FAILURE_MESSAGE);
+        fprintf(stderr, " Request is not correctly formulated.\n");
+    }
+}
+
 /*remove*/
 //nao precisa de parser
 void prepare_remove_request(char *request, char *uid, char *tid)
@@ -509,8 +720,38 @@ void prepare_remove_request(char *request, char *uid, char *tid)
     strcat(request, "\n");
 }
 
-/*exit*/
-//nao precisa de nada
+void treat_rrm(char* buffer)
+{
+    char *token = strtok(buffer, " ");
+
+    if (strcmp(token, REM_RESPONSE) != 0)
+    {
+        fprintf(stderr, "Did not receive REM!\n");
+        return;
+    }
+    token = strtok(NULL, " ");
+
+    //OK
+    if(strcmp(token, OK)){
+        printf(SUCCESS_MESSAGE);
+        printf("\n");
+    }
+    //NOK
+    else if(strcmp(token, NOT_OK)){
+        printf(FAILURE_MESSAGE);
+        fprintf(stderr, " UID does not exist.\n");
+    }
+    //INV
+    else if(strcmp(token, AS_VALIDATION_ERROR)){
+        printf(FAILURE_MESSAGE);
+        fprintf(stderr, " Validation error.\n");
+    }
+    //ERR
+    else if(strcmp(token, PROTOCOL_ERROR)){
+        printf(FAILURE_MESSAGE);
+        fprintf(stderr, " Request is not correctly formulated.\n");
+    }
+}
 
 void verify_command_response(char *buffer, int size)
 {
@@ -529,12 +770,11 @@ void verify_command_response(char *buffer, int size)
     //printf("response: %s\n", buffer);
 }
 
-void socket_to_fs()
+void init_socket_to_fs(int fs_fd, int errcode_fs, ssize_t m, struct addrinfo hints_fs,
+                       struct addrinfo *res_fs)
 {
-    ssize_t m;
-    struct addrinfo hints_fs, *res_fs;
-    int errcode, fs_fd = socket(AF_INET, SOCK_STREAM, 0);
-
+    //connection to FS
+    fs_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fs_fd == ERROR)
         exit(EXIT_FAILURE); //error
 
@@ -542,8 +782,8 @@ void socket_to_fs()
     hints_fs.ai_family = AF_INET;
     hints_fs.ai_socktype = SOCK_STREAM;
 
-    errcode = getaddrinfo(fsip, fsport, &hints_fs, &res_fs);
-    if (errcode != 0)
+    errcode_fs = getaddrinfo(asip, asport, &hints_fs, &res_fs);
+    if (errcode_fs != 0)
     {
         //error
         fprintf(stderr, "Error: could not get address info\n");

@@ -7,8 +7,11 @@ LDFLAGS= -lm
 
 all:
 	@echo Compiling File System...
-	$(LD) $(CFLAGS) $(LDFLAGS) -o FS fs.c ../functions.c
+	$(LD) $(CFLAGS) $(LDFLAGS) -o fs fs.c ../functions.c
+
+run:
+	./fs -v
 
 clean:
 	@echo Cleaning...
-	rm -f *.o fs
+	rm -rf *.o fs USERS/
