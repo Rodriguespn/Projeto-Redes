@@ -22,10 +22,7 @@ typedef enum { false, true } Boolean;
 #define STATUS_SIZE     5       // Max. status size
 
 #define LOCALHOST       "127.0.0.1"
-
-/* APENAS PARA TESTES */
-#define SIZE    128
-#define IP      "tejo.tecnico.ulisboa.pt" 
+#define SIZE            128
 
 #define PDPORT  57000 // Personal Device default Port
 #define ASPORT  58000 // Authentication System default Port

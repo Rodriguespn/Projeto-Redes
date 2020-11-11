@@ -100,11 +100,11 @@ int main(int argc, char const *argv[])
         // sends the login message to AS via tcp connection
         n = tcp_write(as_fd, buffer);
         printf("message sent to AS = %s", buffer);
-        printf("message received from AS = %s", buffer);
 
         // receives the AS response message
         memset(buffer, EOS, SIZE);
         n = tcp_read(as_fd, buffer, SIZE);
+        printf("message received from AS = %s", buffer);
 
         // checks if the response is OK. If so the loop ends
     } while (!verify_login_response(buffer, n));
@@ -116,7 +116,7 @@ int main(int argc, char const *argv[])
 
         if (strcmp(command, "req") == 0)
         {
-            if (parse_req(buffer, fop, fname))
+            if (parse_req(fop, fname))
             {
                 prepare_req_request(buffer, uid, fop, fname, rid);
 
@@ -132,16 +132,29 @@ int main(int argc, char const *argv[])
         }
         if (strcmp(command, "val") == 0)
         {
-            if (parse_val(buffer, vc))
+            if (parse_val(vc))
             {
                 prepare_val_request(buffer, uid, rid, vc);
 
                 // sends the login message to AS via tcp connection
                 n = tcp_write(as_fd, buffer);
+                printf("message sent to AS = %s", buffer);
 
                 // receives the AS response message
                 memset(buffer, EOS, SIZE);
                 n = tcp_read(as_fd, buffer, SIZE);
+                printf("message received from AS = %s", buffer);
+
+                //sets TID
+                char* token = strtok(buffer, " ");
+                token = strtok(NULL, " ");
+                strcpy(tid, token);
+                printf("TID is now: %s\n", tid);
+
+                if (strcmp(tid, "0000") == 0)
+                {
+                    printf("Authentication failed.\n");
+                }
             }
         }
         if (strcmp(command, "list") == 0 || strcmp(command, "l") == 0)
@@ -151,7 +164,7 @@ int main(int argc, char const *argv[])
         }
         if (strcmp(command, "retrieve") == 0 || strcmp(command, "r") == 0)
         {
-            if (parse_retrieve_upload_delete(buffer, fname))
+            if (parse_retrieve_upload_delete(fname))
             {
                 prepare_retrieve_request(buffer, uid, tid, fname);
                 //socket FS
@@ -159,7 +172,7 @@ int main(int argc, char const *argv[])
         }
         if (strcmp(command, "upload") == 0 || strcmp(command, "u") == 0)
         {
-            if (parse_retrieve_upload_delete(buffer, fname))
+            if (parse_retrieve_upload_delete(fname))
             {
                 prepare_upload_request(buffer, uid, tid, fname, fsize, data);
                 //socket FS
@@ -167,7 +180,7 @@ int main(int argc, char const *argv[])
         }
         if (strcmp(command, "delete") == 0 || strcmp(command, "d") == 0)
         {
-            if (parse_retrieve_upload_delete(buffer, fname))
+            if (parse_retrieve_upload_delete(fname))
             {
                 prepare_delete_request(buffer, uid, tid, fname);
                 //socket FS
@@ -188,7 +201,6 @@ int main(int argc, char const *argv[])
         memset(command, EOS, SIZE);
         memset(fname, EOS, SIZE);
         memset(vc, EOS, SIZE);
-        memset(tid, EOS, SIZE);
         memset(fsize, EOS, SIZE);
         memset(data, EOS, SIZE);
     }
@@ -248,6 +260,12 @@ Boolean parse_login_message(char *buffer, char *command, char *uid, char *passwo
     }
     strcpy(password, token);
 
+    token = strtok(NULL, " ");
+    if (token)
+    {
+        fprintf(stderr, "To many arguments!\n");
+        return false;
+    }
 
     return true;
 }
@@ -291,7 +309,7 @@ Boolean verify_login_response(char *buffer, int size)
 }
 
 /*req*/
-Boolean parse_req(char *buffer, char *fop, char *fname)
+Boolean parse_req(char *fop, char *fname)
 {
     char *token;
 
@@ -306,7 +324,8 @@ Boolean parse_req(char *buffer, char *fop, char *fname)
     token = strtok(NULL, " ");
     if (strcmp(fop, "L") == 0 || strcmp(fop, "X") == 0)
     {
-        if(token){
+        if (token)
+        {
             fprintf(stderr, "File operation given does not need file.\n");
             return false;
         }
@@ -324,13 +343,20 @@ Boolean parse_req(char *buffer, char *fop, char *fname)
         }
     }
 
+    token = strtok(NULL, " ");
+    if (token)
+    {
+        fprintf(stderr, "To many arguments!\n");
+        return false;
+    }
+
     printf("fop = %s\nfname = %s\n", fop, fname);
 
     return true;
 }
 
-void prepare_req_request(char *request, char *uid, char *fop, char *fname, char* rid)
-{   
+void prepare_req_request(char *request, char *uid, char *fop, char *fname, char *rid)
+{
     generate_random_rid(rid, RID_SIZE);
 
     memset(request, EOS, SIZE);
@@ -356,7 +382,7 @@ void prepare_req_request(char *request, char *uid, char *fop, char *fname, char*
 }
 
 /*val*/
-Boolean parse_val(char *buffer, char *vc)
+Boolean parse_val(char *vc)
 {
     char *token;
 
@@ -367,6 +393,13 @@ Boolean parse_val(char *buffer, char *vc)
         return false;
     }
     strcpy(vc, token);
+
+    token = strtok(NULL, " ");
+    if (token)
+    {
+        fprintf(stderr, "To many arguments!\n");
+        return false;
+    }
 
     return true;
 }
@@ -397,7 +430,7 @@ void prepare_list_request(char *request, char *uid, char *tid)
 }
 
 /*retrieve*/
-Boolean parse_retrieve_upload_delete(char *buffer, char *fname)
+Boolean parse_retrieve_upload_delete(char *fname)
 {
     char *token;
 
@@ -408,6 +441,13 @@ Boolean parse_retrieve_upload_delete(char *buffer, char *fname)
         return false;
     }
     strcpy(fname, token);
+
+    token = strtok(NULL, " ");
+    if (token)
+    {
+        fprintf(stderr, "To many arguments!\n");
+        return false;
+    }
 
     return true;
 }
@@ -521,13 +561,15 @@ void socket_to_fs()
     }
 }
 
-void generate_random_rid(char rid[], int size) {
+void generate_random_rid(char rid[], int size)
+{
     int rid_alg, rid_number = 0;
 
     // uses the current time as seed for random generator
-    srand(time(NULL));
+    srand(time(NULL) % RND);
     memset(rid, EOS, size);
-    for (int i = 0; i < (size - 1); i++) {
+    for (int i = 0; i < (size - 1); i++)
+    {
         rid_alg = rand() % 10;
         rid_number = rid_number * 10 + rid_alg;
         printf("rid_alg=%d\trid_number=%d\n", rid_alg, rid_number);
