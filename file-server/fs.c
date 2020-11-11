@@ -57,8 +57,8 @@ int main(int argc, char const *argv[])
     // Assign IP address and PORT to the TCP socket 
     bzero(&tcp_servaddr, sizeof(tcp_servaddr));
     tcp_servaddr.sin_family = AF_INET; 
-    tcp_servaddr.sin_addr.s_addr = inet_addr(fs_ip); 
-    tcp_servaddr.sin_port = fs_port; 
+    tcp_servaddr.sin_addr.s_addr = htons(INADDR_ANY); 
+    tcp_servaddr.sin_port = htons(fs_port); 
   
     // Bind TCP socket to the assigned IP address and Port 
     if ((bind(tcp_sockfd, (struct sockaddr*) &tcp_servaddr, sizeof(tcp_servaddr))) != 0)
@@ -96,7 +96,7 @@ int main(int argc, char const *argv[])
             fprintf(stderr, "Unable to accept TCP connections.\n");
             exit(EXIT_FAILURE); 
         }
-        
+        printf("Hello\n");
         // If the code gets here then a new user connected.
         // Create a new process to handle the conversation with the user
         int pid = fork();
