@@ -1265,14 +1265,12 @@ Boolean validate_fop(char* uid, char* tid, char* fop) {
     strcpy(filename, "_");
     strcat(filename, tid);
 
-   
-    
     get_user_file_path(&path, uid, filename, FILE_EXTENSION);
 
     if (!(f = fopen(path, "r"))) {
         fprintf(stderr, "ERROR: tid %s does not exist with uid %s\n", tid, uid);
         free(path);
-        strcpy(fop, "E");
+        strcpy(fop, FOP_ERROR);
         return false;
     }
 

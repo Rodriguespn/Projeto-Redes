@@ -62,6 +62,7 @@ typedef enum { false, true } Boolean;
 #define FOP_DELETE          "D"
 #define FOP_LIST            "L"
 #define FOP_RETRIEVE        "R"
+#define FOP_ERROR           "E"
 
 /* COMMUNICATION PROTOCOLS SPECIFICATION */
 // error
