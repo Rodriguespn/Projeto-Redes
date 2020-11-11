@@ -76,6 +76,8 @@ typedef enum { false, true } Boolean;
 #define PD_NOT_AVAILABLE    "EPD"
 #define INVALID_UID         "EUSER"
 #define INVALID_FOP         "EFOP"
+#define DUPLICATED_FILE     "DUP"
+#define LIMIT_FILES_REACHED "FULL"
 
 // PD-AS Protocol
 #define REGISTRATION        "REG"

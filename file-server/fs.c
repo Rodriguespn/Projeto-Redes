@@ -5,6 +5,7 @@
 // +------------------------------------------+
 int tcp_sockfd;                 // used by sigint_handler
 Boolean running_flag = true;    // used by sigint_handler
+struct stat st = {0};
 
 int main(int argc, char const *argv[])
 {
@@ -15,6 +16,13 @@ int main(int argc, char const *argv[])
     if (wrong_arguments(argc))
     {
         usage();
+        exit(EXIT_FAILURE);
+    }
+
+    // Create database directory
+    if (!make_main_directory())
+    {
+        fprintf(stderr, "Error: Unable to make main directory.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -79,10 +87,13 @@ int main(int argc, char const *argv[])
     {
         // Accept users trying to connect via TCP socket (Blocks here) while running flag is up
         user_sockfd = accept(tcp_sockfd, (struct sockaddr*) &user_servaddr, &user_servaddr_len);
-        if (user_sockfd == EINTR)
+        if (user_sockfd == ERROR) // socket is closed
+        {
+            fprintf(stderr, "\nTCP socket was closed.\n");
             continue;
+        }
         else if (user_sockfd < 0) { 
-            fprintf(stderr, "Unable to accept TCP connections.");
+            fprintf(stderr, "Unable to accept TCP connections.\n");
             exit(EXIT_FAILURE); 
         }
         
@@ -104,7 +115,7 @@ int main(int argc, char const *argv[])
             udp_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
             if (udp_sockfd == ERROR)
             {
-                fprintf(stderr, "Unable to create the udp socket.\n");
+                fprintf(stderr, "Unable to create the udp socket from User.\n");
                 exit(EXIT_FAILURE);
             }
             
@@ -127,113 +138,140 @@ int main(int argc, char const *argv[])
             verbose_message(verbose, "IP = %s | Port = %d | Connection established\n", user_ip, user_port);
 
             // Define the auxilary variables
-            int n;
-            char command[COMMAND_SIZE];
+            int command_size = COMMAND_SIZE+1;
+            char command[COMMAND_SIZE+1];
             
             // Wait for a request (Blocks here)
             // Read the request command. If bytes read are fewer that the command size or negative = error responds ERR to the user
             if (tcp_read(user_sockfd, command, COMMAND_SIZE) != COMMAND_SIZE)
             {
-                bzero(command, COMMAND_SIZE);
+                bzero(command, command_size);
                 strcpy(command, PROTOCOL_ERROR);
-                strcat(command, '\n');
+                strcat(command, "\n");
                 tcp_write(user_sockfd, command);
                 close(udp_sockfd);
                 close(user_sockfd);
+                fprintf(stderr, "Error: Unable to read the full command from User.\n");
                 exit(EXIT_SUCCESS);
             }
-            command[COMMAND_SIZE-1] = '\0';
+            command[COMMAND_SIZE-1] = EOS;
+
+            // Print the command read from the tcp socket
+            verbose_message(verbose, "Command = %s | ", command);
 
             // Decide which operation the user requested and respond
             if (strcmp(command, UPLOAD) == 0)          // Upload command requested
             {
                 // Define auxilary variables
-                char command_status[COMMAND_SIZE+STATUS_SIZE], uid[UID_SIZE], tid[TID_SIZE], filename[FILENAME_SIZE], fop[FOP_SIZE], filesize[FILE_SIZE_DIG];
+                int command_status_size = COMMAND_SIZE+STATUS_SIZE+1;
+                char command_status[COMMAND_SIZE+STATUS_SIZE+1], uid[UID_SIZE+1], tid[TID_SIZE+1], filename[FILENAME_SIZE+1], filesize[FILE_SIZE_DIG+1];
                 
                 // Read the request uid
                 if (tcp_read(user_sockfd, uid, UID_SIZE) != UID_SIZE)
                 {
-                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
-                    strcpy(command_status, UPLOAD);
-                    strcat(command_status, " ");
-                    strcat(command_status, PROTOCOL_ERROR);
-                    strcat(command_status, '\n');
-                    tcp_write(user_sockfd, command_status);
+                    bzero(command, command_size);
+                    strcpy(command, PROTOCOL_ERROR);
+                    strcat(command, "\n");
+                    tcp_write(user_sockfd, command);
                     close(udp_sockfd);
                     close(user_sockfd);
+                    fprintf(stderr, "Error: Unable to read the full uid from User.\n");
                     exit(EXIT_SUCCESS);
                 }
-                uid[UID_SIZE-1] = '\0';
+                uid[UID_SIZE-1] = EOS;
+
+                // Print the uid read from the tcp socket
+                verbose_message(verbose, "UID = %s | ", uid);
 
                 // Read the request tid
                 if (tcp_read(user_sockfd, tid, TID_SIZE) != TID_SIZE)
                 {
-                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
-                    strcpy(command_status, UPLOAD);
-                    strcat(command_status, " ");
-                    strcat(command_status, PROTOCOL_ERROR);
-                    strcat(command_status, '\n');
-                    tcp_write(user_sockfd, command_status);
+                    bzero(command, command_size);
+                    strcpy(command, PROTOCOL_ERROR);
+                    strcat(command, "\n");
+                    tcp_write(user_sockfd, command);
                     close(udp_sockfd);
                     close(user_sockfd);
+                    fprintf(stderr, "Error: Unable to read the full tid from User.\n");
                     exit(EXIT_SUCCESS);
                 }
-                tid[TID_SIZE-1] = '\0';
+                tid[TID_SIZE-1] = EOS;
+
+                // Print the tid read from the tcp socket
+                verbose_message(verbose, "TID = %s | ", tid);
 
                 // Read the request filename
                 if (tcp_read(user_sockfd, filename, FILENAME_SIZE) != FILENAME_SIZE)
                 {
-                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
-                    strcpy(command_status, UPLOAD);
-                    strcat(command_status, " ");
-                    strcat(command_status, PROTOCOL_ERROR);
-                    strcat(command_status, '\n');
-                    tcp_write(user_sockfd, command_status);
+                    bzero(command, command_size);
+                    strcpy(command, PROTOCOL_ERROR);
+                    strcat(command, "\n");
+                    tcp_write(user_sockfd, command);
                     close(udp_sockfd);
                     close(user_sockfd);
+                    fprintf(stderr, "Error: Unable to read the full filename from User.\n");
                     exit(EXIT_SUCCESS);
                 }
-                filename[FILENAME_SIZE-1] = '\0';
+                filename[FILENAME_SIZE-1] = EOS;
+
+                // Print the filename read from the tcp socket
+                verbose_message(verbose, "Filename = %s | ", filename);
 
                 // Read the request filesize
                 if (tcp_read(user_sockfd, filesize, FILE_SIZE_DIG) != FILE_SIZE_DIG)
                 {
-                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
-                    strcpy(command_status, UPLOAD);
-                    strcat(command_status, " ");
-                    strcat(command_status, PROTOCOL_ERROR);
-                    strcat(command_status, '\n');
-                    tcp_write(user_sockfd, command_status);
+                    bzero(command, command_size);
+                    strcpy(command, PROTOCOL_ERROR);
+                    strcat(command, "\n");
+                    tcp_write(user_sockfd, command);
                     close(udp_sockfd);
                     close(user_sockfd);
+                    fprintf(stderr, "Error: Unable to read the full size from User.\n");
                     exit(EXIT_SUCCESS);
                 }
-                filesize[FILE_SIZE_DIG-1] = '\0';
+                filesize[FILE_SIZE_DIG-1] = EOS;
+
+                // Print the filesize read from the tcp socket
+                verbose_message(verbose, "Size = %s | ", filesize);
 
                 // Obtain the data size as an integer
                 int data_size = atoi(filesize);
 
                 // Allocate an array with the size of the data
                 char* data = (char*) malloc(data_size*sizeof(char));
+                if (!data)
+                {
+                    bzero(command, command_size);
+                    strcpy(command, PROTOCOL_ERROR);
+                    strcat(command, "\n");
+                    tcp_write(user_sockfd, command);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    fprintf(stderr, "Error: Unable to allocate memory for the required data size from User.\n");
+                    exit(EXIT_SUCCESS);
+                }
 
                 // Read the request data
                 if (tcp_read(user_sockfd, data, data_size) != data_size)
                 {
-                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
-                    strcpy(command_status, UPLOAD);
-                    strcat(command_status, " ");
-                    strcat(command_status, PROTOCOL_ERROR);
-                    strcat(command_status, '\n');
-                    tcp_write(user_sockfd, command_status);
+                    bzero(command, command_size);
+                    strcpy(command, PROTOCOL_ERROR);
+                    strcat(command, "\n");
+                    tcp_write(user_sockfd, command);
                     free(data);
                     close(udp_sockfd);
                     close(user_sockfd);
+                    fprintf(stderr, "Error: Unable to read the full data from User.\n");
                     exit(EXIT_SUCCESS);
                 }
-                data[data_size-1] = '\0';
+                data[data_size-1] = EOS;
+
+                // Print the data read from the tcp socket
+                verbose_message(verbose, "Data = %s | ", data);
 
                 // Prepare the validation message to send to the AS
-                char vld[COMMAND_SIZE+UID_SIZE+TID_SIZE];
+                char vld[COMMAND_SIZE+UID_SIZE+TID_SIZE+1];
+                bzero(vld, COMMAND_SIZE+UID_SIZE+TID_SIZE);
                 strcpy(vld, VALIDATE_FILE);
                 strcat(vld, " ");
                 strcat(vld, uid);
@@ -242,175 +280,252 @@ int main(int argc, char const *argv[])
                 strcat(vld, "\n");
 
                 // Send the message to the AS
-                if (udp_write(udp_sockfd, vld, &udp_servaddr, udp_servaddr.sin_len) == false)
+                if (udp_write(udp_sockfd, vld, (struct sockaddr *) &udp_servaddr, udp_servaddr.sin_len) == false)
                 {
-                    bzero(command, COMMAND_SIZE);
+                    bzero(command, command_size);
                     strcpy(command, PROTOCOL_ERROR);
-                    strcat(command, '\n');
+                    strcat(command, "\n");
                     tcp_write(user_sockfd, command);
                     free(data);
                     close(udp_sockfd);
                     close(user_sockfd);
+                    fprintf(stderr, "Error: Unable to send validation request to AS.\n");
                     exit(EXIT_FAILURE);
                 }
 
                 // Receive the command response from the AS
-                if (udp_read(udp_sockfd, command, COMMAND_SIZE, &udp_servaddr) != COMMAND_SIZE)
+                if (udp_read(udp_sockfd, command, COMMAND_SIZE, (struct sockaddr *) &udp_servaddr) != COMMAND_SIZE)
                 {
-                    bzero(command, COMMAND_SIZE);
+                    bzero(command, command_size);
                     strcpy(command, PROTOCOL_ERROR);
-                    strcat(command, '\n');
+                    strcat(command, "\n");
                     tcp_write(user_sockfd, command);
                     free(data);
                     close(udp_sockfd);
                     close(user_sockfd);
+                    fprintf(stderr, "Error: Unable to read validation command from AS.\n");
                     exit(EXIT_FAILURE);
                 }
-                command[COMMAND_SIZE-1] = '\0';
+                command[COMMAND_SIZE-1] = EOS;
 
                 // Verify AS command response
                 if (strcmp(command, VAL_FILE_RESPONSE))
                 {
-                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
-                    strcpy(command_status, UPLOAD);
+                    bzero(command_status, command_status_size);
+                    strcpy(command_status, UPL_RESPONSE);
                     strcat(command_status, " ");
                     strcat(command_status, AS_VALIDATION_ERROR);
-                    strcat(command_status, '\n');
+                    strcat(command_status, "\n");
                     tcp_write(user_sockfd, command_status);
                     free(data);
                     close(udp_sockfd);
                     close(user_sockfd);
+                    fprintf(stderr, "Error: %s command from AS not valid.\n", command);
                     exit(EXIT_SUCCESS);
                 }
 
                 // Receive the uid response from the AS
                 char as_uid[UID_SIZE];
-                if (udp_read(udp_sockfd, as_uid, UID_SIZE, &udp_servaddr) != UID_SIZE)
+                if (udp_read(udp_sockfd, as_uid, UID_SIZE, (struct sockaddr *) &udp_servaddr) != UID_SIZE)
                 {
-                    bzero(command, COMMAND_SIZE);
+                    bzero(command, command_size);
                     strcpy(command, PROTOCOL_ERROR);
-                    strcat(command, '\n');
+                    strcat(command, "\n");
                     tcp_write(user_sockfd, command);
                     free(data);
                     close(udp_sockfd);
                     close(user_sockfd);
+                    fprintf(stderr, "Error: Unable to read validation uid from AS.\n");
                     exit(EXIT_FAILURE);
                 }
-                as_uid[UID_SIZE-1] = '\0';
+                as_uid[UID_SIZE-1] = EOS;
 
                 // Verify AS uid response
                 if (strcmp(as_uid, uid))
                 {
-                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
-                    strcpy(command_status, UPLOAD);
+                    bzero(command_status, command_status_size);
+                    strcpy(command_status, UPL_RESPONSE);
                     strcat(command_status, " ");
                     strcat(command_status, AS_VALIDATION_ERROR);
-                    strcat(command_status, '\n');
+                    strcat(command_status, "\n");
                     tcp_write(user_sockfd, command_status);
                     free(data);
                     close(udp_sockfd);
                     close(user_sockfd);
+                    fprintf(stderr, "Error: %s uid from AS not valid.\n", uid);
                     exit(EXIT_SUCCESS);
                 }
 
                 // Receive the tid response from the AS
                 char as_tid[TID_SIZE];
-                if (udp_read(udp_sockfd, as_tid, TID_SIZE, &udp_servaddr) != TID_SIZE)
+                if (udp_read(udp_sockfd, as_tid, TID_SIZE, (struct sockaddr *) &udp_servaddr) != TID_SIZE)
                 {
-                    bzero(command, COMMAND_SIZE);
+                    bzero(command, command_size);
                     strcpy(command, PROTOCOL_ERROR);
-                    strcat(command, '\n');
+                    strcat(command, "\n");
                     tcp_write(user_sockfd, command);
                     free(data);
                     close(udp_sockfd);
                     close(user_sockfd);
+                    fprintf(stderr, "Error: Unable to read validation tid from AS.\n");
                     exit(EXIT_FAILURE);
                 }
-                as_tid[TID_SIZE-1] = '\0';
+                as_tid[TID_SIZE-1] = EOS;
 
                 // Verify AS tid response
                 if (strcmp(as_tid, tid))
                 {
-                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
-                    strcpy(command_status, UPLOAD);
+                    bzero(command_status, command_status_size);
+                    strcpy(command_status, UPL_RESPONSE);
                     strcat(command_status, " ");
                     strcat(command_status, AS_VALIDATION_ERROR);
-                    strcat(command_status, '\n');
+                    strcat(command_status, "\n");
                     tcp_write(user_sockfd, command_status);
                     free(data);
                     close(udp_sockfd);
                     close(user_sockfd);
+                    fprintf(stderr, "Error: %s tid from AS not valid.\n", tid);
                     exit(EXIT_SUCCESS);
                 }
 
                 // Receive the fop response from the AS
                 char as_fop[FOP_SIZE];
-                if (udp_read(udp_sockfd, as_fop, FOP_SIZE, &udp_servaddr) != FOP_SIZE)
+                if (udp_read(udp_sockfd, as_fop, FOP_SIZE, (struct sockaddr *) &udp_servaddr) != FOP_SIZE)
                 {
-                    bzero(command, COMMAND_SIZE);
+                    bzero(command, command_size);
                     strcpy(command, PROTOCOL_ERROR);
-                    strcat(command, '\n');
+                    strcat(command, "\n");
                     tcp_write(user_sockfd, command);
                     free(data);
                     close(udp_sockfd);
                     close(user_sockfd);
+                    fprintf(stderr, "Error: Unable to read validation fop from AS.\n");
                     exit(EXIT_FAILURE);
                 }
-                as_fop[FOP_SIZE-1] = '\0';
+                as_fop[FOP_SIZE-1] = EOS;
 
                 // Verify AS fop response
                 if (strcmp(as_fop, USER_UPLOAD_SHORT))
                 {
-                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
-                    strcpy(command_status, UPLOAD);
+                    bzero(command_status, command_status_size);
+                    strcpy(command_status, UPL_RESPONSE);
                     strcat(command_status, " ");
                     strcat(command_status, AS_VALIDATION_ERROR);
-                    strcat(command_status, '\n');
+                    strcat(command_status, "\n");
                     tcp_write(user_sockfd, command_status);
                     free(data);
                     close(udp_sockfd);
                     close(user_sockfd);
+                    fprintf(stderr, "Error: %s fop from AS not valid.\n", as_fop);
                     exit(EXIT_SUCCESS);
                 }
 
                 // Receive the filename response from the AS
                 char as_filename[FILENAME_SIZE];
-                if (udp_read(udp_sockfd, as_filename, FILENAME_SIZE, &udp_servaddr) != FILENAME_SIZE)
+                if (udp_read(udp_sockfd, as_filename, FILENAME_SIZE, (struct sockaddr *) &udp_servaddr) != FILENAME_SIZE)
                 {
-                    bzero(command, COMMAND_SIZE);
+                    bzero(command, command_size);
                     strcpy(command, PROTOCOL_ERROR);
-                    strcat(command, '\n');
+                    strcat(command, "\n");
                     tcp_write(user_sockfd, command);
                     free(data);
                     close(udp_sockfd);
                     close(user_sockfd);
+                    fprintf(stderr, "Error: Unable to read validation filename.\n");
                     exit(EXIT_FAILURE);
                 }
-                as_filename[FILENAME_SIZE-1] = '\0';
+                as_filename[FILENAME_SIZE-1] = EOS;
 
                 // Verify AS filename response
                 if (strcmp(as_filename, filename))
                 {
-                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
-                    strcpy(command_status, UPLOAD);
+                    bzero(command_status, command_status_size);
+                    strcpy(command_status, UPL_RESPONSE);
                     strcat(command_status, " ");
                     strcat(command_status, AS_VALIDATION_ERROR);
-                    strcat(command_status, '\n');
+                    strcat(command_status, "\n");
                     tcp_write(user_sockfd, command_status);
                     free(data);
                     close(udp_sockfd);
                     close(user_sockfd);
+                    fprintf(stderr, "Error: %s filename from AS not valid.\n", filename);
                     exit(EXIT_SUCCESS);
                 }
 
+                // Verify if the user directory already exists
+                if (!find_user_directory(uid))
+                {
+                    // If not, creates a new one
+                    if (!make_user_directory(uid))
+                    {
+                        bzero(command, command_size);
+                        strcpy(command, PROTOCOL_ERROR);
+                        strcat(command, "\n");
+                        tcp_write(user_sockfd, command);
+                        free(data);
+                        close(udp_sockfd);
+                        close(user_sockfd);
+                        exit(EXIT_FAILURE);
+                    }
+                }
+
+                // Verify if the filename is duplicated
+                if (find_user_filename(uid, filename))
+                {
+                    bzero(command_status, command_status_size);
+                    strcpy(command_status, UPL_RESPONSE);
+                    strcat(command_status, " ");
+                    strcat(command_status, DUPLICATED_FILE);
+                    strcat(command_status, "\n");
+                    tcp_write(user_sockfd, command_status);
+                    free(data);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    fprintf(stderr, "Error: Unable to upload the file because it already exists.\n");
+                    exit(EXIT_SUCCESS);
+                }
+
+                // Verify if the user already has the maximum permitted files stored
+                if (reached_user_file_limit(uid, USERS_DIR_SIZE))
+                {
+                    bzero(command_status, command_status_size);
+                    strcpy(command_status, UPL_RESPONSE);
+                    strcat(command_status, " ");
+                    strcat(command_status, LIMIT_FILES_REACHED);
+                    strcat(command_status, "\n");
+                    tcp_write(user_sockfd, command_status);
+                    free(data);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    fprintf(stderr, "Error: Unable to upload the file because it already exists.\n");
+                    exit(EXIT_SUCCESS);
+                }
+
+                // Create the requested filename with the data
+                if (!create_user_file(uid, filename, data))
+                {
+                    bzero(command, command_size);
+                    strcpy(command, PROTOCOL_ERROR);
+                    strcat(command, "\n");
+                    tcp_write(user_sockfd, command);
+                    free(data);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    fprintf(stderr, "Error: Unable to upload the file because it already exists.\n");
+                    exit(EXIT_SUCCESS);
+                }
+
+                bzero(command_status, command_status_size);
+                strcpy(command_status, UPL_RESPONSE);
+                strcat(command_status, " ");
+                strcat(command_status, OK);
+                strcat(command_status, "\n");
+                tcp_write(user_sockfd, command_status);
+                free(data);
+                close(udp_sockfd);
+                close(user_sockfd);
+                exit(EXIT_SUCCESS);
                 
-
-
-
-
-
-
-
             }
             else if (strcmp(command, RETRIEVE) == 0)    // Retrieve command requested
             {
@@ -430,11 +545,9 @@ int main(int argc, char const *argv[])
             }
             else                                        // Invalid command requested
             {
-                strcpy(response, PROTOCOL_ERROR);
             }
 
             // Respond to the user
-            tcp_write(user_sockfd, response);
 
 
             
@@ -452,7 +565,6 @@ int main(int argc, char const *argv[])
     }
 
     // Program terminated. Closed server socket and exits with success
-    close(tcp_sockfd); 
     exit(EXIT_SUCCESS);
 }
 
@@ -515,9 +627,13 @@ Boolean parse_argument_flag(int argc, char const* argv[], char* flag)
 // +------------------------------------------+
 Boolean make_main_directory()
 {
-    if (!mkdir(MAIN_DIR_NAME))
-    {
-        return false;
+    // creates the directory where the users' information will be stored
+    if (stat(MAIN_DIR_NAME, &st) == -1) { // if directory doesn t exists
+        // check if directory is created or not 
+        if (mkdir(MAIN_DIR_NAME, 0777))
+        {
+            return false;
+        }
     }
     return true;
 }
@@ -544,14 +660,14 @@ Boolean make_user_directory(char* uid)
     char aux[MAIN_DIR_NAME_SIZE+UID_SIZE];
     strcpy(aux, MAIN_DIR_NAME);
     strcat(aux, uid);
-    if (!mkdir(aux))
+    if (!mkdir(aux, 0777))
     {
         return false;
     }
     return true;
 }
 
-int find_user_filename(char* uid, char* filename)
+Boolean find_user_filename(char* uid, char* filename)
 {
     char aux[MAIN_DIR_NAME_SIZE+UID_SIZE];
     strcpy(aux, MAIN_DIR_NAME);
@@ -568,6 +684,97 @@ int find_user_filename(char* uid, char* filename)
     }
     closedir(dir);
     return false;
+}
+
+Boolean reached_user_file_limit(char* uid, int max)
+{
+    char aux[MAIN_DIR_NAME_SIZE+UID_SIZE];
+    strcpy(aux, MAIN_DIR_NAME);
+    strcat(aux, uid);
+    DIR *dir = opendir(aux);
+    struct dirent *file;
+    int count = 0;
+    while ((file=readdir(dir)) != NULL)
+    {
+        count++;
+    }
+    closedir(dir);
+    return count == max;
+}
+
+Boolean create_user_file(char* uid, char* filename, char* data)
+{
+    FILE* fp;
+    char aux[MAIN_DIR_NAME_SIZE+UID_SIZE+1+FILENAME_SIZE];
+    bzero(aux, MAIN_DIR_NAME_SIZE+UID_SIZE+1+FILENAME_SIZE);
+    strcpy(aux, MAIN_DIR_NAME);
+    strcat(aux, uid);
+    strcat(aux, "/");
+    strcat(aux, filename);
+    if (!(fp = fopen(aux, "w")))
+    {
+        fprintf(stderr, "Error: Unable to open %s path\n", aux);
+        return false;
+    }
+    fprintf(fp, "%s", data);
+    fclose(fp);
+    printf("File %s created\n", aux);
+    return true;
+}
+
+Boolean delete_user_file(char* uid, char* filename)
+{
+    char aux[MAIN_DIR_NAME_SIZE+UID_SIZE+1+FILENAME_SIZE];
+    bzero(aux, MAIN_DIR_NAME_SIZE+UID_SIZE+1+FILENAME_SIZE);
+    strcpy(aux, MAIN_DIR_NAME);
+    strcat(aux, uid);
+    strcat(aux, "/");
+    strcat(aux, filename);
+    if (remove(aux))
+    {
+        fprintf(stderr, "Error: Unable to remove %s\n", aux);
+        return false;
+    } 
+    printf("File %s removed\n", aux);
+    return true;
+}
+
+Boolean remove_user_dir(char* uid)
+{
+    DIR *d;
+    struct dirent *dir;
+    char file_path[SIZE];
+    char aux[MAIN_DIR_NAME_SIZE+UID_SIZE];
+    bzero(aux, MAIN_DIR_NAME_SIZE+UID_SIZE);
+    strcpy(aux, MAIN_DIR_NAME);
+    strcat(aux, uid);
+    d = opendir(aux);
+
+    if (d) {
+        while((dir = readdir(d)) != NULL) {
+            if (strcmp(dir->d_name, "..") && strcmp(dir->d_name, ".")) {
+                bzero(file_path, SIZE);
+                strcpy(file_path, aux);
+                strcat(file_path, dir->d_name);
+               
+                if (remove(file_path)) {
+                    fprintf(stderr, "Error: Unable to remove file %s\n", file_path);
+                    closedir(d);
+                    return false;
+                }
+            }
+        }
+        if (rmdir(aux)) // removes the directory
+        {
+            fprintf(stderr, "Error: Unable to remove directory %s\n", aux);
+            closedir(d); 
+            return false;   
+        }
+            
+        closedir(d);
+        return true;
+    }
+    return false; 
 }
 
 // +------------------------------------------+
