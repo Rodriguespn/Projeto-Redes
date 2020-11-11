@@ -280,7 +280,7 @@ int main(int argc, char const *argv[])
                 strcat(vld, "\n");
 
                 // Send the message to the AS
-                if (udp_write(udp_sockfd, vld, (struct sockaddr *) &udp_servaddr, udp_servaddr.sin_len) == false)
+                if (udp_write(udp_sockfd, vld, (struct sockaddr *) &udp_servaddr, sizeof(udp_servaddr)) == false)
                 {
                     bzero(command, command_size);
                     strcpy(command, PROTOCOL_ERROR);
