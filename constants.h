@@ -20,11 +20,10 @@ typedef enum { false, true } Boolean;
 #define COMMAND_SIZE    4       // Size of the command
 #define RID_SIZE        5       // Maximum combinations of RID
 #define TID_ERROR       "0"     // TID when authentication fails
+#define STATUS_SIZE     5       // Max. status size
 
 #define LOCALHOST       "127.0.0.1"
-
-
-#define SIZE    128
+#define SIZE            128
 
 #define PDPORT  57000 // Personal Device default Port
 #define ASPORT  58000 // Authentication System default Port

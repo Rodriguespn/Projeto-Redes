@@ -59,24 +59,6 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);  
     } 
   
-    // Define UDP socket variables (Communication with Authentication Server)
-    int udp_sockfd;
-    struct sockaddr_in udp_servaddr;
-    
-    // Create UDP socket 
-    udp_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (udp_sockfd == ERROR)
-    {
-        fprintf(stderr, "Unable to create the udp socket.\n");
-        exit(EXIT_FAILURE);
-    }
-    
-    // Assign IP address and PORT to the UDP socket
-    bzero(&udp_servaddr, sizeof(udp_servaddr));
-    udp_servaddr.sin_family = AF_INET; 
-    udp_servaddr.sin_addr.s_addr = inet_addr(as_ip); 
-    udp_servaddr.sin_port = as_port;
-
     // Start listening for users in the TCP socket
     if ((listen(tcp_sockfd, 5)) != 0)
     { 
@@ -114,6 +96,24 @@ int main(int argc, char const *argv[])
             // Closes the tcp_sockfd as it wont be used by the child process
             close(tcp_sockfd);
 
+            // Define UDP socket variables (Communication with Authentication Server)
+            int udp_sockfd;
+            struct sockaddr_in udp_servaddr;
+            
+            // Create UDP socket 
+            udp_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+            if (udp_sockfd == ERROR)
+            {
+                fprintf(stderr, "Unable to create the udp socket.\n");
+                exit(EXIT_FAILURE);
+            }
+            
+            // Assign IP address and PORT to the UDP socket
+            bzero(&udp_servaddr, sizeof(udp_servaddr));
+            udp_servaddr.sin_family = AF_INET; 
+            udp_servaddr.sin_addr.s_addr = inet_addr(as_ip); 
+            udp_servaddr.sin_port = as_port;
+            
             // Define user IP and Port variables
             char user_ip[IP_SIZE];
             int user_port;
@@ -128,16 +128,17 @@ int main(int argc, char const *argv[])
 
             // Define the auxilary variables
             int n;
-            char command[COMMAND_SIZE], uid[UID_SIZE], tid[TID_SIZE], filename[FILENAME_SIZE], fop[FOP_SIZE], filesize[FILE_SIZE_DIG];
+            char command[COMMAND_SIZE];
             
             // Wait for a request (Blocks here)
-            // Read the request command
+            // Read the request command. If bytes read are fewer that the command size or negative = error responds ERR to the user
             if (tcp_read(user_sockfd, command, COMMAND_SIZE) != COMMAND_SIZE)
             {
                 bzero(command, COMMAND_SIZE);
-                strcat(command, PROTOCOL_ERROR);
-                command[COMMAND_SIZE-1] = '\n';
+                strcpy(command, PROTOCOL_ERROR);
+                strcat(command, '\n');
                 tcp_write(user_sockfd, command);
+                close(udp_sockfd);
                 close(user_sockfd);
                 exit(EXIT_SUCCESS);
             }
@@ -146,16 +147,270 @@ int main(int argc, char const *argv[])
             // Decide which operation the user requested and respond
             if (strcmp(command, UPLOAD) == 0)          // Upload command requested
             {
+                // Define auxilary variables
+                char command_status[COMMAND_SIZE+STATUS_SIZE], uid[UID_SIZE], tid[TID_SIZE], filename[FILENAME_SIZE], fop[FOP_SIZE], filesize[FILE_SIZE_DIG];
+                
                 // Read the request uid
                 if (tcp_read(user_sockfd, uid, UID_SIZE) != UID_SIZE)
                 {
-                    bzero(command, COMMAND_SIZE);
-                    strcat(command, PROTOCOL_ERROR);
-                    command[COMMAND_SIZE-1] = '\n';
-                    tcp_write(user_sockfd, command);
+                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
+                    strcpy(command_status, UPLOAD);
+                    strcat(command_status, " ");
+                    strcat(command_status, PROTOCOL_ERROR);
+                    strcat(command_status, '\n');
+                    tcp_write(user_sockfd, command_status);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    exit(EXIT_SUCCESS);
                 }
+                uid[UID_SIZE-1] = '\0';
+
+                // Read the request tid
+                if (tcp_read(user_sockfd, tid, TID_SIZE) != TID_SIZE)
+                {
+                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
+                    strcpy(command_status, UPLOAD);
+                    strcat(command_status, " ");
+                    strcat(command_status, PROTOCOL_ERROR);
+                    strcat(command_status, '\n');
+                    tcp_write(user_sockfd, command_status);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    exit(EXIT_SUCCESS);
+                }
+                tid[TID_SIZE-1] = '\0';
+
+                // Read the request filename
+                if (tcp_read(user_sockfd, filename, FILENAME_SIZE) != FILENAME_SIZE)
+                {
+                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
+                    strcpy(command_status, UPLOAD);
+                    strcat(command_status, " ");
+                    strcat(command_status, PROTOCOL_ERROR);
+                    strcat(command_status, '\n');
+                    tcp_write(user_sockfd, command_status);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    exit(EXIT_SUCCESS);
+                }
+                filename[FILENAME_SIZE-1] = '\0';
+
+                // Read the request filesize
+                if (tcp_read(user_sockfd, filesize, FILE_SIZE_DIG) != FILE_SIZE_DIG)
+                {
+                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
+                    strcpy(command_status, UPLOAD);
+                    strcat(command_status, " ");
+                    strcat(command_status, PROTOCOL_ERROR);
+                    strcat(command_status, '\n');
+                    tcp_write(user_sockfd, command_status);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    exit(EXIT_SUCCESS);
+                }
+                filesize[FILE_SIZE_DIG-1] = '\0';
+
+                // Obtain the data size as an integer
+                int data_size = atoi(filesize);
+
+                // Allocate an array with the size of the data
+                char* data = (char*) malloc(data_size*sizeof(char));
+
+                // Read the request data
+                if (tcp_read(user_sockfd, data, data_size) != data_size)
+                {
+                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
+                    strcpy(command_status, UPLOAD);
+                    strcat(command_status, " ");
+                    strcat(command_status, PROTOCOL_ERROR);
+                    strcat(command_status, '\n');
+                    tcp_write(user_sockfd, command_status);
+                    free(data);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    exit(EXIT_SUCCESS);
+                }
+                data[data_size-1] = '\0';
+
+                // Prepare the validation message to send to the AS
+                char vld[COMMAND_SIZE+UID_SIZE+TID_SIZE];
+                strcpy(vld, VALIDATE_FILE);
+                strcat(vld, " ");
+                strcat(vld, uid);
+                strcat(vld, " ");
+                strcat(vld, tid);
+                strcat(vld, "\n");
+
+                // Send the message to the AS
+                if (udp_write(udp_sockfd, vld, &udp_servaddr, udp_servaddr.sin_len) == false)
+                {
+                    bzero(command, COMMAND_SIZE);
+                    strcpy(command, PROTOCOL_ERROR);
+                    strcat(command, '\n');
+                    tcp_write(user_sockfd, command);
+                    free(data);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    exit(EXIT_FAILURE);
+                }
+
+                // Receive the command response from the AS
+                if (udp_read(udp_sockfd, command, COMMAND_SIZE, &udp_servaddr) != COMMAND_SIZE)
+                {
+                    bzero(command, COMMAND_SIZE);
+                    strcpy(command, PROTOCOL_ERROR);
+                    strcat(command, '\n');
+                    tcp_write(user_sockfd, command);
+                    free(data);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    exit(EXIT_FAILURE);
+                }
+                command[COMMAND_SIZE-1] = '\0';
+
+                // Verify AS command response
+                if (strcmp(command, VAL_FILE_RESPONSE))
+                {
+                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
+                    strcpy(command_status, UPLOAD);
+                    strcat(command_status, " ");
+                    strcat(command_status, AS_VALIDATION_ERROR);
+                    strcat(command_status, '\n');
+                    tcp_write(user_sockfd, command_status);
+                    free(data);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    exit(EXIT_SUCCESS);
+                }
+
+                // Receive the uid response from the AS
+                char as_uid[UID_SIZE];
+                if (udp_read(udp_sockfd, as_uid, UID_SIZE, &udp_servaddr) != UID_SIZE)
+                {
+                    bzero(command, COMMAND_SIZE);
+                    strcpy(command, PROTOCOL_ERROR);
+                    strcat(command, '\n');
+                    tcp_write(user_sockfd, command);
+                    free(data);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    exit(EXIT_FAILURE);
+                }
+                as_uid[UID_SIZE-1] = '\0';
+
+                // Verify AS uid response
+                if (strcmp(as_uid, uid))
+                {
+                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
+                    strcpy(command_status, UPLOAD);
+                    strcat(command_status, " ");
+                    strcat(command_status, AS_VALIDATION_ERROR);
+                    strcat(command_status, '\n');
+                    tcp_write(user_sockfd, command_status);
+                    free(data);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    exit(EXIT_SUCCESS);
+                }
+
+                // Receive the tid response from the AS
+                char as_tid[TID_SIZE];
+                if (udp_read(udp_sockfd, as_tid, TID_SIZE, &udp_servaddr) != TID_SIZE)
+                {
+                    bzero(command, COMMAND_SIZE);
+                    strcpy(command, PROTOCOL_ERROR);
+                    strcat(command, '\n');
+                    tcp_write(user_sockfd, command);
+                    free(data);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    exit(EXIT_FAILURE);
+                }
+                as_tid[TID_SIZE-1] = '\0';
+
+                // Verify AS tid response
+                if (strcmp(as_tid, tid))
+                {
+                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
+                    strcpy(command_status, UPLOAD);
+                    strcat(command_status, " ");
+                    strcat(command_status, AS_VALIDATION_ERROR);
+                    strcat(command_status, '\n');
+                    tcp_write(user_sockfd, command_status);
+                    free(data);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    exit(EXIT_SUCCESS);
+                }
+
+                // Receive the fop response from the AS
+                char as_fop[FOP_SIZE];
+                if (udp_read(udp_sockfd, as_fop, FOP_SIZE, &udp_servaddr) != FOP_SIZE)
+                {
+                    bzero(command, COMMAND_SIZE);
+                    strcpy(command, PROTOCOL_ERROR);
+                    strcat(command, '\n');
+                    tcp_write(user_sockfd, command);
+                    free(data);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    exit(EXIT_FAILURE);
+                }
+                as_fop[FOP_SIZE-1] = '\0';
+
+                // Verify AS fop response
+                if (strcmp(as_fop, USER_UPLOAD_SHORT))
+                {
+                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
+                    strcpy(command_status, UPLOAD);
+                    strcat(command_status, " ");
+                    strcat(command_status, AS_VALIDATION_ERROR);
+                    strcat(command_status, '\n');
+                    tcp_write(user_sockfd, command_status);
+                    free(data);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    exit(EXIT_SUCCESS);
+                }
+
+                // Receive the filename response from the AS
+                char as_filename[FILENAME_SIZE];
+                if (udp_read(udp_sockfd, as_filename, FILENAME_SIZE, &udp_servaddr) != FILENAME_SIZE)
+                {
+                    bzero(command, COMMAND_SIZE);
+                    strcpy(command, PROTOCOL_ERROR);
+                    strcat(command, '\n');
+                    tcp_write(user_sockfd, command);
+                    free(data);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    exit(EXIT_FAILURE);
+                }
+                as_filename[FILENAME_SIZE-1] = '\0';
+
+                // Verify AS filename response
+                if (strcmp(as_filename, filename))
+                {
+                    bzero(command_status, COMMAND_SIZE+STATUS_SIZE);
+                    strcpy(command_status, UPLOAD);
+                    strcat(command_status, " ");
+                    strcat(command_status, AS_VALIDATION_ERROR);
+                    strcat(command_status, '\n');
+                    tcp_write(user_sockfd, command_status);
+                    free(data);
+                    close(udp_sockfd);
+                    close(user_sockfd);
+                    exit(EXIT_SUCCESS);
+                }
+
                 
-                if (chop_next_argument(uid) && chop_next_argument(tid) && chop_next_argument(filename) && chop_next_argument(filesize))
+
+
+
+
+
+
+
             }
             else if (strcmp(command, RETRIEVE) == 0)    // Retrieve command requested
             {
@@ -256,24 +511,63 @@ Boolean parse_argument_flag(int argc, char const* argv[], char* flag)
 }
 
 // +------------------------------------------+
-// | User Conversation Functions              |
+// | Directory Functions                      |
 // +------------------------------------------+
-Boolean chop_first_argument(char* buffer, char* argument)
+Boolean make_main_directory()
 {
-    char *token;
-    if(!(token = strtok(buffer, " "))) 
+    if (!mkdir(MAIN_DIR_NAME))
+    {
         return false;
-    strcpy(argument, token);
+    }
     return true;
 }
 
-Boolean chop_next_argument(char* argument)
+Boolean find_user_directory(char* uid)
 {
-    char *token;
-    if(!(token = strtok(NULL, " "))) 
+    DIR* main_dir;
+    main_dir = opendir(MAIN_DIR_NAME);
+    struct dirent* user_dir;
+    while ((user_dir = readdir(main_dir)) != NULL)
+    {
+        if(strcmp(user_dir->d_name, uid) == 0)
+        {
+            closedir(main_dir);
+            return true;
+        }
+    }
+    closedir(main_dir);
+    return false;
+}
+
+Boolean make_user_directory(char* uid)
+{
+    char aux[MAIN_DIR_NAME_SIZE+UID_SIZE];
+    strcpy(aux, MAIN_DIR_NAME);
+    strcat(aux, uid);
+    if (!mkdir(aux))
+    {
         return false;
-    strcpy(argument, token);
+    }
     return true;
+}
+
+int find_user_filename(char* uid, char* filename)
+{
+    char aux[MAIN_DIR_NAME_SIZE+UID_SIZE];
+    strcpy(aux, MAIN_DIR_NAME);
+    strcat(aux, uid);
+    DIR *dir = opendir(aux);
+    struct dirent *file;
+    while ((file=readdir(dir)) != NULL)
+    {
+        if(strcmp(file->d_name, filename) == 0)
+        {
+            closedir(dir);
+            return true;
+        }
+    }
+    closedir(dir);
+    return false;
 }
 
 // +------------------------------------------+
