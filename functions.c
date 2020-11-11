@@ -204,6 +204,5 @@ int udp_read(int sockfd, char* buffer, int size, struct sockaddr* addr) {
         fprintf(stderr, "Error: recvfrom returned %d error code\n", ERROR);
         return false;
     }
-
     return n;
 }
