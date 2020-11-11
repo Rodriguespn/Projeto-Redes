@@ -521,6 +521,7 @@ int main(int argc, char const *argv[])
                 strcat(command_status, OK);
                 strcat(command_status, "\n");
                 tcp_write(user_sockfd, command_status);
+                verbose_message(verbose, "INFORM: Response to User%s\n", command_status);
                 free(data);
                 close(udp_sockfd);
                 close(user_sockfd);
