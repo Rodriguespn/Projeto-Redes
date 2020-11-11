@@ -44,6 +44,7 @@ int main(int argc, char const *argv[]) {
     host_entry = gethostbyname(host); //find host information
     asip = inet_ntoa(*((struct in_addr*) host_entry->h_addr_list[0])); //Convert into IP string
     printf("CONFIG: Verbose flag %s\n", verbose ? "true" : "false");
+    
     verbose_message(verbose, "CONFIG: AS is running on Host=%s IP=%s Port=%s\n", host, asip, asport);
 
     // create and bind the UDP Socket

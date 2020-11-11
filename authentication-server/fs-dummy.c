@@ -34,7 +34,7 @@ int main(int argc, char const *argv[]) {
     
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_DGRAM;
+    hints.ai_socktype = SOCK_STREAM;
 
     // gets the address info
     errcode = getaddrinfo(asip, asport, &hints, &res);
@@ -66,9 +66,9 @@ int main(int argc, char const *argv[]) {
         memset(buffer, EOS, SIZE);
         read_stdin(buffer);
 
-        n = tcp_write(fd, buffer);
-
         printf("request: %s\n", buffer);
+        printf("socket = %d\n", fd);
+        n = tcp_write(fd, buffer);
 
         if (!n) continue;
         
