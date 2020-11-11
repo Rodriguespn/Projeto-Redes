@@ -41,7 +41,7 @@ int main(int argc, char const *argv[])
     fs_port = parse_argument_int(argc, argv, FS_PORT_FLAG, FSPORT+GN);
     as_port = parse_argument_int(argc, argv, AS_PORT_FLAG, ASPORT+GN);
     verbose = parse_argument_flag(argc, argv, VERBOSE_FLAG);
-    parse_argument_string(argc, argv, AS_IP_FLAG, fs_ip, as_ip);
+    parse_argument_string(argc, argv, AS_IP_FLAG, LOCALHOST, as_ip);
     
     // Define TCP socket variables (Communication with User)
     struct addrinfo hints, *res;
@@ -58,24 +58,8 @@ int main(int argc, char const *argv[])
     // Assign IP address and PORT to the TCP socket 
     bzero(&tcp_servaddr, sizeof(tcp_servaddr));
     tcp_servaddr.sin_family = AF_INET; 
-    tcp_servaddr.sin_addr.s_addr = inet_addr(fs_ip); 
-    tcp_servaddr.sin_port = fs_port; 
-
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-
-    char fs_port_char[SIZE];
-    bzero(fs_port_char, SIZE);
-    sprintf(fs_port_char, "%d", fs_port);
-
-    int errcode = getaddrinfo(NULL, fs_port_char, &hints, &res);
-    if (errcode != 0) {
-        // error
-        fprintf(stderr, "ERROR: tcp socket getaddrinfo returned %d error code\n", errcode);
-        exit(EXIT_FAILURE); 
-    } 
+    tcp_servaddr.sin_addr.s_addr = htons(INADDR_ANY); 
+    tcp_servaddr.sin_port = htons(fs_port); 
   
     // Bind TCP socket to the assigned IP address and Port 
     // (bind(tcp_sockfd, (struct sockaddr*) &tcp_servaddr, sizeof(tcp_servaddr))
@@ -114,7 +98,7 @@ int main(int argc, char const *argv[])
             fprintf(stderr, "Unable to accept TCP connections.\n");
             exit(EXIT_FAILURE); 
         }
-        
+        printf("Hello\n");
         // If the code gets here then a new user connected.
         // Create a new process to handle the conversation with the user
         int pid = fork();
