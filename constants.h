@@ -19,6 +19,7 @@ typedef enum { false, true } Boolean;
 #define HOSTNAME_SIZE   24      // Max. hostname size
 #define COMMAND_SIZE    4       // Size of the command
 #define RID_SIZE        5       // Maximum combinations of RID
+#define STATUS_SIZE     5       // Max. status size
 
 #define LOCALHOST       "127.0.0.1"
 #define SIZE            128
