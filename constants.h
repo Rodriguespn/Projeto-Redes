@@ -19,12 +19,12 @@ typedef enum { false, true } Boolean;
 #define HOSTNAME_SIZE   24      // Max. hostname size
 #define COMMAND_SIZE    4       // Size of the command
 #define RID_SIZE        5       // Maximum combinations of RID
+#define TID_ERROR       "0"     // TID when authentication fails
 
 #define LOCALHOST       "127.0.0.1"
 
-/* APENAS PARA TESTES */
+
 #define SIZE    128
-#define IP      "tejo.tecnico.ulisboa.pt" 
 
 #define PDPORT  57000 // Personal Device default Port
 #define ASPORT  58000 // Authentication System default Port
@@ -94,6 +94,7 @@ typedef enum { false, true } Boolean;
 #define REQ_RESPONSE        "RRQ"
 #define AUTHENTICATION      "AUT"
 #define AUT_RESPONSE        "RAU"
+#define FILE_UNAVAILABLE    "EOF"
 
 // FS-AS Protocol 
 #define VALIDATE_FILE       "VLD"
