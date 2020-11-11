@@ -7,7 +7,7 @@ LDFLAGS= -lm
 
 all:
 	@echo Compiling File System...
-	$(LD) $(CFLAGS) $(LDFLAGS) -o fs fs.c ../functions.c
+	$(LD) $(CFLAGS) $(LDFLAGS) -o FS fs.c ../functions.c
 
 clean:
 	@echo Cleaning...
