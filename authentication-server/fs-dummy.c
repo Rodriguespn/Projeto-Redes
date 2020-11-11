@@ -1,93 +1,67 @@
+#include <netdb.h> 
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <string.h> 
+#include <sys/socket.h> 
 #include <unistd.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <netdb.h>
-#include "../constants.h"
-#include "../functions.h"
 
-void parse_arguments(const char *argv[], int size);
+#define MAX 80 
+#define PORT 59038 
+#define SA struct sockaddr 
+void func(int sockfd) 
+{ 
+    char buff[MAX]; 
+    int n; 
+    for (;;) { 
+        bzero(buff, sizeof(buff)); 
+        printf("Enter the string : "); 
+        n = 0; 
+        while ((buff[n++] = getchar()) != '\n') 
+            ;
+        buff[n] = '\n';
+        write(sockfd, buff, sizeof(buff)); 
+        bzero(buff, sizeof(buff)); 
+        read(sockfd, buff, sizeof(buff)); 
+        printf("From Server : %s", buff); 
+        if ((strncmp(buff, "exit", 4)) == 0) { 
+            printf("Client Exit...\n"); 
+            break; 
+        } 
+    } 
+} 
 
-char *asip, *asport;
+int main() 
+{ 
+    int sockfd, connfd; 
+    struct sockaddr_in servaddr, cli; 
 
-int main(int argc, char const *argv[]) {
-    int fd, errcode;
-    ssize_t n;
-    struct addrinfo hints, *res;
-    struct sockaddr_in addr;
-    char buffer[SIZE];
+    // socket create and varification 
+    sockfd = socket(AF_INET, SOCK_STREAM, 0); 
+    if (sockfd == -1) { 
+        printf("socket creation failed...\n"); 
+        exit(0); 
+    } 
+    else
+        printf("Socket successfully created..\n"); 
+    bzero(&servaddr, sizeof(servaddr)); 
 
-    // parses the argv arguments
-    parse_arguments(argv, argc);
+    // assign IP, PORT 
+    servaddr.sin_family = AF_INET; 
+    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
+    servaddr.sin_port = htons(PORT); 
 
-    printf("FSIP=%s\n", asip);
-    printf("FSport=%s\n", asport);
+    // connect the client socket to server socket 
+    if (connect(sockfd, (SA*)&servaddr, sizeof(servaddr)) != 0) { 
+        printf("connection with the server failed...\n"); 
+        exit(0); 
+    } 
+    else
+        printf("connected to the server..\n"); 
 
-    fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fd == ERROR) {
-        //error
-        fprintf(stderr, "Error: socket returned null\n");
-        exit(EXIT_FAILURE);
-    }
-    
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
+    // function for chat 
+    func(sockfd); 
 
-    // gets the address info
-    errcode = getaddrinfo(asip, asport, &hints, &res);
-    if (errcode != 0) {
-        //error
-        fprintf(stderr, "Error: getaddrinfo returned %d error code\n", errcode);
-        exit(EXIT_FAILURE);
-    }
-
-    //UDP socket
-    //IPv4
-    //UDP socket
-
-    
-    char command[SIZE], uid[SIZE], password[SIZE], login_success[SIZE];
-    memset(buffer, EOS, SIZE);
-    memset(command, EOS, SIZE);
-    memset(uid, EOS, SIZE);
-    memset(password, EOS, SIZE);
-    memset(login_success, EOS, SIZE);
-    
-    // writes the "registration success" message
-    strcpy(login_success, LOG_RESPONSE);
-    strcat(login_success, " ");
-    strcat(login_success, OK);
-    strcat(login_success, "\n");
-
-    do {
-        memset(buffer, EOS, SIZE);
-        read_stdin(buffer);
-
-        printf("request: %s\n", buffer);
-        printf("socket = %d\n", fd);
-        n = tcp_write(fd, buffer);
-
-        if (!n) continue;
-        
-        memset(buffer, EOS, SIZE);
-        n = tcp_read(fd, buffer, SIZE);
-
-        printf("response: %s\n", buffer);
-    } while (n); //strcmp(buffer, unregistration_success));
-
-    freeaddrinfo(res);
-    free(asip);
-    free(asport);
-    close(fd);
-
-    exit(EXIT_SUCCESS);
-}
-
-// parses the arguments given on the command line
-void parse_arguments(const char *argv[], int size) {
-    parse_fs_ip(argv, size, LOCALHOST, &asip);
-    parse_fs_port(argv, size, &asport);
+    // close the socket 
+    close(sockfd); 
 }

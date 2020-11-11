@@ -44,7 +44,6 @@ int main(int argc, char const *argv[])
     parse_argument_string(argc, argv, AS_IP_FLAG, LOCALHOST, as_ip);
     
     // Define TCP socket variables (Communication with User)
-    struct addrinfo hints, *res;
     struct sockaddr_in tcp_servaddr;
 
     // Create TCP socket
@@ -63,7 +62,7 @@ int main(int argc, char const *argv[])
   
     // Bind TCP socket to the assigned IP address and Port 
     // (bind(tcp_sockfd, (struct sockaddr*) &tcp_servaddr, sizeof(tcp_servaddr))
-    if ((bind(tcp_sockfd, res -> ai_addr, res -> ai_addrlen)) != 0)
+    if ((bind(tcp_sockfd, (struct sockaddr*) &tcp_servaddr, sizeof(tcp_servaddr))) != 0)
     { 
         fprintf(stderr, "Unable to bind the tcp socket.\n");
         exit(EXIT_FAILURE);  
@@ -98,7 +97,7 @@ int main(int argc, char const *argv[])
             fprintf(stderr, "Unable to accept TCP connections.\n");
             exit(EXIT_FAILURE); 
         }
-        printf("Hello\n");
+        
         // If the code gets here then a new user connected.
         // Create a new process to handle the conversation with the user
         int pid = fork();
@@ -126,6 +125,17 @@ int main(int argc, char const *argv[])
             udp_servaddr.sin_family = AF_INET; 
             udp_servaddr.sin_addr.s_addr = inet_addr(as_ip); 
             udp_servaddr.sin_port = as_port;
+
+            struct timeval tv;
+            tv.tv_sec = 2;
+            tv.tv_usec = 0; 
+            int errcode;
+
+            // sets socket timeout as 5s
+            if ((errcode = setsockopt(udp_sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv))) < 0) {
+                fprintf(stderr, "ERROR: setsockopt returned erro code %d\n", errcode);
+                return false;
+            }
             
             // Define user IP and Port variables
             char user_ip[IP_SIZE];
@@ -185,8 +195,9 @@ int main(int argc, char const *argv[])
                 // Print the uid read from the tcp socket
                 verbose_message(verbose, "UID = %s | ", uid);
 
+                int n;
                 // Read the request tid
-                if (tcp_read(user_sockfd, tid, TID_SIZE) != TID_SIZE)
+                if ((n = tcp_read(user_sockfd, tid, TID_SIZE)) != TID_SIZE || strlen(tid) != TID_SIZE)
                 {
                     bzero(command, command_size);
                     strcpy(command, PROTOCOL_ERROR);
@@ -198,6 +209,8 @@ int main(int argc, char const *argv[])
                     exit(EXIT_SUCCESS);
                 }
                 tid[TID_SIZE-1] = EOS;
+
+                printf("tid_size = %ld\n", strlen(tid));
 
                 // Print the tid read from the tcp socket
                 verbose_message(verbose, "TID = %s | ", tid);
@@ -598,7 +611,7 @@ int main(int argc, char const *argv[])
                 strcat(vld, "\n");
 
                 // Send the message to the AS
-                if (udp_write(udp_sockfd, vld, (struct sockaddr *) &udp_servaddr, udp_servaddr.sin_len) == false)
+                if (udp_write(udp_sockfd, vld, (struct sockaddr *) &udp_servaddr, sizeof(udp_servaddr)) == false)
                 {
                     bzero(command, command_size);
                     strcpy(command, PROTOCOL_ERROR);
@@ -838,7 +851,7 @@ int main(int argc, char const *argv[])
                 strcat(vld, "\n");
 
                 // Send the message to the AS
-                if (udp_write(udp_sockfd, vld, (struct sockaddr *) &udp_servaddr, udp_servaddr.sin_len) == false)
+                if (udp_write(udp_sockfd, vld, (struct sockaddr *) &udp_servaddr, sizeof(udp_servaddr)) == false)
                 {
                     bzero(command, command_size);
                     strcpy(command, PROTOCOL_ERROR);
@@ -1007,6 +1020,13 @@ int main(int argc, char const *argv[])
             }
             else                                        // Invalid command requested
             {
+                bzero(command, command_size);
+                strcpy(command, PROTOCOL_ERROR);
+                strcat(command, "\n");
+                tcp_write(user_sockfd, command);
+                close(udp_sockfd);
+                close(user_sockfd);
+                fprintf(stderr, "Error: Invalid command from User.\n");
             }
 
             // Respond to the user
