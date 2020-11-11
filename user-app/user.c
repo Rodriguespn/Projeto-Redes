@@ -61,6 +61,34 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
+    //connection to FS
+    fs_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fs_fd == ERROR)
+        exit(EXIT_FAILURE); //error
+
+    memset(&hints_fs, 0, sizeof hints_fs);
+    hints_fs.ai_family = AF_INET;
+    hints_fs.ai_socktype = SOCK_STREAM;
+
+    errcode_fs = getaddrinfo(asip, asport, &hints_fs, &res_fs);
+    if (errcode_fs != 0)
+    {
+        //error
+        fprintf(stderr, "Error: could not get address info\n");
+        exit(EXIT_FAILURE);
+    }
+    //TCP socket
+    //IPv4
+    //TCP socket
+    m = connect(fs_fd, res_fs->ai_addr, res_fs->ai_addrlen);
+    if (m == ERROR)
+    {
+        //error
+        fprintf(stderr, "Error: could not connect\n");
+        exit(EXIT_FAILURE);
+    }
+
+    //
     char buffer[SIZE], command[SIZE], uid[SIZE], password[SIZE], rid[SIZE],
         fop[FOP_SIZE], fname[SIZE], vc[SIZE], tid[SIZE], fsize[SIZE], data[SIZE];
 
@@ -306,7 +334,7 @@ void parse_arguments(const char *argv[], int size)
     parse_fs_port(argv, size, &fsport);
 }
 
-/*login*/
+//login
 Boolean parse_login_message(char *buffer, char *command, char *uid, char *password)
 {
     char *token = strtok(buffer, " ");
@@ -387,7 +415,7 @@ Boolean verify_login_response(char *buffer, int size)
     return false;
 }
 
-/*req*/
+//req
 Boolean parse_req(char *fop, char *fname)
 {
     char *token = strtok(NULL, " ");
@@ -459,7 +487,7 @@ void prepare_req_request(char *request, char *uid, char *fop, char *fname, char 
     printf("request = %s\n", request);
 }
 
-/*val*/
+//val
 Boolean parse_val(char *vc)
 {
     char *token = strtok(NULL, " ");
@@ -493,9 +521,7 @@ void prepare_val_request(char *request, char *uid, char *rid, char *vc)
     strcat(request, "\n");
 }
 
-/*list*/
-//nao precisa de parser
-
+//list
 void prepare_list_request(char *request, char *uid, char *tid)
 {
     strcpy(request, LIST);
@@ -535,7 +561,7 @@ void treat_rls(char *buffer)
     }
 }
 
-/*retrieve*/
+//retrieve
 Boolean parse_retrieve_upload_delete(char *fname)
 {
     char *token = strtok(NULL, " ");
@@ -580,32 +606,36 @@ void treat_rrt(char *buffer)
     token = strtok(NULL, " ");
 
     //OK
-    if(strcmp(token, OK)){
+    if (strcmp(token, OK))
+    {
         token = strtok((NULL), " ");
         printf("filename: %s\t", token);
         token = strtok(NULL, " ");
         printf("filesize: %s\n", token);
     }
     //EOF
-    else if(strcmp(token, FILE_UNAVAILABLE)){
+    else if (strcmp(token, FILE_UNAVAILABLE))
+    {
         fprintf(stderr, "File is not available.\n");
     }
     //NOK
-    else if(strcmp(token, NOT_OK)){
+    else if (strcmp(token, NOT_OK))
+    {
         fprintf(stderr, "No content available for current UID.\n");
     }
     //INV
-    else if(strcmp(token, AS_VALIDATION_ERROR)){
+    else if (strcmp(token, AS_VALIDATION_ERROR))
+    {
         fprintf(stderr, "Validation error.\n");
     }
     //ERR
-    else if(strcmp(token, PROTOCOL_ERROR)){
+    else if (strcmp(token, PROTOCOL_ERROR))
+    {
         fprintf(stderr, "Request is not correctly formulated.\n");
     }
 }
 
-/*upload*/
-//usa parser do retrieve
+//upload
 void prepare_upload_request(char *request, char *uid, char *tid, char *fname,
                             char *fsize, char *data)
 {
@@ -623,7 +653,7 @@ void prepare_upload_request(char *request, char *uid, char *tid, char *fname,
     strcat(request, "\n");
 }
 
-void treat_rup(char* buffer)
+void treat_rup(char *buffer)
 {
     char *token = strtok(buffer, " ");
 
@@ -635,34 +665,38 @@ void treat_rup(char* buffer)
     token = strtok(NULL, " ");
 
     //OK
-    if(strcmp(token, OK)){
+    if (strcmp(token, OK))
+    {
         printf(SUCCESS_MESSAGE);
         printf("\n");
     }
     //DUP
-    else if(strcmp(token, FILE_UNAVAILABLE)){
+    else if (strcmp(token, FILE_UNAVAILABLE))
+    {
         printf(FAILURE_MESSAGE);
         fprintf(stderr, " File already exists.\n");
     }
     //FULL
-    else if(strcmp(token, NOT_OK)){
+    else if (strcmp(token, NOT_OK))
+    {
         printf(FAILURE_MESSAGE);
         fprintf(stderr, " FS is full, user already uploaded 15 files.\n");
     }
     //INV
-    else if(strcmp(token, AS_VALIDATION_ERROR)){
+    else if (strcmp(token, AS_VALIDATION_ERROR))
+    {
         printf(FAILURE_MESSAGE);
         fprintf(stderr, " Validation error.\n");
     }
     //ERR
-    else if(strcmp(token, PROTOCOL_ERROR)){
+    else if (strcmp(token, PROTOCOL_ERROR))
+    {
         printf(FAILURE_MESSAGE);
         fprintf(stderr, " Request is not correctly formulated.\n");
     }
 }
 
-/*delete*/
-//usa parser do retrieve
+//delete
 void prepare_delete_request(char *request, char *uid, char *tid, char *fname)
 {
     strcpy(request, DELETE);
@@ -675,7 +709,7 @@ void prepare_delete_request(char *request, char *uid, char *tid, char *fname)
     strcat(request, "\n");
 }
 
-void treat_rdl(char* buffer)
+void treat_rdl(char *buffer)
 {
     char *token = strtok(buffer, " ");
 
@@ -687,29 +721,32 @@ void treat_rdl(char* buffer)
     token = strtok(NULL, " ");
 
     //OK
-    if(strcmp(token, OK)){
+    if (strcmp(token, OK))
+    {
         printf(SUCCESS_MESSAGE);
         printf("\n");
     }
     //NOK
-    else if(strcmp(token, NOT_OK)){
+    else if (strcmp(token, NOT_OK))
+    {
         printf(FAILURE_MESSAGE);
         fprintf(stderr, " UID does not exist.\n");
     }
     //INV
-    else if(strcmp(token, AS_VALIDATION_ERROR)){
+    else if (strcmp(token, AS_VALIDATION_ERROR))
+    {
         printf(FAILURE_MESSAGE);
         fprintf(stderr, " Validation error.\n");
     }
     //ERR
-    else if(strcmp(token, PROTOCOL_ERROR)){
+    else if (strcmp(token, PROTOCOL_ERROR))
+    {
         printf(FAILURE_MESSAGE);
         fprintf(stderr, " Request is not correctly formulated.\n");
     }
 }
 
-/*remove*/
-//nao precisa de parser
+//remove
 void prepare_remove_request(char *request, char *uid, char *tid)
 {
     strcpy(request, REMOVE);
@@ -720,7 +757,7 @@ void prepare_remove_request(char *request, char *uid, char *tid)
     strcat(request, "\n");
 }
 
-void treat_rrm(char* buffer)
+void treat_rrm(char *buffer)
 {
     char *token = strtok(buffer, " ");
 
@@ -732,22 +769,26 @@ void treat_rrm(char* buffer)
     token = strtok(NULL, " ");
 
     //OK
-    if(strcmp(token, OK)){
+    if (strcmp(token, OK))
+    {
         printf(SUCCESS_MESSAGE);
         printf("\n");
     }
     //NOK
-    else if(strcmp(token, NOT_OK)){
+    else if (strcmp(token, NOT_OK))
+    {
         printf(FAILURE_MESSAGE);
         fprintf(stderr, " UID does not exist.\n");
     }
     //INV
-    else if(strcmp(token, AS_VALIDATION_ERROR)){
+    else if (strcmp(token, AS_VALIDATION_ERROR))
+    {
         printf(FAILURE_MESSAGE);
         fprintf(stderr, " Validation error.\n");
     }
     //ERR
-    else if(strcmp(token, PROTOCOL_ERROR)){
+    else if (strcmp(token, PROTOCOL_ERROR))
+    {
         printf(FAILURE_MESSAGE);
         fprintf(stderr, " Request is not correctly formulated.\n");
     }
@@ -767,15 +808,15 @@ void verify_command_response(char *buffer, int size)
     }
 
     printf("%s\n", FAILURE_MESSAGE);
-    //printf("response: %s\n", buffer);
 }
 
+//Initializes TCP connection to FS
 void init_socket_to_fs(int fs_fd, int errcode_fs, ssize_t m, struct addrinfo hints_fs,
                        struct addrinfo *res_fs)
 {
     //connection to FS
     fs_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fs_fd == ERROR)
+    if (fs_fd == ERROR){}
         exit(EXIT_FAILURE); //error
 
     memset(&hints_fs, 0, sizeof hints_fs);
@@ -801,6 +842,7 @@ void init_socket_to_fs(int fs_fd, int errcode_fs, ssize_t m, struct addrinfo hin
     }
 }
 
+//RID generator
 void generate_random_rid(char rid[], int size)
 {
     int rid_alg, rid_number = 0;
