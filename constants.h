@@ -80,6 +80,7 @@ typedef enum { false, true } Boolean;
 #define INVALID_FOP         "EFOP"
 #define DUPLICATED_FILE     "DUP"
 #define LIMIT_FILES_REACHED "FULL"
+#define EOF_FILE            "EOF"
 
 // PD-AS Protocol
 #define REGISTRATION        "REG"
