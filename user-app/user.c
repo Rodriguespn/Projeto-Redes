@@ -113,19 +113,18 @@ int main(int argc, char const *argv[])
     {
         // reads the stdin and checks for login command
         read_stdin(buffer);
-        if (!parse_login_message(buffer, command, uid, password))
-        {
-            continue;
-        }
         // reads the stdin and checks for exit command
-        else if (strcmp(buffer, USER_EXIT) == 0)
+        if (strcmp(buffer, USER_EXIT) == 0)
         {
             close(as_fd);
             exit(EXIT_SUCCESS);
         }
-
-        // if there is a login command prepares the login message to be sent
+        else if (!parse_login_message(buffer, command, uid, password))
+        {
+            continue;
+        }
         memset(buffer, EOS, SIZE);
+        // if there is a login command prepares the login message to be sent
         if (!prepare_login_request(buffer, command, uid, password))
         {
             continue;
