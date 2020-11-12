@@ -38,7 +38,8 @@ PD -> ./pd 193.136.128.104 -n tejo.tecnico.ulisboa.pt -p 58011
 
 ### ToDos
 Gastão:
-- User
+- meter mensagens de sucesso/falha
+- USER-FS
 
 Pedro:
 > PD:

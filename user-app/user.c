@@ -2,7 +2,6 @@
 
 char *asip, *asport, *fsip, *fsport;
 char login_success[SIZE];
-char req_success[SIZE];
 
 int main(int argc, char const *argv[])
 {
@@ -244,8 +243,6 @@ int main(int argc, char const *argv[])
         memset(vc, EOS, SIZE);
         memset(fsize, EOS, SIZE);
         memset(data, EOS, SIZE);
-
-        printf("\nlast command: %s\n", last_command);
     }
 }
 
@@ -363,6 +360,9 @@ void req(char *fop, char *fname, char *buffer, char *uid, char *rid, int as_fd, 
         n = tcp_read(as_fd, buffer, SIZE);
         printf("message received from AS = %s", buffer);
 
+        //treat the received message
+        treat_rrq(buffer);
+
         //tirar isto
         printf("(ignore this (%ld))\n", n);
     }
@@ -439,6 +439,43 @@ void prepare_req_request(char *request, char *uid, char *fop, char *fname, char 
     printf("request = %s\n", request);
 }
 
+void treat_rrq(char *buffer)
+{
+    char *token = strtok(buffer, " ");
+
+    if (strcmp(token, REQ_RESPONSE) != 0)
+    {
+        fprintf(stderr, "Did not receive %s!\n", REQ_RESPONSE);
+        return;
+    }
+    token = strtok(NULL, " ");
+
+    //OK
+    if (strcmp(token, OK))
+    {
+        printf(SUCCESS_MESSAGE);
+        printf("\n");
+    }
+    //ELOG
+    else if (strcmp(token, NOT_LOGGED_IN))
+    {
+        printf(FAILURE_MESSAGE);
+        printf(" There was not a successful login.\n");
+    }
+    //EPD
+    else if (strcmp(token, PD_NOT_AVAILABLE))
+    {
+        printf(FAILURE_MESSAGE);
+        printf(" Message was not sent by AS to PD.\n");
+    }
+    //EUSER
+    else if (strcmp(token, INVALID_UID))
+    {
+        printf(FAILURE_MESSAGE);
+        printf(" UID is incorrect.\n");
+    }
+}
+
 //val action functions
 void val(char *vc, char *tid, char *buffer, char *uid, char *rid, int as_fd, ssize_t n)
 {
@@ -455,16 +492,8 @@ void val(char *vc, char *tid, char *buffer, char *uid, char *rid, int as_fd, ssi
         n = tcp_read(as_fd, buffer, SIZE);
         printf("message received from AS = %s", buffer);
 
-        //sets TID
-        char *token = strtok(buffer, " ");
-        token = strtok(NULL, " ");
-        strcpy(tid, token);
-        printf("TID is now: %s\n", tid);
-
-        if (strcmp(tid, "0") == 0)
-        {
-            printf("Authentication failed.\n");
-        }
+        //treat the received message
+        treat_rau(buffer, tid);
 
         //tirar isto
         printf("(ignore this (%ld))\n", n);
@@ -502,6 +531,29 @@ void prepare_val_request(char *request, char *uid, char *rid, char *vc)
     strcat(request, " ");
     strcat(request, vc);
     strcat(request, "\n");
+}
+
+void treat_rau(char *buffer, char *tid)
+{
+    char *token = strtok(buffer, " ");
+    if (strcmp(token, AUT_RESPONSE) != 0)
+    {
+        fprintf(stderr, "Did not receive %s!\n", AUT_RESPONSE);
+        return;
+    }
+    token = strtok(NULL, " ");
+
+    if (strcmp(token, TID_ERROR) == 0)
+    {
+        printf(FAILURE_MESSAGE);
+        printf(" Authentication failed.\n");
+        return;
+    }
+    else
+    {
+        strcpy(tid, token);
+        printf("%s TID is now: %s\n", SUCCESS_MESSAGE, tid);
+    }
 }
 
 //list action functions

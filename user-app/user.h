@@ -30,11 +30,13 @@ Boolean verify_login_response(char *buffer);
 void req(char* fop, char* fname, char* buffer, char* uid, char* rid, int as_fd, ssize_t n);
 Boolean parse_req(char *fop, char *fname);
 void prepare_req_request(char *request, char *uid, char *fop, char *fname, char *rid);
+void treat_rrq(char* buffer);
 
 //val
 void val(char* vc, char* tid, char* buffer, char* uid, char* rid, int as_fd, ssize_t n);
 Boolean parse_val(char *vc);
 void prepare_val_request(char *request, char *uid, char *rid, char *vc);
+void treat_rau(char* buffer, char *tid);
 
 //list
 void list(char* tid, char* buffer, char* uid, int fs_fd, ssize_t m, 
