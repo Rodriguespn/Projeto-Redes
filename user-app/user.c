@@ -37,7 +37,7 @@ int main(int argc, char const *argv[])
     //connection to AS
     as_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (as_fd == ERROR)
-        exit(EXIT_FAILURE); //error
+        exit(EXIT_FAILURE);
 
     memset(&hints_as, 0, sizeof hints_as);
     hints_as.ai_family = AF_INET;
@@ -46,17 +46,13 @@ int main(int argc, char const *argv[])
     errcode_as = getaddrinfo(asip, asport, &hints_as, &res_as);
     if (errcode_as != 0)
     {
-        //error
         fprintf(stderr, "Error: could not get address info\n");
         exit(EXIT_FAILURE);
     }
-    //TCP socket
-    //IPv4
-    //TCP socket
+
     n = connect(as_fd, res_as->ai_addr, res_as->ai_addrlen);
     if (n == ERROR)
     {
-        //error
         fprintf(stderr, "Error: could not connect\n");
         exit(EXIT_FAILURE);
     }
@@ -64,7 +60,7 @@ int main(int argc, char const *argv[])
     //connection to FS
     fs_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fs_fd == ERROR)
-        exit(EXIT_FAILURE); //error
+        exit(EXIT_FAILURE);
 
     memset(&hints_fs, 0, sizeof hints_fs);
     hints_fs.ai_family = AF_INET;
@@ -73,22 +69,18 @@ int main(int argc, char const *argv[])
     errcode_fs = getaddrinfo(asip, asport, &hints_fs, &res_fs);
     if (errcode_fs != 0)
     {
-        //error
         fprintf(stderr, "Error: could not get address info\n");
         exit(EXIT_FAILURE);
     }
-    //TCP socket
-    //IPv4
-    //TCP socket
+
     m = connect(fs_fd, res_fs->ai_addr, res_fs->ai_addrlen);
     if (m == ERROR)
     {
-        //error
         fprintf(stderr, "Error: could not connect\n");
         exit(EXIT_FAILURE);
     }
 
-    //
+    //variables
     char buffer[SIZE], command[SIZE], uid[SIZE], password[SIZE], rid[SIZE],
         fop[FOP_SIZE], fname[SIZE], vc[SIZE], tid[SIZE], fsize[SIZE], data[SIZE];
 
@@ -110,6 +102,13 @@ int main(int argc, char const *argv[])
     strcat(login_success, OK);
     strcat(login_success, "\n");
 
+    /*Sequence of actions: 
+        - exit may be executed whenever;
+        - first action must be login;
+        - after req action must be either req or val;
+        - after val action can be anyone but val or login;
+        - after an user-fs command or login action must be req;
+    */
     do
     {
         // reads the stdin and checks for login command
@@ -117,6 +116,11 @@ int main(int argc, char const *argv[])
         if (!parse_login_message(buffer, command, uid, password))
         {
             continue;
+        }
+        // reads the stdin and checks for exit command
+        else if (strcmp(buffer, USER_EXIT) == 0)
+        {
+            exit(EXIT_SUCCESS);
         }
 
         // if there is a login command prepares the login message to be sent
@@ -142,177 +146,266 @@ int main(int argc, char const *argv[])
 
     while (1)
     {
-        read_stdin(buffer);
-        strcpy(command, strtok(buffer, " "));
-
-        if (strcmp(command, USER_REQUEST) == 0)
+        //if the last action was req, it will check for req, val or exit
+        if (strcpy(command, USER_REQUEST) == 0)
         {
-            if (parse_req(fop, fname))
+            memset(command, EOS, SIZE);
+            read_stdin(buffer);
+            strcpy(command, strtok(buffer, " "));
+
+            //req
+            if (strcmp(command, USER_REQUEST) == 0)
             {
-                prepare_req_request(buffer, uid, fop, fname, rid);
-
-                // sends the login message to AS via tcp connection
-                n = tcp_write(as_fd, buffer);
-                printf("message sent to AS = %s", buffer);
-
-                // receives the AS response message
-                memset(buffer, EOS, SIZE);
-                n = tcp_read(as_fd, buffer, SIZE);
-                printf("message received from AS = %s", buffer);
-            };
-        }
-        if (strcmp(command, USER_VAL) == 0)
-        {
-            if (parse_val(vc))
-            {
-                prepare_val_request(buffer, uid, rid, vc);
-
-                // sends the login message to AS via tcp connection
-                n = tcp_write(as_fd, buffer);
-                printf("message sent to AS = %s", buffer);
-
-                // receives the AS response message
-                memset(buffer, EOS, SIZE);
-                n = tcp_read(as_fd, buffer, SIZE);
-                printf("message received from AS = %s", buffer);
-
-                //sets TID
-                char *token = strtok(buffer, " ");
-                token = strtok(NULL, " ");
-                strcpy(tid, token);
-                printf("TID is now: %s\n", tid);
-
-                if (strcmp(tid, "0") == 0)
+                if (parse_req(fop, fname))
                 {
-                    printf("Authentication failed.\n");
+                    prepare_req_request(buffer, uid, fop, fname, rid);
+
+                    // sends the login message to AS via tcp connection
+                    n = tcp_write(as_fd, buffer);
+                    printf("message sent to AS = %s", buffer);
+
+                    // receives the AS response message
+                    memset(buffer, EOS, SIZE);
+                    n = tcp_read(as_fd, buffer, SIZE);
+                    printf("message received from AS = %s", buffer);
+                };
+            }
+            //val
+            if (strcmp(command, USER_VAL) == 0)
+            {
+                if (parse_val(vc))
+                {
+                    prepare_val_request(buffer, uid, rid, vc);
+
+                    // sends the login message to AS via tcp connection
+                    n = tcp_write(as_fd, buffer);
+                    printf("message sent to AS = %s", buffer);
+
+                    // receives the AS response message
+                    memset(buffer, EOS, SIZE);
+                    n = tcp_read(as_fd, buffer, SIZE);
+                    printf("message received from AS = %s", buffer);
+
+                    //sets TID
+                    char *token = strtok(buffer, " ");
+                    token = strtok(NULL, " ");
+                    strcpy(tid, token);
+                    printf("TID is now: %s\n", tid);
+
+                    if (strcmp(tid, "0") == 0)
+                    {
+                        printf("Authentication failed.\n");
+                    }
                 }
             }
+            //exit
+            else if (strcmp(command, USER_EXIT) == 0)
+            {
+                exit(EXIT_SUCCESS);
+            }
+            else
+            {
+                printf("Not accepted. Possible actions: 'req', 'val' or 'exit'.\n");
+                continue;
+            }
         }
-        if (strcmp(command, USER_LIST) == 0 || strcmp(command, USER_LIST_SHORT) == 0)
+
+        //if the last action was val, it will check for anyone but val or login
+        else if (strcmp(command, USER_VAL) == 0)
         {
-            init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
+            memset(command, EOS, SIZE);
+            read_stdin(buffer);
+            strcpy(command, strtok(buffer, " "));
 
-            prepare_list_request(buffer, uid, tid);
+            //req
+            if (strcmp(command, USER_REQUEST) == 0)
+            {
+                if (parse_req(fop, fname))
+                {
+                    prepare_req_request(buffer, uid, fop, fname, rid);
 
-            // sends the login message to FS via tcp connection
-            n = tcp_write(fs_fd, buffer);
-            printf("message sent to AS = %s", buffer);
+                    // sends the login message to AS via tcp connection
+                    n = tcp_write(as_fd, buffer);
+                    printf("message sent to AS = %s", buffer);
 
-            // receives the FS response message
-            memset(buffer, EOS, SIZE);
-            n = tcp_read(fs_fd, buffer, SIZE);
-            printf("message received from AS = %s", buffer);
-
-            //treat received message
-            treat_rls(buffer);
-        }
-        if (strcmp(command, USER_RETRIEVE) == 0 || strcmp(command, USER_RETRIEVE_SHORT) == 0)
-        {
-            if (parse_retrieve_upload_delete(fname))
+                    // receives the AS response message
+                    memset(buffer, EOS, SIZE);
+                    n = tcp_read(as_fd, buffer, SIZE);
+                    printf("message received from AS = %s", buffer);
+                };
+            }
+            //list
+            else if (strcmp(command, USER_LIST) == 0 || strcmp(command, USER_LIST_SHORT) == 0)
             {
                 init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
 
-                prepare_retrieve_request(buffer, uid, tid, fname);
+                prepare_list_request(buffer, uid, tid);
 
                 // sends the login message to FS via tcp connection
                 n = tcp_write(fs_fd, buffer);
-                printf("message sent to AS = %s", buffer);
+                printf("message sent to FS = %s", buffer);
 
                 // receives the FS response message
                 memset(buffer, EOS, SIZE);
                 n = tcp_read(fs_fd, buffer, SIZE);
-                printf("message received from AS = %s", buffer);
+                printf("message received from FS = %s", buffer);
 
-                //TODO: display name and path of file
                 //treat received message
-                treat_rrt(buffer);
-
-                close(fs_fd);
+                treat_rls(buffer);
             }
-        }
-        if (strcmp(command, USER_UPLOAD) == 0 || strcmp(command, USER_UPLOAD_SHORT) == 0)
-        {
-            if (parse_retrieve_upload_delete(fname))
+            //retrieve
+            else if (strcmp(command, USER_RETRIEVE) == 0 || strcmp(command, USER_RETRIEVE_SHORT) == 0)
+            {
+                if (parse_retrieve_upload_delete(fname))
+                {
+                    init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
+
+                    prepare_retrieve_request(buffer, uid, tid, fname);
+
+                    // sends the login message to FS via tcp connection
+                    n = tcp_write(fs_fd, buffer);
+                    printf("message sent to FS = %s", buffer);
+
+                    // receives the FS response message
+                    memset(buffer, EOS, SIZE);
+                    n = tcp_read(fs_fd, buffer, SIZE);
+                    printf("message received from FS = %s", buffer);
+
+                    //treat received message
+                    treat_rrt(buffer);
+
+                    close(fs_fd);
+                }
+            }
+            //upload
+            else if (strcmp(command, USER_UPLOAD) == 0 || strcmp(command, USER_UPLOAD_SHORT) == 0)
+            {
+                if (parse_retrieve_upload_delete(fname))
+                {
+
+                    init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
+
+                    prepare_upload_request(buffer, uid, tid, fname, fsize, data);
+
+                    // sends the login message to FS via tcp connection
+                    n = tcp_write(fs_fd, buffer);
+                    printf("message sent to FS = %s", buffer);
+
+                    // receives the FS response message
+                    memset(buffer, EOS, SIZE);
+                    n = tcp_read(fs_fd, buffer, SIZE);
+                    printf("message received from FS = %s", buffer);
+
+                    //treat received message
+                    treat_rup(buffer);
+
+                    close(fs_fd);
+                }
+            }
+            //delete
+            else if (strcmp(command, USER_DELETE) == 0 || strcmp(command, USER_DELETE_SHORT) == 0)
+            {
+                if (parse_retrieve_upload_delete(fname))
+                {
+                    init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
+
+                    prepare_delete_request(buffer, uid, tid, fname);
+
+                    // sends the login message to FS via tcp connection
+                    n = tcp_write(fs_fd, buffer);
+                    printf("message sent to FS = %s", buffer);
+
+                    // receives the FS response message
+                    memset(buffer, EOS, SIZE);
+                    n = tcp_read(fs_fd, buffer, SIZE);
+                    printf("message received from FS = %s", buffer);
+
+                    //treat received message
+                    treat_rdl(buffer);
+
+                    close(fs_fd);
+                }
+            }
+            //remove
+            else if (strcmp(command, USER_REMOVE) == 0 || strcmp(command, USER_REMOVE_SHORT) == 0)
             {
                 init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
 
-                prepare_upload_request(buffer, uid, tid, fname, fsize, data);
+                prepare_remove_request(buffer, uid, tid);
 
                 // sends the login message to FS via tcp connection
                 n = tcp_write(fs_fd, buffer);
-                printf("message sent to AS = %s", buffer);
+                printf("message sent to FS = %s", buffer);
 
                 // receives the FS response message
                 memset(buffer, EOS, SIZE);
                 n = tcp_read(fs_fd, buffer, SIZE);
-                printf("message received from AS = %s", buffer);
+                printf("message received from FS = %s", buffer);
 
-                //TODO: display succes/failure
                 //treat received message
-                treat_rup(buffer);
+                treat_rrm(buffer);
 
                 close(fs_fd);
             }
-        }
-        if (strcmp(command, USER_DELETE) == 0 || strcmp(command, USER_DELETE_SHORT) == 0)
-        {
-            if (parse_retrieve_upload_delete(fname))
+            //exit
+            else if (strcmp(command, USER_EXIT) == 0)
             {
-                init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
-
-                prepare_delete_request(buffer, uid, tid, fname);
-
-                // sends the login message to FS via tcp connection
-                n = tcp_write(fs_fd, buffer);
-                printf("message sent to AS = %s", buffer);
-
-                // receives the FS response message
-                memset(buffer, EOS, SIZE);
-                n = tcp_read(fs_fd, buffer, SIZE);
-                printf("message received from AS = %s", buffer);
-
-                //TODO: display succes/failure
-                //treat received message
-                treat_rdl(buffer);
-
-                close(fs_fd);
+                exit(EXIT_SUCCESS);
+            }
+            else{
+                printf("Not accepted. Impossible actions: 'val' and 'login'.\n");
+                continue;
             }
         }
-        if (strcmp(command, USER_REMOVE) == 0 || strcmp(command, USER_REMOVE_SHORT) == 0)
+
+        //if the last action was an User_FS command(else) or login, action must
+        //be either req or exit
+        else
         {
-            init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
+            memset(command, EOS, SIZE);
+            read_stdin(buffer);
+            strcpy(command, strtok(buffer, " "));
 
-            prepare_remove_request(buffer, uid, tid);
+            //req
+            if (strcmp(command, USER_REQUEST) == 0)
+            {
+                if (parse_req(fop, fname))
+                {
+                    prepare_req_request(buffer, uid, fop, fname, rid);
 
-            // sends the login message to FS via tcp connection
-            n = tcp_write(fs_fd, buffer);
-            printf("message sent to AS = %s", buffer);
+                    // sends the login message to AS via tcp connection
+                    n = tcp_write(as_fd, buffer);
+                    printf("message sent to AS = %s", buffer);
 
-            // receives the FS response message
-            memset(buffer, EOS, SIZE);
-            n = tcp_read(fs_fd, buffer, SIZE);
-            printf("message received from AS = %s", buffer);
-
-            //display succes/failure
-            //treat received message
-            treat_rrm(buffer);
-
-            close(fs_fd);
+                    // receives the AS response message
+                    memset(buffer, EOS, SIZE);
+                    n = tcp_read(as_fd, buffer, SIZE);
+                    printf("message received from AS = %s", buffer);
+                };
+            }
+            //exit
+            else if (strcmp(command, USER_EXIT) == 0)
+            {
+                exit(EXIT_SUCCESS);
+            }
+            else{
+                printf("Not accepted. Possible actions: 'req' and 'exit'.\n");
+                continue;
+            }
         }
-        if (strcmp(command, USER_EXIT) == 0)
-        {
-            exit(EXIT_SUCCESS);
-        }
 
+        //clean variables
         memset(buffer, EOS, SIZE);
-        memset(command, EOS, SIZE);
         memset(fname, EOS, SIZE);
         memset(vc, EOS, SIZE);
         memset(fsize, EOS, SIZE);
         memset(data, EOS, SIZE);
+
+        printf("\nlast command: %s\n", command);
     }
 }
 
+//shows the correct way to run user.c
 void usage()
 {
     printf("usage: ./user [-n ASIP] [-p ASport] [-m FSIP] [-q FSport]\n");
@@ -320,6 +413,7 @@ void usage()
     //alterar exemplo flag -m
 }
 
+//ensures the number of arguments given when running is correct
 int wrong_arguments(int argc)
 {
     return !(argc > 0 && argc % 2 == 1 && argc <= 9);
@@ -334,19 +428,19 @@ void parse_arguments(const char *argv[], int size)
     parse_fs_port(argv, size, &fsport);
 }
 
-//login
+//login action functions
 Boolean parse_login_message(char *buffer, char *command, char *uid, char *password)
 {
     char *token = strtok(buffer, " ");
 
     if (!token)
     {
-        fprintf(stderr, "Command missing!\nMust give a command\n");
+        fprintf(stderr, "Command missing! Must give a command\n");
         return false;
     }
     else if (strcmp(token, USER_LOGIN) != 0)
     {
-        fprintf(stderr, "You did not login.\nDid you mean to use command '%s'?\n", USER_LOGIN);
+        fprintf(stderr, "You did not login. Did you mean to use command '%s'?\n", USER_LOGIN);
         return false;
     }
     strcpy(command, token);
@@ -354,7 +448,7 @@ Boolean parse_login_message(char *buffer, char *command, char *uid, char *passwo
     token = strtok(NULL, " ");
     if (!token)
     {
-        fprintf(stderr, "UID missing!\nMust give a UID\n");
+        fprintf(stderr, "UID missing! Must give a UID\n");
         return false;
     }
     strcpy(uid, token);
@@ -362,7 +456,7 @@ Boolean parse_login_message(char *buffer, char *command, char *uid, char *passwo
     token = strtok(NULL, " ");
     if (!token)
     {
-        fprintf(stderr, "Password missing!\nMust give a password\n");
+        fprintf(stderr, "Password missing! Must give a password\n");
         return false;
     }
     strcpy(password, token);
@@ -400,7 +494,7 @@ Boolean verify_login_response(char *buffer, int size)
     printf("response: %s\n", buffer);
     if (!size)
     {
-        printf("%s\n", SERVER_DOWN_MESSAGE);
+        printf("%s\n", FAILURE_MESSAGE);
         return false;
     }
 
@@ -411,11 +505,10 @@ Boolean verify_login_response(char *buffer, int size)
     }
 
     printf("%s\n", FAILURE_MESSAGE);
-    //printf("response: %s\n", buffer);
     return false;
 }
 
-//req
+//req action functions
 Boolean parse_req(char *fop, char *fname)
 {
     char *token = strtok(NULL, " ");
@@ -487,7 +580,7 @@ void prepare_req_request(char *request, char *uid, char *fop, char *fname, char 
     printf("request = %s\n", request);
 }
 
-//val
+//val action functions
 Boolean parse_val(char *vc)
 {
     char *token = strtok(NULL, " ");
@@ -561,27 +654,7 @@ void treat_rls(char *buffer)
     }
 }
 
-//retrieve
-Boolean parse_retrieve_upload_delete(char *fname)
-{
-    char *token = strtok(NULL, " ");
-    if (!token)
-    {
-        fprintf(stderr, "UID missing!\nMust give a UID\n");
-        return false;
-    }
-    strcpy(fname, token);
-
-    token = strtok(NULL, " ");
-    if (token)
-    {
-        fprintf(stderr, "Too many arguments!\n");
-        return false;
-    }
-
-    return true;
-}
-
+//retrieve action functions
 void prepare_retrieve_request(char *request, char *uid, char *tid, char *fname)
 {
     strcpy(request, RETRIEVE);
@@ -635,10 +708,12 @@ void treat_rrt(char *buffer)
     }
 }
 
-//upload
+//upload action functions
 void prepare_upload_request(char *request, char *uid, char *tid, char *fname,
                             char *fsize, char *data)
 {
+    //data
+
     strcpy(request, UPLOAD);
     strcat(request, " ");
     strcat(request, uid);
@@ -696,7 +771,7 @@ void treat_rup(char *buffer)
     }
 }
 
-//delete
+//delete action functions
 void prepare_delete_request(char *request, char *uid, char *tid, char *fname)
 {
     strcpy(request, DELETE);
@@ -746,7 +821,7 @@ void treat_rdl(char *buffer)
     }
 }
 
-//remove
+//remove action functions
 void prepare_remove_request(char *request, char *uid, char *tid)
 {
     strcpy(request, REMOVE);
@@ -794,20 +869,25 @@ void treat_rrm(char *buffer)
     }
 }
 
-void verify_command_response(char *buffer, int size)
+//general functions
+Boolean parse_retrieve_upload_delete(char *fname)
 {
-    printf("response: %s\n", buffer);
-    if (!size)
+    char *token = strtok(NULL, " ");
+    if (!token)
     {
-        printf("%s\n", SERVER_DOWN_MESSAGE);
+        fprintf(stderr, "UID missing!\nMust give a UID\n");
+        return false;
+    }
+    strcpy(fname, token);
+
+    token = strtok(NULL, " ");
+    if (token)
+    {
+        fprintf(stderr, "Too many arguments!\n");
+        return false;
     }
 
-    if (!strcmp(buffer, req_success))
-    {
-        printf("%s\n", SUCCESS_MESSAGE);
-    }
-
-    printf("%s\n", FAILURE_MESSAGE);
+    return true;
 }
 
 //Initializes TCP connection to FS
@@ -816,8 +896,8 @@ void init_socket_to_fs(int fs_fd, int errcode_fs, ssize_t m, struct addrinfo hin
 {
     //connection to FS
     fs_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fs_fd == ERROR){}
-        exit(EXIT_FAILURE); //error
+    if (fs_fd == ERROR)
+        exit(EXIT_FAILURE);
 
     memset(&hints_fs, 0, sizeof hints_fs);
     hints_fs.ai_family = AF_INET;
@@ -826,17 +906,15 @@ void init_socket_to_fs(int fs_fd, int errcode_fs, ssize_t m, struct addrinfo hin
     errcode_fs = getaddrinfo(asip, asport, &hints_fs, &res_fs);
     if (errcode_fs != 0)
     {
-        //error
+
         fprintf(stderr, "Error: could not get address info\n");
         exit(EXIT_FAILURE);
     }
-    //TCP socket
-    //IPv4
-    //TCP socket
+
     m = connect(fs_fd, res_fs->ai_addr, res_fs->ai_addrlen);
     if (m == ERROR)
     {
-        //error
+
         fprintf(stderr, "Error: could not connect\n");
         exit(EXIT_FAILURE);
     }

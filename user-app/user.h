@@ -16,7 +16,6 @@
 
 #define SUCCESS_MESSAGE "Success!"
 #define FAILURE_MESSAGE "Action unsuccessful."
-#define SERVER_DOWN_MESSAGE "Server disconnected."
 #define RND 42
 
 void usage();
@@ -59,8 +58,6 @@ void treat_rrm(char* buffer);
 
 //global
 Boolean parse_retrieve_upload_delete(char *fname);
-
-void verify_command_response(char *buffer, int size);
 
 //Initializes TCP connection to FS
 void init_socket_to_fs(int fs_fd, int errcode_fs, ssize_t m, struct addrinfo hints_fs, 
