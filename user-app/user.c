@@ -164,7 +164,7 @@ int main(int argc, char const *argv[])
             //exit
             else if (strcmp(command, USER_EXIT) == 0)
             {
-                exit(as_fd);
+                ex(as_fd);
             }
 
             //others
@@ -204,7 +204,7 @@ int main(int argc, char const *argv[])
 
             //exit
             else if (strcmp(command, USER_EXIT) == 0)
-                exit(as_fd);
+                ex(as_fd);
 
             //other
             else
@@ -224,7 +224,7 @@ int main(int argc, char const *argv[])
 
             //exit
             else if (strcmp(command, USER_EXIT) == 0)
-                exit(as_fd);
+                ex(as_fd);
 
             //other
             else
@@ -924,7 +924,7 @@ void treat_rrm(char *buffer)
 }
 
 //exit action functions
-void exit(int as_fd)
+void ex(int as_fd)
 {
     close(as_fd);
     exit(EXIT_SUCCESS);

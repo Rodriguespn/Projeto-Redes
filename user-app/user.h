@@ -70,7 +70,7 @@ void prepare_remove_request(char *request, char *uid, char *tid);
 void treat_rrm(char* buffer);
 
 //exit
-void exit(int as_fd);
+void ex(int as_fd);
 
 //global
 Boolean parse_retrieve_upload_delete(char *fname);
