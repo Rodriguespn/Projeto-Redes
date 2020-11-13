@@ -51,8 +51,6 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    
-
     //variables
     char buffer[SIZE], command[SIZE], last_command[SIZE], uid[SIZE], password[SIZE], rid[SIZE],
         fop[FOP_SIZE], fname[SIZE], vc[SIZE], tid[SIZE], fsize[SIZE], data[SIZE];
@@ -128,11 +126,11 @@ int main(int argc, char const *argv[])
         {
             //req
             if (strcmp(command, USER_REQUEST) == 0)
-                req(fop, fname, buffer, uid, rid, as_fd, n);
+                req(fop, fname, buffer, uid, rid, as_fd);
 
             //val
             else if (strcmp(command, USER_VAL) == 0)
-                val(vc, tid, buffer, uid, rid, as_fd, n);
+                val(vc, tid, buffer, uid, rid, as_fd);
 
             //exit
             else if (strcmp(command, USER_EXIT) == 0)
@@ -153,7 +151,7 @@ int main(int argc, char const *argv[])
         {
             //req
             if (strcmp(command, USER_REQUEST) == 0)
-                req(fop, fname, buffer, uid, rid, as_fd, n);
+                req(fop, fname, buffer, uid, rid, as_fd);
 
             //list
             else if (strcmp(command, USER_LIST) == 0 || strcmp(command, USER_LIST_SHORT) == 0)
@@ -193,7 +191,7 @@ int main(int argc, char const *argv[])
         {
             //req
             if (strcmp(command, USER_REQUEST) == 0)
-                req(fop, fname, buffer, uid, rid, as_fd, n);
+                req(fop, fname, buffer, uid, rid, as_fd);
 
             //exit
             else if (strcmp(command, USER_EXIT) == 0)
@@ -318,26 +316,23 @@ Boolean verify_login_response(char *buffer)
 }
 
 //req action functions
-void req(char *fop, char *fname, char *buffer, char *uid, char *rid, int as_fd, ssize_t n)
+void req(char *fop, char *fname, char *buffer, char *uid, char *rid, int as_fd)
 {
     if (parse_req(fop, fname))
     {
         prepare_req_request(buffer, uid, fop, fname, rid);
 
         // sends the login message to AS via tcp connection
-        n = tcp_write(as_fd, buffer);
+        tcp_write(as_fd, buffer);
         printf("message sent to AS = %s", buffer);
 
         // receives the AS response message
         memset(buffer, EOS, SIZE);
-        n = tcp_read(as_fd, buffer, SIZE);
+        tcp_read(as_fd, buffer, SIZE);
         printf("message received from AS = %s", buffer);
 
         //treat the received message
         treat_rrq(buffer);
-
-        //tirar isto
-        printf("(ignore this (%ld))\n", n);
     }
 }
 
@@ -446,26 +441,23 @@ void treat_rrq(char *buffer)
 }
 
 //val action functions
-void val(char *vc, char *tid, char *buffer, char *uid, char *rid, int as_fd, ssize_t n)
+void val(char *vc, char *tid, char *buffer, char *uid, char *rid, int as_fd)
 {
     if (parse_val(vc))
     {
         prepare_val_request(buffer, uid, rid, vc);
 
         // sends the login message to AS via tcp connection
-        n = tcp_write(as_fd, buffer);
+        tcp_write(as_fd, buffer);
         printf("message sent to AS = %s", buffer);
 
         // receives the AS response message
         memset(buffer, EOS, SIZE);
-        n = tcp_read(as_fd, buffer, SIZE);
+        tcp_read(as_fd, buffer, SIZE);
         printf("message received from AS = %s", buffer);
 
         //treat the received message
         treat_rau(buffer, tid);
-
-        //tirar isto
-        printf("(ignore this (%ld))\n", n);
     }
 }
 
@@ -654,6 +646,9 @@ void treat_rrt(char *buffer)
             fprintf(stderr, "Did not receive data!\n");
             return;
         }
+
+        //change
+        printf("%s%d", data, fsize_value);
     }
 
     //EOF
@@ -729,10 +724,10 @@ void prepare_upload_request(char *request, char *uid, char *tid, char *fname,
     strcat(request, fsize);
     strcat(request, " ");
 
-    while(i < fsize_value && (n = tcp_read(fs_fd, data, SIZE)) != 0)
+    while (i < fsize_value && (n = tcp_read(fs_fd, data, SIZE)) != 0)
     {
         printf("%s", data);
-        i+=n;
+        i += n;
     }
 
     strcat(request, "\n");
@@ -950,7 +945,8 @@ int init_socket_to_fs()
 
     //connection to FS
     int fs_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fs_fd == ERROR) {
+    if (fs_fd == ERROR)
+    {
         printf("Error: could not create\n");
         exit(EXIT_FAILURE);
     }
