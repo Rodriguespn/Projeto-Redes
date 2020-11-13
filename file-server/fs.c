@@ -112,8 +112,8 @@ int main(int argc, char const *argv[])
 
             // Define UDP socket variables (Communication with Authentication Server)
             int udp_sockfd; // close
-            struct sockaddr_in udp_servaddr;
             struct addrinfo udp_hints, *client;
+            struct sockaddr_in udp_servaddr;
             
             // Create UDP socket 
             udp_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -758,7 +758,7 @@ Boolean send_as_val_request(int sockfd, struct addrinfo* client, int user_sockfd
     printf("uid=%s\n", uid);
     printf("sockfd=%d\n", sockfd);
     //int n = sendto(sockfd, aux, strlen(aux), 0, addr, sizeof(addr));
-    int n = sendto(sockfd, aux, strlen(aux), 0, client->ai_addr, client->ai_addrlen);
+    int n = sendto(sockfd, aux, strlen(aux), 0, client->ai_addr, &client->ai_addrlen);
     printf("dest_size=%d\nlen(aux)=%d\nn=%d\naux=%s", dest_size, strlen(aux), n, aux);
     if (n == 0)                                 // Checks if the user disconnected
     {

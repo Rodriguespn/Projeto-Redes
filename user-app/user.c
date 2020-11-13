@@ -183,23 +183,23 @@ int main(int argc, char const *argv[])
 
             //list
             else if (strcmp(command, USER_LIST) == 0 || strcmp(command, USER_LIST_SHORT) == 0)
-                list(tid, buffer, uid, fs_fd, m, hints_fs, res_fs, errcode_fs);
+                list(tid, buffer, uid);
 
             //retrieve
             else if (strcmp(command, USER_RETRIEVE) == 0 || strcmp(command, USER_RETRIEVE_SHORT) == 0)
-                retrieve(fname, tid, buffer, uid, fs_fd, m, hints_fs, res_fs, errcode_fs);
+                retrieve(fname, tid, buffer, uid);
 
             //upload
             else if (strcmp(command, USER_UPLOAD) == 0 || strcmp(command, USER_UPLOAD_SHORT) == 0)
-                upload(fname, fsize, data, tid, buffer, uid, fs_fd, m, hints_fs, res_fs, errcode_fs);
+                upload(fname, fsize, data, tid, buffer, uid);
 
             //delete
             else if (strcmp(command, USER_DELETE) == 0 || strcmp(command, USER_DELETE_SHORT) == 0)
-                delete (fname, tid, buffer, uid, fs_fd, m, hints_fs, res_fs, errcode_fs);
+                delete (fname, tid, buffer, uid);
 
             //remove
             else if (strcmp(command, USER_REMOVE) == 0 || strcmp(command, USER_REMOVE_SHORT) == 0)
-                rem(tid, buffer, uid, as_fd, fs_fd, m, hints_fs, res_fs, errcode_fs);
+                rem(tid, buffer, uid, as_fd);
 
             //exit
             else if (strcmp(command, USER_EXIT) == 0)
@@ -556,20 +556,19 @@ void treat_rau(char *buffer, char *tid)
 }
 
 //list action functions
-void list(char *tid, char *buffer, char *uid, int fs_fd, ssize_t m,
-          struct addrinfo hints_fs, struct addrinfo *res_fs, int errcode_fs)
+void list(char *tid, char *buffer, char *uid)
 {
-    fs_fd = init_socket_to_fs();
+    int fs_fd = init_socket_to_fs();
 
     prepare_list_request(buffer, uid, tid);
 
     // sends the login message to FS via tcp connection
-    m = tcp_write(fs_fd, buffer);
+    tcp_write(fs_fd, buffer);
     printf("message sent to FS = %s", buffer);
 
     // receives the FS response message
     memset(buffer, EOS, SIZE);
-    m = tcp_read(fs_fd, buffer, SIZE);
+    tcp_read(fs_fd, buffer, SIZE);
     printf("message received from FS = %s", buffer);
 
     //treat received message
@@ -618,22 +617,21 @@ void treat_rls(char *buffer)
 }
 
 //retrieve action functions
-void retrieve(char *fname, char *tid, char *buffer, char *uid, int fs_fd, ssize_t m,
-              struct addrinfo hints_fs, struct addrinfo *res_fs, int errcode_fs)
+void retrieve(char *fname, char *tid, char *buffer, char *uid)
 {
     if (parse_retrieve_upload_delete(fname))
     {
-        fs_fd = init_socket_to_fs();
+        int fs_fd = init_socket_to_fs();
 
         prepare_retrieve_request(buffer, uid, tid, fname);
 
         // sends the login message to FS via tcp connection
-        m = tcp_write(fs_fd, buffer);
+        tcp_write(fs_fd, buffer);
         printf("message sent to FS = %s", buffer);
 
         // receives the FS response message
         memset(buffer, EOS, SIZE);
-        m = tcp_read(fs_fd, buffer, SIZE);
+        tcp_read(fs_fd, buffer, SIZE);
         printf("message received from FS = %s", buffer);
 
         //treat received message
@@ -657,6 +655,7 @@ void prepare_retrieve_request(char *request, char *uid, char *tid, char *fname)
 
 void treat_rrt(char *buffer)
 {
+    int fsize_value;
     char fsize[SIZE];
     char data[SIZE];
     char *token = strtok(buffer, " ");
@@ -666,44 +665,74 @@ void treat_rrt(char *buffer)
         fprintf(stderr, "Did not receive RRT!\n");
         return;
     }
-
     token = strtok(NULL, " ");
-    if (!token)
+
+    //OK
+    if (strcmp(token, OK) == 0)
     {
-        fprintf(stderr, "Did not receive number of file size!\n");
+        token = strtok(NULL, " ");
+        if (!token)
+        {
+            fprintf(stderr, "Did not receive number of file size!\n");
+            return;
+        }
+        strcpy(fsize, token);
+        fsize_value = atoi(fsize);
+
+        token = strtok(NULL, " ");
+        if (!token)
+        {
+            fprintf(stderr, "Did not receive data!\n");
+            return;
+        }
+    }
+
+    //EOF
+    else if (strcmp(token, EOF_FILE) == 0)
+    {
+        fprintf(stderr, "%s File is not available.\n", FAILURE_MESSAGE);
         return;
     }
-    strcpy(fsize, token);
 
-    token = strtok(NULL, " ");
-    if (!token)
+    //NOK
+    else if (strcmp(token, NOT_OK) == 0)
     {
-        fprintf(stderr, "Did not receive data!\n");
+        fprintf(stderr, "%s No content available for this UID.\n", FAILURE_MESSAGE);
         return;
     }
-    strcpy(data, token);
 
-    //do stuff
+    //INV
+    else if (strcmp(token, AS_VALIDATION_ERROR) == 0)
+    {
+        fprintf(stderr, "%s AS validation error.\n", FAILURE_MESSAGE);
+        return;
+    }
+
+    //ERR
+    else if (strcmp(token, PROTOCOL_ERROR) == 0)
+    {
+        fprintf(stderr, "%s Request is not correctly formulated.\n", FAILURE_MESSAGE);
+        return;
+    }
 }
 
 //upload action functions
-void upload(char *fname, char *fsize, char *data, char *tid, char *buffer, char *uid, int fs_fd, ssize_t m,
-            struct addrinfo hints_fs, struct addrinfo *res_fs, int errcode_fs)
+void upload(char *fname, char *fsize, char *data, char *tid, char *buffer, char *uid)
 {
     if (parse_retrieve_upload_delete(fname))
     {
 
-        fs_fd = init_socket_to_fs();
+        int fs_fd = init_socket_to_fs();
 
-        prepare_upload_request(buffer, uid, tid, fname, fsize, data);
+        prepare_upload_request(buffer, uid, tid, fname, fsize, data, fs_fd);
 
         // sends the login message to FS via tcp connection
-        m = tcp_write(fs_fd, buffer);
+        tcp_write(fs_fd, buffer);
         printf("message sent to FS = %s", buffer);
 
         // receives the FS response message
         memset(buffer, EOS, SIZE);
-        m = tcp_read(fs_fd, buffer, SIZE);
+        tcp_read(fs_fd, buffer, SIZE);
         printf("message received from FS = %s", buffer);
 
         //treat received message
@@ -714,9 +743,11 @@ void upload(char *fname, char *fsize, char *data, char *tid, char *buffer, char 
 }
 
 void prepare_upload_request(char *request, char *uid, char *tid, char *fname,
-                            char *fsize, char *data)
+                            char *fsize, char *data, int fs_fd)
 {
-    //data
+    int fsize_value = atoi(fsize);
+    int i = 0;
+    ssize_t n;
 
     strcpy(request, UPLOAD);
     strcat(request, " ");
@@ -728,7 +759,13 @@ void prepare_upload_request(char *request, char *uid, char *tid, char *fname,
     strcat(request, " ");
     strcat(request, fsize);
     strcat(request, " ");
-    strcat(request, data);
+
+    while(i < fsize_value && (n = tcp_read(fs_fd, data, SIZE)) != 0)
+    {
+        printf("%s", data);
+        i+=n;
+    }
+
     strcat(request, "\n");
 }
 
@@ -776,22 +813,21 @@ void treat_rup(char *buffer)
 }
 
 //delete action functions
-void delete (char *fname, char *tid, char *buffer, char *uid, int fs_fd, ssize_t m,
-             struct addrinfo hints_fs, struct addrinfo *res_fs, int errcode_fs)
+void delete (char *fname, char *tid, char *buffer, char *uid)
 {
     if (parse_retrieve_upload_delete(fname))
     {
-        fs_fd = init_socket_to_fs();
+        int fs_fd = init_socket_to_fs();
 
         prepare_delete_request(buffer, uid, tid, fname);
 
         // sends the login message to FS via tcp connection
-        m = tcp_write(fs_fd, buffer);
+        tcp_write(fs_fd, buffer);
         printf("message sent to FS = %s", buffer);
 
         // receives the FS response message
         memset(buffer, EOS, SIZE);
-        m = tcp_read(fs_fd, buffer, SIZE);
+        tcp_read(fs_fd, buffer, SIZE);
         printf("message received from FS = %s", buffer);
 
         //treat received message
@@ -851,20 +887,19 @@ void treat_rdl(char *buffer)
 }
 
 //remove action functions
-void rem(char *tid, char *buffer, char *uid, int as_fd, int fs_fd, ssize_t m,
-         struct addrinfo hints_fs, struct addrinfo *res_fs, int errcode_fs)
+void rem(char *tid, char *buffer, char *uid, int as_fd)
 {
-    fs_fd = init_socket_to_fs();
+    int fs_fd = init_socket_to_fs();
 
     prepare_remove_request(buffer, uid, tid);
 
     // sends the login message to FS via tcp connection
-    m = tcp_write(fs_fd, buffer);
+    tcp_write(fs_fd, buffer);
     printf("message sent to FS = %s", buffer);
 
     // receives the FS response message
     memset(buffer, EOS, SIZE);
-    m = tcp_read(fs_fd, buffer, SIZE);
+    tcp_read(fs_fd, buffer, SIZE);
     printf("message received from FS = %s", buffer);
 
     //treat received message

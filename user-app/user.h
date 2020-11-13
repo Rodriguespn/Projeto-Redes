@@ -39,33 +39,28 @@ void prepare_val_request(char *request, char *uid, char *rid, char *vc);
 void treat_rau(char* buffer, char *tid);
 
 //list
-void list(char* tid, char* buffer, char* uid, int fs_fd, ssize_t m, 
-          struct addrinfo hints_fs, struct addrinfo *res_fs, int errcode_fs);
+void list(char* tid, char* buffer, char* uid);
 void prepare_list_request(char *request, char *uid, char *tid);
 void treat_rls(char* buffer);
 
 //retrieve
-void retrieve(char* fname, char* tid, char* buffer, char* uid, int fs_fd, ssize_t m, 
-          struct addrinfo hints_fs, struct addrinfo *res_fs, int errcode_fs);
+void retrieve(char* fname, char* tid, char* buffer, char* uid);
 void prepare_retrieve_request(char *request, char *uid, char *tid, char *fname);
 void treat_rrt(char* buffer);
 
 //upload
-void upload(char* fname, char* fsize, char* data, char* tid, char* buffer, char* uid, int fs_fd, ssize_t m, 
-          struct addrinfo hints_fs, struct addrinfo *res_fs, int errcode_fs);
+void upload(char* fname, char* fsize, char* data, char* tid, char* buffer, char* uid);
 void prepare_upload_request(char *request, char *uid, char *tid, char *fname,
-                            char *fsize, char *data);
+                            char *fsize, char *data, int fs_fd);
 void treat_rup(char* buffer);
 
 //delete
-void delete(char* fname, char* tid, char* buffer, char* uid, int fs_fd, ssize_t m, 
-          struct addrinfo hints_fs, struct addrinfo *res_fs, int errcode_fs);
+void delete(char* fname, char* tid, char* buffer, char* uid);
 void prepare_delete_request(char *request, char *uid, char *tid, char *fname);
 void treat_rdl(char* buffer);
 
 //remove
-void rem(char* tid, char* buffer, char* uid, int as_fd, int fs_fd, ssize_t m, 
-          struct addrinfo hints_fs, struct addrinfo *res_fs, int errcode_fs);
+void rem(char* tid, char* buffer, char* uid, int as_fd);
 void prepare_remove_request(char *request, char *uid, char *tid);
 void treat_rrm(char* buffer);
 
