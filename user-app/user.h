@@ -55,7 +55,7 @@ void treat_rrt(char *buffer, char *fname, int fs_fd);
 
 //upload
 void upload(char *fname, char *tid, char *buffer, char *uid);
-void prepare_upload_request(char *request, char *uid, char *tid, char *fname, int fs_fd);
+void prepare_upload_request(char *request, char *uid, char *tid, char *fname);
 void treat_rup(char *buffer);
 Boolean upload_user_file(int sockfd, char* filename);
 

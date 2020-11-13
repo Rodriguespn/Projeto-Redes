@@ -264,6 +264,7 @@ int main(int argc, char const *argv[]) {
                                 process_login_request(buffer, uid, password);
                             } 
                             else if (!strcmp(command, REQUEST)) {
+                                REQUEST_OP:
                                 process_request_request(buffer, uid, rid, fop, &vc, operation);
                                 verbose_message(verbose, "INFORM: Processed Command=%s UID=%s RID=%s Fop=%s VC=%s request\n", command, uid, rid, fop, vc);
                             } 
@@ -305,6 +306,8 @@ int main(int argc, char const *argv[]) {
                             if (!strcmp(command, AUTHENTICATION)) {
                                 process_authentication_request(buffer, uid, rid, vc, operation);
                                 verbose_message(verbose, "INFORM: Processed Command=%s UID=%s, RID=%s, VC=%s authentication\n", command, uid, rid, vc);
+                            } else if (!strcmp(command, REQUEST)) {
+                                goto REQUEST_OP;
                             } else {
                                 prepare_error_message(buffer);
                                 verbose_message(verbose, "INFORM: Request=%s is invalid", buffer);

@@ -718,7 +718,6 @@ Boolean upload_user_file(int sockfd, char* uid, char* filename, char* filesize)
     {
         fwrite(chunk, sizeof(char), len, fp);
         remain_data -= len;
-        fprintf(stdout, "Receive %d bytes and we hope :- %d bytes\n", len, remain_data);
     }
     fclose(fp);
     return true;
@@ -744,7 +743,7 @@ Boolean retrieve_user_file(int sockfd, char* uid, char* filename)
 
     stat(aux, &st);
     int filesize_int = st.st_size;
-    char response[COMMAND_SIZE+STATUS_SIZE+FILE_SIZE_DIG+1], chunk[SIZE], filesize[FILE_SIZE_DIG];
+    char response[COMMAND_SIZE+STATUS_SIZE+FILE_SIZE_DIG+1], chunk[SIZE];
 
     memset(response, EOS, COMMAND_SIZE+STATUS_SIZE+FILE_SIZE_DIG+1);
 
@@ -946,7 +945,12 @@ Boolean read_as_val_response(int sockfd, struct addrinfo* client, int user_sockf
         printf("filename=%s\n", filename);
     }
 
-    return (strcmp(command, default_command) == 0 && strcmp(uid, default_uid) == 0 && strcmp(tid, default_tid) == 0 && strcmp(fop, default_fop) == 0 && (filename == NULL || strcmp(filename, default_filename) == 0)) ? true : false;
+    if  (!(strcmp(command, default_command) == 0 && strcmp(uid, default_uid) == 0 && strcmp(tid, default_tid) == 0 && strcmp(fop, default_fop) == 0 && (filename == NULL || strcmp(filename, default_filename) == 0))) {
+        send_user_response(user_sockfd, PROTOCOL_ERROR, NULL);
+        user_connected_flag = false;
+        return false;
+    }
+    return true;
 }
 
 

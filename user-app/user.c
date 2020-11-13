@@ -104,11 +104,9 @@ int main(int argc, char const *argv[])
             continue;
         }
 
-        printf("request: %s\n", buffer);
-
+        printf("message sent to AS = %s", buffer);
         // sends the login message to AS via tcp connection
         n = tcp_write(as_fd, buffer);
-        printf("message sent to AS = %s", buffer);
 
         // receives the AS response message
         memset(buffer, EOS, SIZE);
@@ -385,9 +383,6 @@ Boolean parse_req(char *fop, char *fname)
         fprintf(stderr, "Too many arguments!\n");
         return false;
     }
-
-    printf("fop = %s\nfname = %s\n", fop, fname);
-
     return true;
 }
 
@@ -409,12 +404,6 @@ void prepare_req_request(char *request, char *uid, char *fop, char *fname, char 
         strcat(request, fname);
     }
     strcat(request, "\n");
-
-    printf("uid = %s\n", uid);
-    printf("rid = %s\n", rid);
-    printf("fop = %s\n", fop);
-    printf("fname = %s\n", fname);
-    printf("request = %s\n", request);
 }
 
 void treat_rrq(char *buffer)
@@ -604,7 +593,6 @@ void retrieve(char *fname, char *tid, char *buffer, char *uid)
         memset(buffer, EOS, SIZE);
         tcp_read(fs_fd, buffer, COMMAND_SIZE+strlen(NOT_OK)+FILE_SIZE_DIG);
 
-        printf("buffer = %s\n", buffer);
         printf("message received from FS = %s", buffer);
 
         //treat received message
@@ -628,9 +616,7 @@ void prepare_retrieve_request(char *request, char *uid, char *tid, char *fname)
 
 void treat_rrt(char *buffer, char *fname, int fs_fd)
 {
-    int fsize_value;
     char fsize[SIZE];
-    char data[SIZE];
     char *token = strtok(buffer, " ");
 
     if (strcmp(token, RET_RESPONSE) != 0)
@@ -653,13 +639,6 @@ void treat_rrt(char *buffer, char *fname, int fs_fd)
         strcpy(fsize, token);
 
         int filesize_int = atoi(fsize);
-        printf("\nfilesize = %d\n", filesize_int);
-
-        token = strtok(NULL, " ");
-        if (token)
-        {
-            printf("token a mais = %s\n", token);
-        }
 
         FILE* fp;
 
@@ -682,7 +661,7 @@ void treat_rrt(char *buffer, char *fname, int fs_fd)
         }
         fclose(fp);
 
-        printf("File stored with successes\nFilename = %s\tPath=./%s\n", fname, fname);
+        printf("File stored with success\nFilename = %s\tPath=./%s\n", fname, fname);
     }
 
     //EOF
@@ -722,7 +701,7 @@ void upload(char *fname, char *tid, char *buffer, char *uid)
 
         int fs_fd = init_socket_to_fs();
 
-        prepare_upload_request(buffer, uid, tid, fname, fs_fd);
+        prepare_upload_request(buffer, uid, tid, fname);
 
         // sends the login message to FS via tcp connection
         tcp_write(fs_fd, buffer);
@@ -762,7 +741,7 @@ Boolean upload_user_file(int sockfd, char* filename)
 
     sprintf(filesize, "%d", filesize_int);
 
-    int n = 0, counter = 0;
+    int n = 0;
     n = write(sockfd, filesize, strlen(filesize));
     if (n == 0 || n == ERROR)
     {
@@ -779,15 +758,13 @@ Boolean upload_user_file(int sockfd, char* filename)
         return false;
     }
 
-    printf("\nfilesize_int = %d\n", filesize_int);
-
     sendfile(sockfd, fd, NULL, filesize_int);
 
     fclose(fp);
     return true;
 }
 
-void prepare_upload_request(char *request, char *uid, char *tid, char *fname, int fs_fd)
+void prepare_upload_request(char *request, char *uid, char *tid, char *fname)
 {
     /*int i = 0;
     ssize_t n;*/
@@ -800,14 +777,6 @@ void prepare_upload_request(char *request, char *uid, char *tid, char *fname, in
     strcat(request, " ");
     strcat(request, fname);
     strcat(request, " ");
-
-    /*while (i < fsize_value && (n = tcp_read(fs_fd, data, SIZE)) != 0)
-    {
-        printf("%s", data);
-        i += n;
-    }
-
-    strcat(request, "\n");*/
 }
 
 void treat_rup(char *buffer)
@@ -857,13 +826,14 @@ void delete (char *fname, char *tid, char *buffer, char *uid)
 
         prepare_delete_request(buffer, uid, tid, fname);
 
+        printf("message sent to FS = %s", buffer);
         // sends the login message to FS via tcp connection
         tcp_write(fs_fd, buffer);
-        printf("message sent to FS = %s", buffer);
 
         // receives the FS response message
         memset(buffer, EOS, SIZE);
         tcp_read(fs_fd, buffer, SIZE);
+        printf("Here\n");
         printf("message received from FS = %s", buffer);
 
         //treat received message
@@ -875,10 +845,6 @@ void delete (char *fname, char *tid, char *buffer, char *uid)
 
 void prepare_delete_request(char *request, char *uid, char *tid, char *fname)
 {
-    printf("uid = %s\n", uid);
-    printf("tid = %s\n", tid);
-    printf("fname = %s\n", fname);
-
     strcpy(request, DELETE);
     strcat(request, " ");
     strcat(request, uid);
@@ -892,6 +858,7 @@ void prepare_delete_request(char *request, char *uid, char *tid, char *fname)
 void treat_rdl(char *buffer)
 {
     char *token = strtok(buffer, " ");
+    printf("token = %s\n", token);
 
     if (strcmp(token, DEL_RESPONSE) != 0)
     {
@@ -899,6 +866,7 @@ void treat_rdl(char *buffer)
         return;
     }
     token = strtok(NULL, " ");
+    printf("token2 = %s\n", token);
 
     //OK
     if (strcmp(token, OK))
@@ -916,7 +884,7 @@ void treat_rdl(char *buffer)
         fprintf(stderr, "%s Validation error.\n", FAILURE_MESSAGE);
     }
     //ERR
-    else if (strcmp(token, PROTOCOL_ERROR))
+    else
     {
         fprintf(stderr, "%s Request is not correctly formulated.\n", FAILURE_MESSAGE);
     }
@@ -1057,7 +1025,6 @@ void generate_random_rid(char rid[], int size)
     {
         rid_alg = rand() % 10;
         rid_number = rid_number * 10 + rid_alg;
-        printf("rid_alg=%d\trid_number=%d\n", rid_alg, rid_number);
     }
 
     // converts the random number into a string with 4 digits
