@@ -42,6 +42,7 @@
 #define PD_TIMEOUT_SECS             2
 #define PD_TIMEOUT_USECS            0
 
+void handler_sigint();
 void usage();
 int wrong_arguments(int argc);
 void process_registration_request(char* buffer, char* uid, char* password, char* pdip, char* pdport);

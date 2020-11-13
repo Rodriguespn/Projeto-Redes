@@ -4,9 +4,10 @@
 // PDIP, PDport, ASIP, ASport are stored
 char *pdip, *pdport, *asip, *asport;
 char registration_success[SIZE];
+int fd, listenfd;
 
 int main(int argc, char const *argv[]) {
-    int fd, errcode, listenfd;
+    int errcode;
     fd_set inputs, testfds;
     int out_fds;
 
@@ -206,12 +207,22 @@ int main(int argc, char const *argv[]) {
     freeaddrinfo(server);
 
     close(fd);
+    close(listenfd);
 
     free(pdip);
     free(pdport);
     free(asip);
     free(asport);
 
+    exit(EXIT_SUCCESS);
+}
+
+// Handler for SIGINT, caused by 
+// Ctrl-C at keyboard 
+void handler_sigint() { 
+    close(fd);
+    close(listenfd);
+    printf("\nGoodbye...\n");
     exit(EXIT_SUCCESS);
 }
 

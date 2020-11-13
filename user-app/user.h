@@ -8,15 +8,20 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/stat.h>
 #include <netdb.h>
 #include <time.h>
+#include <sys/sendfile.h>
 #include "../constants.h"
 #include "../functions.h"
 
 #define SUCCESS_MESSAGE "Success!"
 #define FAILURE_MESSAGE "Action unsuccessful."
 #define RND 42
+#define FILE_SIZE_DIG       11          // Max. digits a file size can have
+#define FILENAME_SIZE       25          // Max. filename size
 
+void handler_sigint();
 void usage();
 int wrong_arguments(int argc);
 void parse_arguments(const char *argv[], int size);
@@ -46,13 +51,13 @@ void treat_rls(char *buffer);
 //retrieve
 void retrieve(char *fname, char *tid, char *buffer, char *uid);
 void prepare_retrieve_request(char *request, char *uid, char *tid, char *fname);
-void treat_rrt(char *buffer, char *fname);
+void treat_rrt(char *buffer, char *fname, int fs_fd);
 
 //upload
-void upload(char *fname, char *fsize, char *data, char *tid, char *buffer, char *uid);
-void prepare_upload_request(char *request, char *uid, char *tid, char *fname,
-                            char *fsize, char *data, int fs_fd);
+void upload(char *fname, char *tid, char *buffer, char *uid);
+void prepare_upload_request(char *request, char *uid, char *tid, char *fname, int fs_fd);
 void treat_rup(char *buffer);
+Boolean upload_user_file(int sockfd, char* filename);
 
 //delete
 void delete (char *fname, char *tid, char *buffer, char *uid);

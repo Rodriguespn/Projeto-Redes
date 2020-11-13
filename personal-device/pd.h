@@ -18,6 +18,7 @@
 #define LOGIN_FAILURE_MESSAGE   "Registration unsuccessful."
 #define SERVER_DOWN_MESSAGE     "Server disconnected."
 
+void handler_sigint();
 int wrong_arguments(int argc);
 void usage();
 Boolean parse_register_message(char* buffer, char* command, char* uid, char* password);

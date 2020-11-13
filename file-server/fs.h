@@ -11,10 +11,11 @@
 #include <sys/stat.h>
 #include <arpa/inet.h> 
 #include <errno.h>
-#include "../constants.h"
-#include "../functions.h"
 #include <dirent.h>
 #include <unistd.h>
+#include <sys/sendfile.h>
+#include "../constants.h"
+#include "../functions.h"
 
 #define MAIN_DIR_NAME       "USERS/"    // Main directory name
 #define MAIN_DIR_NAME_SIZE  6

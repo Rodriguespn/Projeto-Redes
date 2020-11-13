@@ -1,12 +1,5 @@
 #include "functions.h"
 
-// Handler for SIGINT, caused by 
-// Ctrl-C at keyboard 
-void handler_sigint() { 
-    printf("\nGoodbye...\n");
-    exit(EXIT_SUCCESS);
-}
-
 // reads a paragraph from the stdin
 void read_stdin(char* buffer) {
     char c;

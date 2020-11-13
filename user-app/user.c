@@ -2,11 +2,13 @@
 
 char *asip, *asport, *fsip, *fsport;
 char login_success[SIZE];
+int as_fd;
+struct stat st = {0};
 
 int main(int argc, char const *argv[])
 {
     //User-AS variables
-    int as_fd, errcode_as;
+    int errcode_as;
     ssize_t n;
     struct addrinfo hints_as, *res_as;
 
@@ -163,7 +165,7 @@ int main(int argc, char const *argv[])
 
             //upload
             else if (strcmp(command, USER_UPLOAD) == 0 || strcmp(command, USER_UPLOAD_SHORT) == 0)
-                upload(fname, fsize, data, tid, buffer, uid);
+                upload(fname, tid, buffer, uid);
 
             //delete
             else if (strcmp(command, USER_DELETE) == 0 || strcmp(command, USER_DELETE_SHORT) == 0)
@@ -215,6 +217,14 @@ int main(int argc, char const *argv[])
         memset(fsize, EOS, SIZE);
         memset(data, EOS, SIZE);
     }
+}
+
+// Handler for SIGINT, caused by 
+// Ctrl-C at keyboard 
+void handler_sigint() { 
+    close(as_fd);
+    printf("\nGoodbye...\n");
+    exit(EXIT_SUCCESS);
 }
 
 //shows the correct way to run user.c
@@ -502,7 +512,7 @@ void treat_rau(char *buffer, char *tid)
         fprintf(stderr, "Did not receive %s!\n", AUT_RESPONSE);
         return;
     }
-    token = strtok(NULL, " ");
+    token = strtok(NULL, "\n");
 
     if (strcmp(token, TID_ERROR) == 0)
     {
@@ -564,13 +574,13 @@ void treat_rls(char *buffer)
         fprintf(stderr, "Did not receive number of files!\n");
         return;
     }
-    int i = atoi(token);
+    int number_of_files = atoi(token);
 
     token = strtok(NULL, " ");
 
-    for (int j = 0; j < i; i++)
+    for (int j = 1; j <= number_of_files; j++)
     {
-        printf("%d - filename: %s\t", j + 1, token);
+        printf("%d - filename: %s\t", j, token);
         token = strtok(NULL, " ");
         printf("filesize: %s\n", token);
         token = strtok(NULL, " ");
@@ -592,11 +602,13 @@ void retrieve(char *fname, char *tid, char *buffer, char *uid)
 
         // receives the FS response message
         memset(buffer, EOS, SIZE);
-        tcp_read(fs_fd, buffer, SIZE);
+        tcp_read(fs_fd, buffer, COMMAND_SIZE+strlen(NOT_OK)+FILE_SIZE_DIG);
+
+        printf("buffer = %s\n", buffer);
         printf("message received from FS = %s", buffer);
 
         //treat received message
-        treat_rrt(buffer, fname);
+        treat_rrt(buffer, fname, fs_fd);
 
         close(fs_fd);
     }
@@ -614,7 +626,7 @@ void prepare_retrieve_request(char *request, char *uid, char *tid, char *fname)
     strcat(request, "\n");
 }
 
-void treat_rrt(char *buffer, char *fname)
+void treat_rrt(char *buffer, char *fname, int fs_fd)
 {
     int fsize_value;
     char fsize[SIZE];
@@ -637,17 +649,40 @@ void treat_rrt(char *buffer, char *fname)
             fprintf(stderr, "Did not receive number of file size!\n");
             return;
         }
+
         strcpy(fsize, token);
-        fsize_value = atoi(fsize);
+
+        int filesize_int = atoi(fsize);
+        printf("\nfilesize = %d\n", filesize_int);
 
         token = strtok(NULL, " ");
-        if (!token)
+        if (token)
         {
-            fprintf(stderr, "Did not receive data!\n");
+            printf("token a mais = %s\n", token);
+        }
+
+        FILE* fp;
+
+        if (!(fp = fopen(fname, "wb")))
+        {
+            fprintf(stderr, "\nError: Unable to open %s path\n", fname);
             return;
         }
 
-        printf("filename - %s\tfilepath - ../files\n", fname);
+        char chunk[SIZE];
+        memset(chunk, EOS, SIZE);
+        int len = 0;
+
+        int remain_data = filesize_int;
+
+        while ((remain_data > 0) && ((len = recv(fs_fd, chunk, SIZE, 0)) > 0))
+        {
+            fwrite(chunk, sizeof(char), len, fp);
+            remain_data -= len;
+        }
+        fclose(fp);
+
+        printf("File stored with successes\nFilename = %s\tPath=./%s\n", fname, fname);
     }
 
     //EOF
@@ -680,18 +715,20 @@ void treat_rrt(char *buffer, char *fname)
 }
 
 //upload action functions
-void upload(char *fname, char *fsize, char *data, char *tid, char *buffer, char *uid)
+void upload(char *fname, char *tid, char *buffer, char *uid)
 {
     if (parse_retrieve_upload_delete(fname))
     {
 
         int fs_fd = init_socket_to_fs();
 
-        prepare_upload_request(buffer, uid, tid, fname, fsize, data, fs_fd);
+        prepare_upload_request(buffer, uid, tid, fname, fs_fd);
 
         // sends the login message to FS via tcp connection
         tcp_write(fs_fd, buffer);
         printf("message sent to FS = %s", buffer);
+
+        upload_user_file(fs_fd, fname);
 
         // receives the FS response message
         memset(buffer, EOS, SIZE);
@@ -705,12 +742,55 @@ void upload(char *fname, char *fsize, char *data, char *tid, char *buffer, char 
     }
 }
 
-void prepare_upload_request(char *request, char *uid, char *tid, char *fname,
-                            char *fsize, char *data, int fs_fd)
+// Retrieves a filename in the user directory with the respective data
+Boolean upload_user_file(int sockfd, char* filename)
 {
-    int fsize_value = atoi(fsize);
-    int i = 0;
-    ssize_t n;
+    FILE* fp;
+
+    if (!(fp = fopen(filename, "rb")))
+    {
+        fprintf(stderr, "\nError: Unable to open %s path\n", filename);
+        return false;
+    }
+    int fd = fileno(fp);
+
+    stat(filename, &st);
+    int filesize_int = st.st_size;
+    char chunk[SIZE], filesize[FILE_SIZE_DIG];
+    memset(chunk, EOS, SIZE);
+    memset(filesize, EOS, FILE_SIZE_DIG);
+
+    sprintf(filesize, "%d", filesize_int);
+
+    int n = 0, counter = 0;
+    n = write(sockfd, filesize, strlen(filesize));
+    if (n == 0 || n == ERROR)
+    {
+        fprintf(stderr, "\nError: Unable to send the file to FS.\n");
+        fclose(fp);
+        return false;
+    }
+
+    n = write(sockfd, " ", 1);
+    if (n == 0 || n == ERROR)
+    {
+        fprintf(stderr, "\nError: Unable to send the file to FS.\n");
+        fclose(fp);
+        return false;
+    }
+
+    printf("\nfilesize_int = %d\n", filesize_int);
+
+    sendfile(sockfd, fd, NULL, filesize_int);
+
+    fclose(fp);
+    return true;
+}
+
+void prepare_upload_request(char *request, char *uid, char *tid, char *fname, int fs_fd)
+{
+    /*int i = 0;
+    ssize_t n;*/
 
     strcpy(request, UPLOAD);
     strcat(request, " ");
@@ -720,16 +800,14 @@ void prepare_upload_request(char *request, char *uid, char *tid, char *fname,
     strcat(request, " ");
     strcat(request, fname);
     strcat(request, " ");
-    strcat(request, fsize);
-    strcat(request, " ");
 
-    while (i < fsize_value && (n = tcp_read(fs_fd, data, SIZE)) != 0)
+    /*while (i < fsize_value && (n = tcp_read(fs_fd, data, SIZE)) != 0)
     {
         printf("%s", data);
         i += n;
     }
 
-    strcat(request, "\n");
+    strcat(request, "\n");*/
 }
 
 void treat_rup(char *buffer)
@@ -797,6 +875,10 @@ void delete (char *fname, char *tid, char *buffer, char *uid)
 
 void prepare_delete_request(char *request, char *uid, char *tid, char *fname)
 {
+    printf("uid = %s\n", uid);
+    printf("tid = %s\n", tid);
+    printf("fname = %s\n", fname);
+
     strcpy(request, DELETE);
     strcat(request, " ");
     strcat(request, uid);
@@ -813,7 +895,7 @@ void treat_rdl(char *buffer)
 
     if (strcmp(token, DEL_RESPONSE) != 0)
     {
-        fprintf(stderr, "Did not receive DEL!\n");
+        fprintf(stderr, "Did not receive %s!\n", DEL_RESPONSE);
         return;
     }
     token = strtok(NULL, " ");
@@ -917,21 +999,14 @@ void ex(int as_fd)
 //general functions
 Boolean parse_retrieve_upload_delete(char *fname)
 {
-    char *token = strtok(NULL, " ");
+    char *token = strtok(NULL, "\n");
+    
     if (!token)
     {
-        fprintf(stderr, "UID missing!\nMust give a UID\n");
+        fprintf(stderr, "Filename missing!\nMust give a filename\n");
         return false;
     }
     strcpy(fname, token);
-
-    token = strtok(NULL, " ");
-    if (token)
-    {
-        fprintf(stderr, "Too many arguments!\n");
-        return false;
-    }
-
     return true;
 }
 

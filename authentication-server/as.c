@@ -6,9 +6,10 @@ Boolean verbose = false;
 const char *users_directory = USERS_FOLDER_NAME;
 FILE *userfd; 
 struct stat st = {0};
+int udpsocket, tcpsocket, connectfd;
 
 int main(int argc, char const *argv[]) {
-    int udpsocket, tcpsocket, connectfd, out_fds, childpid, errcode;
+    int out_fds, childpid, errcode;
     fd_set inputs, testfds;
     struct timeval timeout;
     ssize_t n;
@@ -334,6 +335,16 @@ int main(int argc, char const *argv[]) {
     freeaddrinfo(res);
     close (udpsocket);
 
+    exit(EXIT_SUCCESS);
+}
+
+// Handler for SIGINT, caused by 
+// Ctrl-C at keyboard 
+void handler_sigint() { 
+    close(udpsocket);
+    close(tcpsocket);
+    close(connectfd);
+    printf("\nGoodbye...\n");
     exit(EXIT_SUCCESS);
 }
 

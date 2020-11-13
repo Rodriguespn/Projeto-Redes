@@ -260,7 +260,7 @@ int main(int argc, char const *argv[])
                     {
                         if (find_user_filename(user_uid, NULL))
                         {
-                            int n = count_user_filenames(user_uid);
+                            int n = count_user_filenames(user_uid) - 2;
                             memset(user_filesize, EOS, FILE_SIZE_DIG);
                             sprintf(user_filesize, "%d", n);
                             int lst_size = (n * FILENAME_SIZE + n * FILE_SIZE_DIG + n * 2 + 1);
@@ -591,9 +591,14 @@ Boolean make_user_directory(char* uid)
     char aux[MAIN_DIR_NAME_SIZE+UID_SIZE];
     strcpy(aux, MAIN_DIR_NAME);
     strcat(aux, uid);
-    if (!mkdir(aux, 0777))
-    {
-        return false;
+    
+    // creates the directory where the users' information will be stored
+    if (stat(aux, &st) == -1) { // if directory doesn t exists
+        // check if directory is created or not 
+        if (mkdir(aux, 0777))
+        {
+            return false;
+        }
     }
     return true;
 }
@@ -640,23 +645,31 @@ void list_user_filenames(char* uid, char* res, int res_size)
 {
     memset(res, EOS, res_size);
     
-    char aux[MAIN_DIR_NAME_SIZE+UID_SIZE];
+    char aux[MAIN_DIR_NAME_SIZE+UID_SIZE+1], path[MAIN_DIR_NAME_SIZE+UID_SIZE+1+FILENAME_MAX];
+    bzero(aux, MAIN_DIR_NAME_SIZE+UID_SIZE+1);
     strcpy(aux, MAIN_DIR_NAME);
     strcat(aux, uid);
+    strcat(aux, "/");
     DIR *dir = opendir(aux);
     struct dirent *file;
     char filesize[FILE_SIZE_DIG];
     while ((file=readdir(dir)) != NULL)
     {
-        stat(file->d_name, &st);
-        strcat(res, " ");
-        strcat(res, file->d_name);
-        strcat(res, " ");
-        memset(filesize, EOS, FILE_SIZE_DIG);
-        sprintf(filesize, "%ld", st.st_size);
-        strcat(res, filesize);
+        if (strcmp(file->d_name, "..") && strcmp(file->d_name, ".")) {
+            bzero(path, MAIN_DIR_NAME_SIZE+UID_SIZE+1+FILENAME_MAX);
+            strcpy(path, aux);
+            strcat(path, file->d_name);
+            stat(path, &st);
+            strcat(res, " ");
+            strcat(res, file->d_name);
+            strcat(res, " ");
+            memset(filesize, EOS, FILE_SIZE_DIG);
+            sprintf(filesize, "%ld", st.st_size);
+            strcat(res, filesize);
+        }
     }
     closedir(dir);
+    strcat(res, "\n");
 }
 
 // Counts the filenames in the user directory and check if it has reached the limit
@@ -680,6 +693,7 @@ Boolean reached_user_file_limit(char* uid, int max)
 Boolean upload_user_file(int sockfd, char* uid, char* filename, char* filesize)
 {
     int filesize_int = atoi(filesize);
+    printf("\nfilesize = %d\n", filesize_int);
     FILE* fp;
     char aux[MAIN_DIR_NAME_SIZE+UID_SIZE+1+FILENAME_SIZE];
     bzero(aux, MAIN_DIR_NAME_SIZE+UID_SIZE+1+FILENAME_SIZE);
@@ -688,7 +702,7 @@ Boolean upload_user_file(int sockfd, char* uid, char* filename, char* filesize)
     strcat(aux, "/");
     strcat(aux, filename);
 
-    if (!(fp = fopen(aux, "a")))
+    if (!(fp = fopen(aux, "ab")))
     {
         fprintf(stderr, "\nError: Unable to open %s path\n", aux);
         return false;
@@ -696,20 +710,16 @@ Boolean upload_user_file(int sockfd, char* uid, char* filename, char* filesize)
 
     char chunk[SIZE];
     memset(chunk, EOS, SIZE);
-    int n = 0, counter = 0;
-    do
-    {
-        n = read(sockfd, chunk, SIZE);
-        if (n == 0 || n == ERROR)
-        {
-            fprintf(stderr, "\nError: Unable to read the file from the user.\n");
-            return false;
-        }
-        counter += n;
-        fprintf(fp, "%s", chunk);
-        memset(chunk, EOS, SIZE);
-    } while (counter < filesize_int);
+    int len = 0;
 
+    int remain_data = filesize_int;
+
+    while ((remain_data > 0) && ((len = recv(sockfd, chunk, SIZE, 0)) > 0))
+    {
+        fwrite(chunk, sizeof(char), len, fp);
+        remain_data -= len;
+        fprintf(stdout, "Receive %d bytes and we hope :- %d bytes\n", len, remain_data);
+    }
     fclose(fp);
     return true;
 }
@@ -725,20 +735,22 @@ Boolean retrieve_user_file(int sockfd, char* uid, char* filename)
     strcat(aux, "/");
     strcat(aux, filename);
 
-    if (!(fp = fopen(aux, "r")))
+    if (!(fp = fopen(aux, "rb")))
     {
         fprintf(stderr, "\nError: Unable to open %s path\n", aux);
         return false;
     }
+    int fd = fileno(fp);
 
     stat(aux, &st);
     int filesize_int = st.st_size;
-    char response[COMMAND_SIZE+FILE_SIZE_DIG+1], chunk[SIZE];
-    memset(response, EOS, COMMAND_SIZE+FILE_SIZE_DIG+1);
-    memset(chunk, EOS, SIZE);
-    int n = 0, counter = 0;
-    sprintf(response, "%s %d ", RET_RESPONSE, filesize_int);
+    char response[COMMAND_SIZE+STATUS_SIZE+FILE_SIZE_DIG+1], chunk[SIZE], filesize[FILE_SIZE_DIG];
 
+    memset(response, EOS, COMMAND_SIZE+STATUS_SIZE+FILE_SIZE_DIG+1);
+
+    sprintf(response, "%s %s %d ", RET_RESPONSE, OK, filesize_int);
+
+    int n = 0;
     n = write(sockfd, response, strlen(response));
     if (n == 0 || n == ERROR)
     {
@@ -746,26 +758,14 @@ Boolean retrieve_user_file(int sockfd, char* uid, char* filename)
         return false;
     }
 
-    while (fgets(chunk, SIZE, fp))
-    {
-        n = write(sockfd, chunk, strlen(chunk));
-        if (n == 0 || n == ERROR)
-        {
-            fprintf(stderr, "\nError: Unable to send the file to the user.\n");
-            return false;
-        }
-        counter += n;
-        if (counter >= filesize_int)
-        {
-            n = write(sockfd, "\n", 1);
-            if (n == 0 || n == ERROR)
-            {
-                fprintf(stderr, "\nError: Unable to send the file to the user.\n");
-                return false;
-            }
-            break;
-        }
-    }
+    memset(chunk, EOS, SIZE);
+
+    printf("\nfilesize_int = %d\n", filesize_int);
+
+    sendfile(sockfd, fd, NULL, filesize_int);
+
+    fclose(fp);
+
     return true;
 }
 
@@ -792,10 +792,11 @@ Boolean remove_user_dir(char* uid)
     DIR *d;
     struct dirent *dir;
     char file_path[SIZE];
-    char aux[MAIN_DIR_NAME_SIZE+UID_SIZE];
-    bzero(aux, MAIN_DIR_NAME_SIZE+UID_SIZE);
+    char aux[MAIN_DIR_NAME_SIZE+UID_SIZE+1];
+    bzero(aux, MAIN_DIR_NAME_SIZE+UID_SIZE+1);
     strcpy(aux, MAIN_DIR_NAME);
     strcat(aux, uid);
+    strcat(aux, "/");
     d = opendir(aux);
 
     if (d) {
