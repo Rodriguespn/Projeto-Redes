@@ -27,42 +27,42 @@ Boolean prepare_login_request(char *request, char *command, char *uid, char *pas
 Boolean verify_login_response(char *buffer);
 
 //req
-void req(char* fop, char* fname, char* buffer, char* uid, char* rid, int as_fd);
+void req(char *fop, char *fname, char *buffer, char *uid, char *rid, int as_fd);
 Boolean parse_req(char *fop, char *fname);
 void prepare_req_request(char *request, char *uid, char *fop, char *fname, char *rid);
-void treat_rrq(char* buffer);
+void treat_rrq(char *buffer);
 
 //val
-void val(char* vc, char* tid, char* buffer, char* uid, char* rid, int as_fd);
+void val(char *vc, char *tid, char *buffer, char *uid, char *rid, int as_fd);
 Boolean parse_val(char *vc);
 void prepare_val_request(char *request, char *uid, char *rid, char *vc);
-void treat_rau(char* buffer, char *tid);
+void treat_rau(char *buffer, char *tid);
 
 //list
-void list(char* tid, char* buffer, char* uid);
+void list(char *tid, char *buffer, char *uid);
 void prepare_list_request(char *request, char *uid, char *tid);
-void treat_rls(char* buffer);
+void treat_rls(char *buffer);
 
 //retrieve
-void retrieve(char* fname, char* tid, char* buffer, char* uid);
+void retrieve(char *fname, char *tid, char *buffer, char *uid);
 void prepare_retrieve_request(char *request, char *uid, char *tid, char *fname);
-void treat_rrt(char* buffer);
+void treat_rrt(char *buffer, char *fname);
 
 //upload
-void upload(char* fname, char* fsize, char* data, char* tid, char* buffer, char* uid);
+void upload(char *fname, char *fsize, char *data, char *tid, char *buffer, char *uid);
 void prepare_upload_request(char *request, char *uid, char *tid, char *fname,
                             char *fsize, char *data, int fs_fd);
-void treat_rup(char* buffer);
+void treat_rup(char *buffer);
 
 //delete
-void delete(char* fname, char* tid, char* buffer, char* uid);
+void delete (char *fname, char *tid, char *buffer, char *uid);
 void prepare_delete_request(char *request, char *uid, char *tid, char *fname);
-void treat_rdl(char* buffer);
+void treat_rdl(char *buffer);
 
 //remove
-void rem(char* tid, char* buffer, char* uid, int as_fd);
+void rem(char *tid, char *buffer, char *uid, int as_fd);
 void prepare_remove_request(char *request, char *uid, char *tid);
-void treat_rrm(char* buffer);
+void treat_rrm(char *buffer);
 
 //exit
 void ex(int as_fd);
