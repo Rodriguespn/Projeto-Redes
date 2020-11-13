@@ -10,7 +10,7 @@ all:
 	$(LD) $(CFLAGS) $(LDFLAGS) -o user user.c ../functions.c
 
 run:
-	./user -n 193.136.128.109 -p 58038
+	./user -n 193.136.128.109 -p 58038 -m 193.136.138.142 -q 59000
 
 clean:
 	@echo Cleaning...
