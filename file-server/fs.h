@@ -46,8 +46,8 @@ Boolean remove_user_dir(char* uid);
 // Internet Functions
 void get_localhost_info(char* hostname_buffer, char* ip_buffer);
 Boolean read_user_request_arg(int sockfd, char* dest, int dest_size, Boolean skip_len,  char* delimiter);
-Boolean read_as_val_response(int sockfd, struct sockaddr* addr, int user_sockfd, char* dest, int dest_size, Boolean skip_len, char* delimiter, char* dest_default, char* special_res_err);
-Boolean send_as_val_request(int sockfd, struct sockaddr* addr, int user_sockfd, char* uid, char* tid);
+Boolean read_as_val_response(int sockfd, struct addrinfo* client, int user_sockfd, char* dest, int dest_size, Boolean skip_len, char* delimiter, char* dest_default, char* special_res_err);
+Boolean send_as_val_request(int sockfd, struct addrinfo* client, int user_sockfd, char* uid, char* tid);
 Boolean send_user_response(int sockfd, char* protocol, char* status);
 
 // Signal Threatment Functions

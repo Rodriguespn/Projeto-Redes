@@ -113,6 +113,7 @@ int main(int argc, char const *argv[])
             // Define UDP socket variables (Communication with Authentication Server)
             int udp_sockfd; // close
             struct sockaddr_in udp_servaddr;
+            struct addrinfo udp_hints, *client;
             
             // Create UDP socket 
             udp_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -123,19 +124,28 @@ int main(int argc, char const *argv[])
             }
             
             // Assign IP address and PORT to the UDP socket
-            bzero(&udp_servaddr, sizeof(udp_servaddr));
-            udp_servaddr.sin_family = AF_INET; 
-            udp_servaddr.sin_addr.s_addr = INADDR_ANY; 
-            udp_servaddr.sin_port = htons(as_port);
+            memset(&udp_hints, 0, sizeof udp_hints);
+            udp_hints.ai_family = AF_INET;
+            udp_hints.ai_socktype = SOCK_DGRAM;
+            
+            // gets the address info
+            char as_port_str[6];
+            bzero(as_port_str, 6);
+            sprintf(as_port_str, "%d", as_port);
+            int errcode = getaddrinfo(as_ip, as_port_str, &udp_hints, &client);
+            if (errcode != 0) {
+                //error
+                fprintf(stderr, "ERROR: getaddrinfo returned %d error code\n", errcode);
+                return false;
+            }
 
             struct timeval tv;
             tv.tv_sec = 2;
             tv.tv_usec = 0; 
-            int errcode;
 
             // sets socket timeout as 5s
             if ((errcode = setsockopt(udp_sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv))) < 0) {
-                fprintf(stderr, "Error: setsockopt returned erro code %d\n", errcode);
+                fprintf(stderr, "ERROR: setsockopt returned erro code %d\n", errcode);
                 return false;
             }
             
@@ -184,27 +194,27 @@ int main(int argc, char const *argv[])
                     verbose_message(verbose, "| TID = %s\n", user_tid);
 
                     // Send AS validation message
-                    if(!send_as_val_request(udp_sockfd, (struct sockaddr*) &udp_servaddr, user_sockfd,user_uid, user_tid))
+                    if(!send_as_val_request(udp_sockfd, client, user_sockfd,user_uid, user_tid))
                         break;
                     verbose_message(verbose, "IP = %s | Port = %s | Sent AS Validation Request.\n", fs_ip, fs_port);
                     
                     // Read AS command response
-                    if(!read_as_val_response(udp_sockfd, (struct sockaddr*) &udp_servaddr, user_sockfd, as_command, COMMAND_SIZE, false, " ", VAL_FILE_RESPONSE, NULL))
+                    if(!read_as_val_response(udp_sockfd, client, user_sockfd, as_command, COMMAND_SIZE, false, " ", VAL_FILE_RESPONSE, NULL))
                         break;
                     verbose_message(verbose, "IP = %s | Port = %s | Command = ", as_ip, as_port, as_command);
 
                     // Read AS uid response
-                    if (!read_as_val_response(udp_sockfd, (struct sockaddr*) &udp_servaddr, user_sockfd, as_uid, UID_SIZE, false, " ", user_uid, LIS_RESPONSE))
+                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_uid, UID_SIZE, false, " ", user_uid, LIS_RESPONSE))
                         break;
                     verbose_message(verbose, "| UID = %s ", as_uid);
 
                     // Read AS tid response
-                    if (!read_as_val_response(udp_sockfd, (struct sockaddr*) &udp_servaddr, user_sockfd, as_tid, TID_SIZE, false, " ", user_tid, LIS_RESPONSE))
+                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_tid, TID_SIZE, false, " ", user_tid, LIS_RESPONSE))
                         break;
                     verbose_message(verbose, "| TID = %s ", as_tid);
 
                     // Read AS fop response
-                    if (!read_as_val_response(udp_sockfd, (struct sockaddr*) &udp_servaddr, user_sockfd, as_fop, FOP_SIZE, false, "\n", USER_LIST_SHORT, LIS_RESPONSE))
+                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_fop, FOP_SIZE, false, "\n", USER_LIST_SHORT, LIS_RESPONSE))
                         break;
                     verbose_message(verbose, "| FOP = %s\n", as_fop);
 
@@ -271,32 +281,32 @@ int main(int argc, char const *argv[])
                     verbose_message(verbose, "| Filename = %s ", user_filename);
 
                     // Send AS validation message
-                    if(!send_as_val_request(udp_sockfd, (struct sockaddr*) &udp_servaddr, user_sockfd, user_uid, user_tid))
+                    if(!send_as_val_request(udp_sockfd, client, user_sockfd, user_uid, user_tid))
                         break;
                     verbose_message(verbose, "IP = %s | Port = %s | Sent AS Validation Request.\n", fs_ip, fs_port);
                     
                     // Read AS command response
-                    if(!read_as_val_response(udp_sockfd, (struct sockaddr*) &udp_servaddr, user_sockfd, as_command, COMMAND_SIZE, false, " ", VAL_FILE_RESPONSE, NULL))
+                    if(!read_as_val_response(udp_sockfd, client, user_sockfd, as_command, COMMAND_SIZE, false, " ", VAL_FILE_RESPONSE, NULL))
                         break;
                     verbose_message(verbose, "IP = %s | Port = %s | Command = ", as_ip, as_port, as_command);
 
                     // Read AS uid response
-                    if (!read_as_val_response(udp_sockfd, (struct sockaddr*) &udp_servaddr, user_sockfd, as_uid, UID_SIZE, false, " ", user_uid, DEL_RESPONSE))
+                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_uid, UID_SIZE, false, " ", user_uid, DEL_RESPONSE))
                         break;
                     verbose_message(verbose, "| UID = %s ", as_uid);
 
                     // Read AS tid response
-                    if (!read_as_val_response(udp_sockfd, (struct sockaddr*) &udp_servaddr, user_sockfd, as_tid, TID_SIZE, false, " ", user_tid, DEL_RESPONSE))
+                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_tid, TID_SIZE, false, " ", user_tid, DEL_RESPONSE))
                         break;
                     verbose_message(verbose, "| TID = %s ", as_tid);
 
                     // Read AS fop response
-                    if (!read_as_val_response(udp_sockfd, (struct sockaddr*) &udp_servaddr, user_sockfd, as_fop, FOP_SIZE, false, " ", USER_DELETE_SHORT, DEL_RESPONSE))
+                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_fop, FOP_SIZE, false, " ", USER_DELETE_SHORT, DEL_RESPONSE))
                         break;
                     verbose_message(verbose, "| FOP = %s ", as_fop);
 
                     // Read AS filename response
-                    if (!read_as_val_response(udp_sockfd, (struct sockaddr*) &udp_servaddr, user_sockfd, as_filename, FILENAME_SIZE, true, "\n", user_filename, DEL_RESPONSE))
+                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_filename, FILENAME_SIZE, true, "\n", user_filename, DEL_RESPONSE))
                         break;
                     verbose_message(verbose, "| Filename = %s\n", as_filename);
 
@@ -342,27 +352,27 @@ int main(int argc, char const *argv[])
                     verbose_message(verbose, "| UID = %s ", user_tid);
 
                     // Send AS validation message
-                    if(!send_as_val_request(udp_sockfd, (struct sockaddr*) &udp_servaddr, user_sockfd, user_uid, user_tid))
+                    if(!send_as_val_request(udp_sockfd, client, user_sockfd, user_uid, user_tid))
                         break;
                     verbose_message(verbose, "IP = %s | Port = %s | Sent AS Validation Request.\n", fs_ip, fs_port);
                     
                     // Read AS command response
-                    if(!read_as_val_response(udp_sockfd, (struct sockaddr*) &udp_servaddr, user_sockfd, as_command, COMMAND_SIZE, false, " ", VAL_FILE_RESPONSE, NULL))
+                    if(!read_as_val_response(udp_sockfd, client, user_sockfd, as_command, COMMAND_SIZE, false, " ", VAL_FILE_RESPONSE, NULL))
                         break;
                     verbose_message(verbose, "IP = %s | Port = %s | Command = ", as_ip, as_port, as_command);
 
                     // Read AS uid response
-                    if (!read_as_val_response(udp_sockfd, (struct sockaddr*) &udp_servaddr, user_sockfd, as_uid, UID_SIZE, false, " ", user_uid, REM_RESPONSE))
+                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_uid, UID_SIZE, false, " ", user_uid, REM_RESPONSE))
                         break;
                     verbose_message(verbose, "| UID = %s ", as_uid);
                     
                     // Read AS tid response
-                    if (!read_as_val_response(udp_sockfd, (struct sockaddr*) &udp_servaddr, user_sockfd, as_tid, TID_SIZE, false, " ", user_tid, REM_RESPONSE))
+                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_tid, TID_SIZE, false, " ", user_tid, REM_RESPONSE))
                         break;
                     verbose_message(verbose, "| TID = %s ", as_tid);
 
                     // Read AS fop response
-                    if (!read_as_val_response(udp_sockfd, (struct sockaddr*) &udp_servaddr, user_sockfd, as_fop, FOP_SIZE, false, "\n", USER_REMOVE_SHORT, REM_RESPONSE))
+                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_fop, FOP_SIZE, false, "\n", USER_REMOVE_SHORT, REM_RESPONSE))
                         break;
                     verbose_message(verbose, "| FOP = %s ", as_fop);
 
@@ -570,7 +580,7 @@ void list_user_filenames(char* uid, char* res, int res_size)
         strcat(res, file->d_name);
         strcat(res, " ");
         memset(filesize, EOS, FILE_SIZE_DIG);
-        sprintf(filesize, "%lld", st.st_size);
+        sprintf(filesize, "%ld", st.st_size);
         strcat(res, filesize);
     }
     closedir(dir);
@@ -704,12 +714,11 @@ Boolean read_user_request_arg(int sockfd, char* dest, int dest_size, Boolean ski
     return true;
 }
 
-Boolean read_as_val_response(int sockfd, struct sockaddr* addr, int user_sockfd, char* dest, int dest_size, Boolean skip_len, char* delimiter, char* dest_default, char* special_res_err)
+Boolean read_as_val_response(int sockfd, struct addrinfo* client, int user_sockfd, char* dest, int dest_size, Boolean skip_len, char* delimiter, char* dest_default, char* special_res_err)
 {
     memset(dest, EOS, dest_size);
     char aux[dest_size];
-    int addr_size = sizeof(addr);
-    int n = recvfrom(sockfd, aux, dest_size, MSG_WAITALL, addr, (socklen_t*) &addr_size);
+    int n = recvfrom(sockfd, aux, dest_size, 0, client->ai_addr, client->ai_addrlen);
     if (n == 0)                                 // Checks if the user disconnected
     {
         user_connected_flag = false;
@@ -735,12 +744,10 @@ Boolean read_as_val_response(int sockfd, struct sockaddr* addr, int user_sockfd,
 }
 
 
-Boolean send_as_val_request(int sockfd, struct sockaddr* addr, int user_sockfd, char* uid, char* tid)
+Boolean send_as_val_request(int sockfd, struct addrinfo* client, int user_sockfd, char* uid, char* tid)
 {
-    memset(uid, EOS, UID_SIZE);
-    memset(tid, EOS, TID_SIZE);
-    const int dest_size = COMMAND_SIZE+UID_SIZE+TID_SIZE+1;
-    char aux[dest_size];
+    int dest_size = COMMAND_SIZE+UID_SIZE+TID_SIZE+1;
+    char aux[COMMAND_SIZE+UID_SIZE+TID_SIZE+1];
     memset(aux, EOS, dest_size);
     strcpy(aux, VALIDATE_FILE);
     strcat(aux, " ");
@@ -748,13 +755,17 @@ Boolean send_as_val_request(int sockfd, struct sockaddr* addr, int user_sockfd, 
     strcat(aux, " ");
     strcat(aux, tid);
     strcat(aux, "\n");
-    int n = sendto(sockfd, aux, strlen(aux), 0, addr, sizeof(addr));
+    printf("uid=%s\n", uid);
+    printf("sockfd=%d\n", sockfd);
+    //int n = sendto(sockfd, aux, strlen(aux), 0, addr, sizeof(addr));
+    int n = sendto(sockfd, aux, strlen(aux), 0, client->ai_addr, client->ai_addrlen);
+    printf("dest_size=%d\nlen(aux)=%d\nn=%d\naux=%s", dest_size, strlen(aux), n, aux);
     if (n == 0)                                 // Checks if the user disconnected
     {
         user_connected_flag = false;
         return false;
     }
-    else if (n == ERROR || n < dest_size || strlen(aux) < dest_size)
+    else if (n == ERROR || n < (dest_size-1) || (int) strlen(aux) < (dest_size-1))
     {
         fprintf(stderr, "\nError Unable to write properly to the as socket.\n");
         send_user_response(user_sockfd, PROTOCOL_ERROR, NULL);

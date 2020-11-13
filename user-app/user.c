@@ -559,7 +559,7 @@ void treat_rau(char *buffer, char *tid)
 void list(char *tid, char *buffer, char *uid, int fs_fd, ssize_t m,
           struct addrinfo hints_fs, struct addrinfo *res_fs, int errcode_fs)
 {
-    init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
+    fs_fd = init_socket_to_fs();
 
     prepare_list_request(buffer, uid, tid);
 
@@ -623,7 +623,7 @@ void retrieve(char *fname, char *tid, char *buffer, char *uid, int fs_fd, ssize_
 {
     if (parse_retrieve_upload_delete(fname))
     {
-        init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
+        fs_fd = init_socket_to_fs();
 
         prepare_retrieve_request(buffer, uid, tid, fname);
 
@@ -693,7 +693,7 @@ void upload(char *fname, char *fsize, char *data, char *tid, char *buffer, char 
     if (parse_retrieve_upload_delete(fname))
     {
 
-        init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
+        fs_fd = init_socket_to_fs();
 
         prepare_upload_request(buffer, uid, tid, fname, fsize, data);
 
@@ -781,7 +781,7 @@ void delete (char *fname, char *tid, char *buffer, char *uid, int fs_fd, ssize_t
 {
     if (parse_retrieve_upload_delete(fname))
     {
-        init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
+        fs_fd = init_socket_to_fs();
 
         prepare_delete_request(buffer, uid, tid, fname);
 
@@ -854,7 +854,7 @@ void treat_rdl(char *buffer)
 void rem(char *tid, char *buffer, char *uid, int as_fd, int fs_fd, ssize_t m,
          struct addrinfo hints_fs, struct addrinfo *res_fs, int errcode_fs)
 {
-    init_socket_to_fs(fs_fd, errcode_fs, m, hints_fs, res_fs);
+    fs_fd = init_socket_to_fs();
 
     prepare_remove_request(buffer, uid, tid);
 
@@ -951,22 +951,26 @@ Boolean parse_retrieve_upload_delete(char *fname)
 }
 
 //Initializes TCP connection to FS
-void init_socket_to_fs(int fs_fd, int errcode_fs, ssize_t m, struct addrinfo hints_fs,
-                       struct addrinfo *res_fs)
+int init_socket_to_fs()
 {
+    struct addrinfo hints_fs, *res_fs;
+    int errcode_fs;
+    ssize_t m;
+
     //connection to FS
-    fs_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fs_fd == ERROR)
+    int fs_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fs_fd == ERROR) {
+        printf("Error: could not create\n");
         exit(EXIT_FAILURE);
+    }
 
     memset(&hints_fs, 0, sizeof hints_fs);
     hints_fs.ai_family = AF_INET;
     hints_fs.ai_socktype = SOCK_STREAM;
 
-    errcode_fs = getaddrinfo(asip, asport, &hints_fs, &res_fs);
+    errcode_fs = getaddrinfo(fsip, fsport, &hints_fs, &res_fs);
     if (errcode_fs != 0)
     {
-
         fprintf(stderr, "Error: could not get address info\n");
         exit(EXIT_FAILURE);
     }
@@ -974,10 +978,10 @@ void init_socket_to_fs(int fs_fd, int errcode_fs, ssize_t m, struct addrinfo hin
     m = connect(fs_fd, res_fs->ai_addr, res_fs->ai_addrlen);
     if (m == ERROR)
     {
-
         fprintf(stderr, "Error: could not connect\n");
         exit(EXIT_FAILURE);
     }
+    return fs_fd;
 }
 
 //RID generator

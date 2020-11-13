@@ -76,8 +76,7 @@ void ex(int as_fd);
 Boolean parse_retrieve_upload_delete(char *fname);
 
 //Initializes TCP connection to FS
-void init_socket_to_fs(int fs_fd, int errcode_fs, ssize_t m, struct addrinfo hints_fs, 
-                       struct addrinfo *res_fs);
+int init_socket_to_fs();
 
 //RID generator
 void generate_random_rid(char rid[], int size);
