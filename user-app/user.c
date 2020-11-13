@@ -312,7 +312,7 @@ Boolean verify_login_response(char *buffer)
     }
     else
     {
-        printf("%s\n", FAILURE_MESSAGE);
+        fprintf(stderr, "%s\n", FAILURE_MESSAGE);
         return false;
     }
 }
@@ -426,26 +426,22 @@ void treat_rrq(char *buffer)
     //OK
     if (strcmp(token, OK))
     {
-        printf(SUCCESS_MESSAGE);
-        printf("\n");
+        printf("%s\n", SUCCESS_MESSAGE);
     }
     //ELOG
     else if (strcmp(token, NOT_LOGGED_IN))
     {
-        printf(FAILURE_MESSAGE);
-        printf(" There was not a successful login.\n");
+        fprintf(stderr, "%s There was not a successful login.\n", FAILURE_MESSAGE);
     }
     //EPD
     else if (strcmp(token, PD_NOT_AVAILABLE))
     {
-        printf(FAILURE_MESSAGE);
-        printf(" Message was not sent by AS to PD.\n");
+        fprintf(stderr, "%s Message was not sent by AS to PD.\n", FAILURE_MESSAGE);
     }
     //EUSER
     else if (strcmp(token, INVALID_UID))
     {
-        printf(FAILURE_MESSAGE);
-        printf(" UID is incorrect.\n");
+        fprintf(stderr, "%s UID is incorrect.\n", FAILURE_MESSAGE);
     }
 }
 
@@ -518,8 +514,7 @@ void treat_rau(char *buffer, char *tid)
 
     if (strcmp(token, TID_ERROR) == 0)
     {
-        printf(FAILURE_MESSAGE);
-        printf(" Authentication failed.\n");
+        fprintf(stderr, "%s Authentication failed.\n", FAILURE_MESSAGE);
         return;
     }
     else
@@ -757,32 +752,27 @@ void treat_rup(char *buffer)
     //OK
     if (strcmp(token, OK))
     {
-        printf(SUCCESS_MESSAGE);
-        printf("\n");
+        printf("%s\n", SUCCESS_MESSAGE);
     }
     //DUP
     else if (strcmp(token, FILE_UNAVAILABLE))
     {
-        printf(FAILURE_MESSAGE);
-        fprintf(stderr, " File already exists.\n");
+        fprintf(stderr, "%s File already exists.\n", FAILURE_MESSAGE);
     }
     //FULL
     else if (strcmp(token, NOT_OK))
     {
-        printf(FAILURE_MESSAGE);
-        fprintf(stderr, " FS is full, user already uploaded 15 files.\n");
+        fprintf(stderr, "%s FS is full, user already uploaded 15 files.\n", FAILURE_MESSAGE);
     }
     //INV
     else if (strcmp(token, AS_VALIDATION_ERROR))
     {
-        printf(FAILURE_MESSAGE);
-        fprintf(stderr, " Validation error.\n");
+        fprintf(stderr, "%s Validation error.\n", FAILURE_MESSAGE);
     }
     //ERR
     else if (strcmp(token, PROTOCOL_ERROR))
     {
-        printf(FAILURE_MESSAGE);
-        fprintf(stderr, " Request is not correctly formulated.\n");
+        fprintf(stderr, "%s Request is not correctly formulated.\n", FAILURE_MESSAGE);
     }
 }
 
@@ -837,26 +827,22 @@ void treat_rdl(char *buffer)
     //OK
     if (strcmp(token, OK))
     {
-        printf(SUCCESS_MESSAGE);
-        printf("\n");
+        printf("%s\n", SUCCESS_MESSAGE);
     }
     //NOK
     else if (strcmp(token, NOT_OK))
     {
-        printf(FAILURE_MESSAGE);
-        fprintf(stderr, " UID does not exist.\n");
+        fprintf(stderr, "%s UID does not exist.\n", FAILURE_MESSAGE);
     }
     //INV
     else if (strcmp(token, AS_VALIDATION_ERROR))
     {
-        printf(FAILURE_MESSAGE);
-        fprintf(stderr, " Validation error.\n");
+        fprintf(stderr, "%s Validation error.\n", FAILURE_MESSAGE);
     }
     //ERR
     else if (strcmp(token, PROTOCOL_ERROR))
     {
-        printf(FAILURE_MESSAGE);
-        fprintf(stderr, " Request is not correctly formulated.\n");
+        fprintf(stderr, "%s Request is not correctly formulated.\n", FAILURE_MESSAGE);
     }
 }
 
@@ -908,26 +894,22 @@ void treat_rrm(char *buffer)
     //OK
     if (strcmp(token, OK))
     {
-        printf(SUCCESS_MESSAGE);
-        printf("\n");
+        printf("%s\n", SUCCESS_MESSAGE);
     }
     //NOK
     else if (strcmp(token, NOT_OK))
     {
-        printf(FAILURE_MESSAGE);
-        fprintf(stderr, " UID does not exist.\n");
+        fprintf(stderr, "%s UID does not exist.\n", FAILURE_MESSAGE);
     }
     //INV
     else if (strcmp(token, AS_VALIDATION_ERROR))
     {
-        printf(FAILURE_MESSAGE);
-        fprintf(stderr, " Validation error.\n");
+        fprintf(stderr, "%s Validation error.\n", FAILURE_MESSAGE);
     }
     //ERR
     else if (strcmp(token, PROTOCOL_ERROR))
     {
-        printf(FAILURE_MESSAGE);
-        fprintf(stderr, " Request is not correctly formulated.\n");
+        fprintf(stderr, "%s Request is not correctly formulated.\n", FAILURE_MESSAGE);
     }
 }
 
