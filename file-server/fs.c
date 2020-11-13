@@ -197,14 +197,14 @@ int main(int argc, char const *argv[])
                     verbose_message(verbose, "| Filename = %s\n", user_filename);
 
                     // Send AS validation message
-                    //if(!send_as_val_request(udp_sockfd, client, user_sockfd, user_uid, user_tid))
-                    //    break;
-                    //verbose_message(verbose, "IP = %s | Port = %d | Sent AS Validation Request.\n", fs_ip, fs_port);
+                    if(!send_as_val_request(udp_sockfd, client, user_sockfd, user_uid, user_tid))
+                        break;
+                    verbose_message(verbose, "IP = %s | Port = %d | Sent AS Validation Request.\n", fs_ip, fs_port);
                     
                     // Read AS response
-                    //if(!read_as_val_response(udp_sockfd, client, user_sockfd, as_command, as_uid, as_tid, as_fop, as_filename, VAL_FILE_RESPONSE, user_uid, user_tid, FOP_RETRIEVE, user_filename, RET_RESPONSE))
-                    //    break;
-                    //verbose_message(verbose, "IP = %s | Port = %d | Command = %s | UID = %s | TID = %s | FOP = %s | Filename = %s\n", as_ip, as_port, as_command, as_uid, as_tid, as_fop, as_filename);
+                    if(!read_as_val_response(udp_sockfd, client, user_sockfd, as_command, as_uid, as_tid, as_fop, as_filename, VAL_FILE_RESPONSE, user_uid, user_tid, FOP_RETRIEVE, user_filename, RET_RESPONSE))
+                        break;
+                    verbose_message(verbose, "IP = %s | Port = %d | Command = %s | UID = %s | TID = %s | FOP = %s | Filename = %s\n", as_ip, as_port, as_command, as_uid, as_tid, as_fop, as_filename);
 
                     // Tries to find the filename
                     if (find_user_directory(user_uid))
