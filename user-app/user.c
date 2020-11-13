@@ -596,7 +596,7 @@ void retrieve(char *fname, char *tid, char *buffer, char *uid)
         printf("message received from FS = %s", buffer);
 
         //treat received message
-        treat_rrt(buffer);
+        treat_rrt(buffer, fname);
 
         close(fs_fd);
     }
@@ -614,7 +614,7 @@ void prepare_retrieve_request(char *request, char *uid, char *tid, char *fname)
     strcat(request, "\n");
 }
 
-void treat_rrt(char *buffer)
+void treat_rrt(char *buffer, char *fname)
 {
     int fsize_value;
     char fsize[SIZE];
@@ -647,8 +647,7 @@ void treat_rrt(char *buffer)
             return;
         }
 
-        //change
-        printf("%s%d", data, fsize_value);
+        printf("filename - %s\tfilepath - ../files\n", fname);
     }
 
     //EOF
