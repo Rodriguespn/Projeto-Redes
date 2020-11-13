@@ -23,7 +23,7 @@ int main(int argc, char const *argv[])
     // Create database directory
     if (!make_main_directory())
     {
-        fprintf(stderr, "\nError Unable to make main directory.\n");
+        fprintf(stderr, "\nError: Unable to make main directory.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -51,7 +51,7 @@ int main(int argc, char const *argv[])
     tcp_sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (tcp_sockfd == ERROR)
     {
-        fprintf(stderr, "Unable to create the tcp socket.\n");
+        fprintf(stderr, "Error: Unable to create the tcp socket.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -65,20 +65,23 @@ int main(int argc, char const *argv[])
     // (bind(tcp_sockfd, (struct sockaddr*) &tcp_servaddr, sizeof(tcp_servaddr))
     if ((bind(tcp_sockfd, (struct sockaddr*) &tcp_servaddr, sizeof(tcp_servaddr))) != 0)
     { 
-        fprintf(stderr, "Unable to bind the tcp socket.\n");
+        fprintf(stderr, "Error: Unable to bind the tcp socket.\n");
         exit(EXIT_FAILURE);  
     } 
   
     // Start listening for users in the TCP socket
     if ((listen(tcp_sockfd, 5)) != 0)
     { 
-        fprintf(stderr, "Unable to start listening for user in the TCP socket.\n");
+        fprintf(stderr, "Error: Unable to start listening for user in the TCP socket.\n");
         exit(EXIT_FAILURE);
     }
 
     // Print important network information if verbose flag is true
     verbose_message(verbose, "File-System Details:\nHostname = %s\nIP = %s\nPort = %d\n\nAuthentication-System Details:\nIP = %s\nPort = %d\n\n", fs_hostname, fs_ip, fs_port, as_ip, as_port);
     
+
+    // Creates outer-scope pid variable
+    int pid = 1;
 
     // Repeat the routine while main process is running
     while (running_flag == true)
@@ -92,17 +95,17 @@ int main(int argc, char const *argv[])
         user_sockfd = accept(tcp_sockfd, (struct sockaddr*) &user_servaddr, &user_servaddr_len);
         if (user_sockfd == ERROR)
         {
-            fprintf(stderr, "\nTCP socket was closed.\n");
+            verbose_message(verbose, "\nIP = %s | Port = %d | Not accepting any more connections.\n", fs_ip, fs_port);
             continue;
         }
         else if (user_sockfd < 0) { 
-            fprintf(stderr, "Unable to accept TCP connections.\n");
+            fprintf(stderr, "Error: Unable to accept TCP connections.\n");
             exit(EXIT_FAILURE); 
         }
         
         // If the code gets here then a new user connected.
         // Create a new process to handle the conversation with the user
-        int pid = fork();
+        pid = fork();
 
         // Redirect the child process to handle the conversation
         if (pid == 0)   // Child process
@@ -113,13 +116,12 @@ int main(int argc, char const *argv[])
             // Define UDP socket variables (Communication with Authentication Server)
             int udp_sockfd; // close
             struct addrinfo udp_hints, *client;
-            struct sockaddr_in udp_servaddr;
             
             // Create UDP socket 
             udp_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
             if (udp_sockfd == ERROR)
             {
-                fprintf(stderr, "Unable to create the udp socket from User.\n");
+                fprintf(stderr, "Error: Unable to create the udp socket from User.\n");
                 exit(EXIT_FAILURE);
             }
             
@@ -135,17 +137,17 @@ int main(int argc, char const *argv[])
             int errcode = getaddrinfo(as_ip, as_port_str, &udp_hints, &client);
             if (errcode != 0) {
                 //error
-                fprintf(stderr, "ERROR: getaddrinfo returned %d error code\n", errcode);
+                fprintf(stderr, "Error: getaddrinfo returned %d error code\n", errcode);
                 return false;
             }
 
             struct timeval tv;
-            tv.tv_sec = 2;
+            tv.tv_sec = 15;
             tv.tv_usec = 0; 
 
             // sets socket timeout as 5s
             if ((errcode = setsockopt(udp_sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv))) < 0) {
-                fprintf(stderr, "ERROR: setsockopt returned erro code %d\n", errcode);
+                fprintf(stderr, "Error: setsockopt returned erro code %d\n", errcode);
                 return false;
             }
             
@@ -172,51 +174,86 @@ int main(int argc, char const *argv[])
             while (user_connected_flag == true)
             {
                 // Tries to read the command, uid and tid sent by the user
-                if(!read_user_request_arg(user_sockfd, user_command, COMMAND_SIZE, false, " "))
+                if(!read_user_request_arg(user_sockfd, user_command, COMMAND_SIZE, " "))
                     break;
                 verbose_message(verbose, "IP = %s | Port = %d | Command = %s ", user_ip, user_port, user_command);
 
                 // Decides which operation to perform
                 if (strcmp(user_command, RETRIEVE) == 0)
                 {
+                    // Read user uid
+                    if(!read_user_request_arg(user_sockfd, user_uid, UID_SIZE,  " "))
+                        break;
+                    verbose_message(verbose, "| UID = %s ", user_uid);
+
+                    // Read user tid
+                    if (!read_user_request_arg(user_sockfd, user_tid, TID_SIZE, " "))
+                        break;
+                    verbose_message(verbose, "| TID = %s ", user_tid);
+
+                    // Read user filename
+                    if (!read_user_request_arg(user_sockfd, user_filename, FILENAME_SIZE, "\n"))
+                        break;
+                    verbose_message(verbose, "| Filename = %s\n", user_filename);
+
+                    // Send AS validation message
+                    if(!send_as_val_request(udp_sockfd, client, user_sockfd, user_uid, user_tid))
+                        break;
+                    verbose_message(verbose, "IP = %s | Port = %d | Sent AS Validation Request.\n", fs_ip, fs_port);
                     
+                    // Read AS response
+                    if(!read_as_val_response(udp_sockfd, client, user_sockfd, as_command, as_uid, as_tid, as_fop, as_filename, VAL_FILE_RESPONSE, user_uid, user_tid, FOP_RETRIEVE, user_filename, RET_RESPONSE))
+                        break;
+                    verbose_message(verbose, "IP = %s | Port = %d | Command = %s | UID = %s | TID = %s | FOP = %s | Filename = %s\n", as_ip, as_port, as_command, as_uid, as_tid, as_fop, as_filename);
+
+                    // Tries to find the filename
+                    if (find_user_directory(user_uid))
+                    {
+                        if (find_user_filename(user_uid, user_filename))
+                        {
+                            if (retrieve_user_file(user_sockfd, user_uid, user_filename))
+                            {
+                                verbose_message(verbose, "IP = %s | Port = %d | Retrieve request fullfilled.\n", fs_ip, fs_port);
+                            }
+                            else  // returns ERR
+                            {
+                                verbose_message(verbose, "IP = %s | Port = %d | Retrieve request failed: Unable to retrieve the file.\n", fs_ip, fs_port);
+                                send_user_response(user_sockfd, PROTOCOL_ERROR, NULL);
+                            }
+                        }
+                        else // returns EOF
+                        {
+                            verbose_message(verbose, "IP = %s | Port = %d | Retrieve request failed: File not found.\n", fs_ip, fs_port);
+                            send_user_response(user_sockfd, RET_RESPONSE, EOF_FILE);
+                        }
+                    }
+                    else    // returns NOK
+                    {
+                        verbose_message(verbose, "IP = %s | Port = %d | Retrieve request failed: User not found.\n", fs_ip, fs_port);
+                        send_user_response(user_sockfd, RET_RESPONSE, NOT_OK);
+                    }
                 }
                 else if (strcmp(user_command, LIST) == 0)
                 {
                     // Read user uid
-                    if(!read_user_request_arg(user_sockfd, user_uid, UID_SIZE, false,  " "))
+                    if(!read_user_request_arg(user_sockfd, user_uid, UID_SIZE,  " "))
                         break;
                     verbose_message(verbose, "| UID = %s ", user_uid);
                     
                     // Read user tid
-                    if (!read_user_request_arg(user_sockfd, user_tid, TID_SIZE, false, "\n"))
+                    if (!read_user_request_arg(user_sockfd, user_tid, TID_SIZE, "\n"))
                         break;
                     verbose_message(verbose, "| TID = %s\n", user_tid);
 
                     // Send AS validation message
                     if(!send_as_val_request(udp_sockfd, client, user_sockfd,user_uid, user_tid))
                         break;
-                    verbose_message(verbose, "IP = %s | Port = %s | Sent AS Validation Request.\n", fs_ip, fs_port);
+                    verbose_message(verbose, "IP = %s | Port = %d | Sent AS Validation Request.\n", fs_ip, fs_port);
                     
-                    // Read AS command response
-                    if(!read_as_val_response(udp_sockfd, client, user_sockfd, as_command, COMMAND_SIZE, false, " ", VAL_FILE_RESPONSE, NULL))
+                    // Read AS response
+                    if(!read_as_val_response(udp_sockfd, client, user_sockfd, as_command, as_uid, as_tid, as_fop, NULL, VAL_FILE_RESPONSE, user_uid, user_tid, FOP_LIST, NULL, LIS_RESPONSE))
                         break;
-                    verbose_message(verbose, "IP = %s | Port = %s | Command = ", as_ip, as_port, as_command);
-
-                    // Read AS uid response
-                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_uid, UID_SIZE, false, " ", user_uid, LIS_RESPONSE))
-                        break;
-                    verbose_message(verbose, "| UID = %s ", as_uid);
-
-                    // Read AS tid response
-                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_tid, TID_SIZE, false, " ", user_tid, LIS_RESPONSE))
-                        break;
-                    verbose_message(verbose, "| TID = %s ", as_tid);
-
-                    // Read AS fop response
-                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_fop, FOP_SIZE, false, "\n", USER_LIST_SHORT, LIS_RESPONSE))
-                        break;
-                    verbose_message(verbose, "| FOP = %s\n", as_fop);
+                    verbose_message(verbose, "IP = %s | Port = %d | Command = %s | UID = %s | TID = %s | FOP = %s\n", as_ip, as_port, as_command, as_uid, as_tid, as_fop);
 
                     // Tries to find the filename
                     if (find_user_directory(user_uid))
@@ -242,73 +279,118 @@ int main(int argc, char const *argv[])
                                 fprintf(stderr, "\nError Unable to write properly on the user socket.\n");
                                 user_connected_flag = false;
                             }
-                            verbose_message(verbose, "IP = %s | Port = %s | List request fullfilled.\n", fs_ip, fs_port);
+                            verbose_message(verbose, "IP = %s | Port = %d | List request fullfilled.\n", fs_ip, fs_port);
                             free(lst);
                             free(res);
                         }
                         else  // No files to list
                         {
-                            verbose_message(verbose, "IP = %s | Port = %s | List request fullfilled: User has no files.\n", fs_ip, fs_port);
+                            verbose_message(verbose, "IP = %s | Port = %d | List request fullfilled: User has no files.\n", fs_ip, fs_port);
                             send_user_response(user_sockfd, LIS_RESPONSE, "0");
                         }
                     }
                     else    // returns NOK
                     {
-                        verbose_message(verbose, "IP = %s | Port = %s | List request failed: User must do at least one upload.\n", fs_ip, fs_port);
+                        verbose_message(verbose, "IP = %s | Port = %d | List request failed: User must do at least one upload.\n", fs_ip, fs_port);
                         send_user_response(user_sockfd, LIS_RESPONSE, NOT_OK);
                     }
                 }
                 else if (strcmp(user_command, UPLOAD) == 0)
                 {
-                    
-
-                }
-                else if (strcmp(user_command, DELETE) == 0)
-                {
                     // Read user uid
-                    if(!read_user_request_arg(user_sockfd, user_uid, UID_SIZE, false,  " "))
+                    if(!read_user_request_arg(user_sockfd, user_uid, UID_SIZE,  " "))
                         break;
                     verbose_message(verbose, "| UID = %s ", user_uid);
 
                     // Read user tid
-                    if (!read_user_request_arg(user_sockfd, user_tid, TID_SIZE, false, " "))
+                    if (!read_user_request_arg(user_sockfd, user_tid, TID_SIZE, " "))
                         break;
                     verbose_message(verbose, "| TID = %s ", user_tid);
 
                     // Read user filename
-                    if (!read_user_request_arg(user_sockfd, user_filename, FILENAME_SIZE, true, "\n"))
+                    if (!read_user_request_dynamic_arg(user_sockfd, user_filename, FILENAME_SIZE, ' '))
                         break;
                     verbose_message(verbose, "| Filename = %s ", user_filename);
+
+                    // Read user filesize
+                    if (!read_user_request_dynamic_arg(user_sockfd, user_filesize, FILE_SIZE_DIG, ' '))
+                        break;
+                    verbose_message(verbose, "| Filesize = %s\n", user_filesize);
 
                     // Send AS validation message
                     if(!send_as_val_request(udp_sockfd, client, user_sockfd, user_uid, user_tid))
                         break;
-                    verbose_message(verbose, "IP = %s | Port = %s | Sent AS Validation Request.\n", fs_ip, fs_port);
+                    verbose_message(verbose, "IP = %s | Port = %d | Sent AS Validation Request.\n", fs_ip, fs_port);
                     
-                    // Read AS command response
-                    if(!read_as_val_response(udp_sockfd, client, user_sockfd, as_command, COMMAND_SIZE, false, " ", VAL_FILE_RESPONSE, NULL))
+                    // Read AS response
+                    if(!read_as_val_response(udp_sockfd, client, user_sockfd, as_command, as_uid, as_tid, as_fop, as_filename, VAL_FILE_RESPONSE, user_uid, user_tid, FOP_UPLOAD, user_filename, UPL_RESPONSE))
                         break;
-                    verbose_message(verbose, "IP = %s | Port = %s | Command = ", as_ip, as_port, as_command);
+                    verbose_message(verbose, "IP = %s | Port = %d | Command = %s | UID = %s | TID = %s | FOP = %s | Filename = %s\n", as_ip, as_port, as_command, as_uid, as_tid, as_fop, as_filename);
 
-                    // Read AS uid response
-                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_uid, UID_SIZE, false, " ", user_uid, DEL_RESPONSE))
+                    // Tries to find the filename
+                    if (find_user_directory(user_uid))
+                    {
+                        if (find_user_filename(user_uid, user_filename))  // return DUP
+                        {
+                            verbose_message(verbose, "IP = %s | Port = %d | Upload request failed: File already exists.\n", fs_ip, fs_port);
+                            send_user_response(user_sockfd, UPL_RESPONSE, DUPLICATED_FILE);
+                        }
+                        else
+                        {
+                            if (count_user_filenames(user_uid) >= USERS_DIR_SIZE+2)
+                            {
+                                verbose_message(verbose, "IP = %s | Port = %d | Upload request failed: Max. files per User reached.\n", fs_ip, fs_port);
+                                send_user_response(user_sockfd, UPL_RESPONSE, LIMIT_FILES_REACHED);  
+                            }
+                            else
+                            {
+                                if (upload_user_file(user_sockfd, user_uid, user_filename, user_filesize))
+                                {
+                                    verbose_message(verbose, "IP = %s | Port = %d | Upload request fullfilled.\n", fs_ip, fs_port);
+                                    send_user_response(user_sockfd, UPL_RESPONSE, OK);  
+                                }
+                                else
+                                {
+                                    verbose_message(verbose, "IP = %s | Port = %d | Upload request failed: Unable to upload the file.\n", fs_ip, fs_port);
+                                    send_user_response(user_sockfd, PROTOCOL_ERROR, NULL);  
+                                }
+                                
+                            }
+                            
+                        }
+                    }
+                    else  // returns NOK
+                    {
+                        verbose_message(verbose, "IP = %s | Port = %d | Upload request failed: User not found.\n", fs_ip, fs_port);
+                        send_user_response(user_sockfd, UPL_RESPONSE, NOT_OK);
+                    }
+                }
+                else if (strcmp(user_command, DELETE) == 0)
+                {
+                    // Read user uid
+                    if(!read_user_request_arg(user_sockfd, user_uid, UID_SIZE,  " "))
                         break;
-                    verbose_message(verbose, "| UID = %s ", as_uid);
+                    verbose_message(verbose, "| UID = %s ", user_uid);
 
-                    // Read AS tid response
-                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_tid, TID_SIZE, false, " ", user_tid, DEL_RESPONSE))
+                    // Read user tid
+                    if (!read_user_request_arg(user_sockfd, user_tid, TID_SIZE, " "))
                         break;
-                    verbose_message(verbose, "| TID = %s ", as_tid);
+                    verbose_message(verbose, "| TID = %s ", user_tid);
 
-                    // Read AS fop response
-                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_fop, FOP_SIZE, false, " ", USER_DELETE_SHORT, DEL_RESPONSE))
+                    // Read user filename
+                    if (!read_user_request_arg(user_sockfd, user_filename, FILENAME_SIZE, "\n"))
                         break;
-                    verbose_message(verbose, "| FOP = %s ", as_fop);
+                    verbose_message(verbose, "| Filename = %s\n", user_filename);
 
-                    // Read AS filename response
-                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_filename, FILENAME_SIZE, true, "\n", user_filename, DEL_RESPONSE))
+                    // Send AS validation message
+                    if(!send_as_val_request(udp_sockfd, client, user_sockfd, user_uid, user_tid))
                         break;
-                    verbose_message(verbose, "| Filename = %s\n", as_filename);
+                    verbose_message(verbose, "IP = %s | Port = %d | Sent AS Validation Request.\n", fs_ip, fs_port);
+                    
+                    // Read AS response
+                    if(!read_as_val_response(udp_sockfd, client, user_sockfd, as_command, as_uid, as_tid, as_fop, as_filename, VAL_FILE_RESPONSE, user_uid, user_tid, FOP_DELETE, user_filename, DEL_RESPONSE))
+                        break;
+                    verbose_message(verbose, "IP = %s | Port = %d | Command = %s | UID = %s | TID = %s | FOP = %s | Filename = %s\n", as_ip, as_port, as_command, as_uid, as_tid, as_fop, as_filename);
 
                     // Tries to find the filename
                     if (find_user_directory(user_uid))
@@ -317,89 +399,77 @@ int main(int argc, char const *argv[])
                         {
                             if (delete_user_file(user_uid, user_filename))
                             {
-                                verbose_message(verbose, "IP = %s | Port = %s | Delete request fullfilled.\n", fs_ip, fs_port);
+                                verbose_message(verbose, "IP = %s | Port = %d | Delete request fullfilled.\n", fs_ip, fs_port);
                                 send_user_response(user_sockfd, DEL_RESPONSE, OK);
                             }
                             else  // returns ERR
                             {
-                                verbose_message(verbose, "IP = %s | Port = %s | Delete request failed: Unable to delete the file.\n", fs_ip, fs_port);
+                                verbose_message(verbose, "IP = %s | Port = %d | Delete request failed: Unable to delete the file.\n", fs_ip, fs_port);
                                 send_user_response(user_sockfd, PROTOCOL_ERROR, NULL);
                             }
                             
                         }
                         else // returns EOF
                         {
-                            verbose_message(verbose, "IP = %s | Port = %s | Delete request failed: File not found.\n", fs_ip, fs_port);
+                            verbose_message(verbose, "IP = %s | Port = %d | Delete request failed: File not found.\n", fs_ip, fs_port);
                             send_user_response(user_sockfd, DEL_RESPONSE, EOF_FILE);
                         }
                     }
                     else    // returns NOK
                     {
-                        verbose_message(verbose, "IP = %s | Port = %s | Delete request failed: User not found.\n", fs_ip, fs_port);
+                        verbose_message(verbose, "IP = %s | Port = %d | Delete request failed: User not found.\n", fs_ip, fs_port);
                         send_user_response(user_sockfd, DEL_RESPONSE, NOT_OK);
                     }
                 }
                 else if (strcmp(user_command, REMOVE) == 0)
                 {
                     // Read user uid
-                    if(!read_user_request_arg(user_sockfd, user_uid, UID_SIZE, false,  " "))
+                    if(!read_user_request_arg(user_sockfd, user_uid, UID_SIZE,  " "))
                         break;
                     verbose_message(verbose, "| UID = %s ", user_uid);
 
                     // Read user tid
-                    if (!read_user_request_arg(user_sockfd, user_tid, TID_SIZE, false, "\n"))
+                    if (!read_user_request_arg(user_sockfd, user_tid, TID_SIZE, "\n"))
                         break;
-                    verbose_message(verbose, "| UID = %s ", user_tid);
+                    verbose_message(verbose, "| TID = %s\n", user_tid);
 
                     // Send AS validation message
                     if(!send_as_val_request(udp_sockfd, client, user_sockfd, user_uid, user_tid))
                         break;
-                    verbose_message(verbose, "IP = %s | Port = %s | Sent AS Validation Request.\n", fs_ip, fs_port);
+                    verbose_message(verbose, "IP = %s | Port = %d | Sent AS Validation Request.\n", fs_ip, fs_port);
                     
-                    // Read AS command response
-                    if(!read_as_val_response(udp_sockfd, client, user_sockfd, as_command, COMMAND_SIZE, false, " ", VAL_FILE_RESPONSE, NULL))
+                    // Read AS response
+                    if(!read_as_val_response(udp_sockfd, client, user_sockfd, as_command, as_uid, as_tid, as_fop, NULL, VAL_FILE_RESPONSE, user_uid, user_tid, FOP_REMOVE, NULL, REM_RESPONSE))
+                    {
                         break;
-                    verbose_message(verbose, "IP = %s | Port = %s | Command = ", as_ip, as_port, as_command);
-
-                    // Read AS uid response
-                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_uid, UID_SIZE, false, " ", user_uid, REM_RESPONSE))
-                        break;
-                    verbose_message(verbose, "| UID = %s ", as_uid);
-                    
-                    // Read AS tid response
-                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_tid, TID_SIZE, false, " ", user_tid, REM_RESPONSE))
-                        break;
-                    verbose_message(verbose, "| TID = %s ", as_tid);
-
-                    // Read AS fop response
-                    if (!read_as_val_response(udp_sockfd, client, user_sockfd, as_fop, FOP_SIZE, false, "\n", USER_REMOVE_SHORT, REM_RESPONSE))
-                        break;
-                    verbose_message(verbose, "| FOP = %s ", as_fop);
+                    }
+                    verbose_message(verbose, "IP = %s | Port = %d | Command = %s | UID = %s | TID = %s | FOP = %s\n", as_ip, as_port, as_command, as_uid, as_tid, as_fop);
 
                     // Tries to find the filename
                     if (find_user_directory(user_uid))
                     {
                         if (remove_user_dir(user_uid))
                         {
-                            verbose_message(verbose, "IP = %s | Port = %s | Remove request fullfilled.\n", fs_ip, fs_port);
+                            verbose_message(verbose, "IP = %s | Port = %d | Remove request fullfilled.\n", fs_ip, fs_port);
                             send_user_response(user_sockfd, REM_RESPONSE, OK);
                         }
                         else  // returns ERR
                         {
-                            verbose_message(verbose, "IP = %s | Port = %s | Remove request failed: Unable to remove the directory.\n", fs_ip, fs_port);
+                            verbose_message(verbose, "IP = %s | Port = %d | Remove request failed: Unable to remove the directory.\n", fs_ip, fs_port);
                             send_user_response(user_sockfd, PROTOCOL_ERROR, NULL);
                         }   
                     }
                     else    // returns NOK
                     {
-                        verbose_message(verbose, "IP = %s | Port = %s | Remove request failed: User not found.\n", fs_ip, fs_port);
+                        verbose_message(verbose, "IP = %s | Port = %d | Remove request failed: User not found.\n", fs_ip, fs_port);
                         send_user_response(user_sockfd, REM_RESPONSE, NOT_OK);
                     }   
                 }
                 else
                 {
-                    verbose_message(verbose, "IP = %s | Port = %s | Invalid command.\n", fs_ip, fs_port);
+                    verbose_message(verbose, "\nIP = %s | Port = %d | Invalid command.\n", fs_ip, fs_port);
                     send_user_response(user_sockfd, PROTOCOL_ERROR, NULL);
+                    user_connected_flag = false;
                 }
             }            
             
@@ -419,7 +489,10 @@ int main(int argc, char const *argv[])
     }
 
     // Program terminated
-    fprintf(stdout, "Process Terminated.\n");
+    if (pid == 0)
+        verbose_message(verbose, "IP = %s | Port = %d | User Disconnected.\n", fs_ip, fs_port);
+    else
+        verbose_message(verbose, "File-System Terminated.\n");
     exit(EXIT_SUCCESS);
 }
 
@@ -603,8 +676,46 @@ Boolean reached_user_file_limit(char* uid, int max)
     return count == max;
 }
 
-// Creates a new filename in the user directory with the respective data
-Boolean create_user_file(char* uid, char* filename, char* data)
+// Uploads a new filename in the user directory with the respective data
+Boolean upload_user_file(int sockfd, char* uid, char* filename, char* filesize)
+{
+    int filesize_int = atoi(filesize);
+    FILE* fp;
+    char aux[MAIN_DIR_NAME_SIZE+UID_SIZE+1+FILENAME_SIZE];
+    bzero(aux, MAIN_DIR_NAME_SIZE+UID_SIZE+1+FILENAME_SIZE);
+    strcpy(aux, MAIN_DIR_NAME);
+    strcat(aux, uid);
+    strcat(aux, "/");
+    strcat(aux, filename);
+
+    if (!(fp = fopen(aux, "a")))
+    {
+        fprintf(stderr, "\nError: Unable to open %s path\n", aux);
+        return false;
+    }
+
+    char chunk[SIZE];
+    memset(chunk, EOS, SIZE);
+    int n = 0, counter = 0;
+    do
+    {
+        n = read(sockfd, chunk, SIZE);
+        if (n == 0 || n == ERROR)
+        {
+            fprintf(stderr, "\nError: Unable to read the file from the user.\n");
+            return false;
+        }
+        counter += n;
+        fprintf(fp, "%s", chunk);
+        memset(chunk, EOS, SIZE);
+    } while (counter < filesize_int);
+
+    fclose(fp);
+    return true;
+}
+
+// Retrieves a filename in the user directory with the respective data
+Boolean retrieve_user_file(int sockfd, char* uid, char* filename)
 {
     FILE* fp;
     char aux[MAIN_DIR_NAME_SIZE+UID_SIZE+1+FILENAME_SIZE];
@@ -613,14 +724,48 @@ Boolean create_user_file(char* uid, char* filename, char* data)
     strcat(aux, uid);
     strcat(aux, "/");
     strcat(aux, filename);
-    if (!(fp = fopen(aux, "w")))
+
+    if (!(fp = fopen(aux, "r")))
     {
-        fprintf(stderr, "\nError Unable to open %s path\n", aux);
+        fprintf(stderr, "\nError: Unable to open %s path\n", aux);
         return false;
     }
-    fprintf(fp, "%s", data);
-    fclose(fp);
-    printf("File %s created\n", aux);
+
+    stat(aux, &st);
+    int filesize_int = st.st_size;
+    char response[COMMAND_SIZE+FILE_SIZE_DIG+1], chunk[SIZE];
+    memset(response, EOS, COMMAND_SIZE+FILE_SIZE_DIG+1);
+    memset(chunk, EOS, SIZE);
+    int n = 0, counter = 0;
+    sprintf(response, "%s %d ", RET_RESPONSE, filesize_int);
+
+    n = write(sockfd, response, strlen(response));
+    if (n == 0 || n == ERROR)
+    {
+        fprintf(stderr, "\nError: Unable to send the file to the user.\n");
+        return false;
+    }
+
+    while (fgets(chunk, SIZE, fp))
+    {
+        n = write(sockfd, chunk, strlen(chunk));
+        if (n == 0 || n == ERROR)
+        {
+            fprintf(stderr, "\nError: Unable to send the file to the user.\n");
+            return false;
+        }
+        counter += n;
+        if (counter >= filesize_int)
+        {
+            n = write(sockfd, "\n", 1);
+            if (n == 0 || n == ERROR)
+            {
+                fprintf(stderr, "\nError: Unable to send the file to the user.\n");
+                return false;
+            }
+            break;
+        }
+    }
     return true;
 }
 
@@ -635,10 +780,9 @@ Boolean delete_user_file(char* uid, char* filename)
     strcat(aux, filename);
     if (remove(aux))
     {
-        fprintf(stderr, "\nError Unable to remove %s\n", aux);
+        fprintf(stderr, "\nError: Unable to remove %s\n", aux);
         return false;
     } 
-    printf("File %s removed\n", aux);
     return true;
 }
 
@@ -662,7 +806,7 @@ Boolean remove_user_dir(char* uid)
                 strcat(file_path, dir->d_name);
                
                 if (remove(file_path)) {
-                    fprintf(stderr, "\nError Unable to remove file %s\n", file_path);
+                    fprintf(stderr, "\nError: Unable to remove file %s\n", file_path);
                     closedir(d);
                     return false;
                 }
@@ -670,7 +814,7 @@ Boolean remove_user_dir(char* uid)
         }
         if (rmdir(aux)) // removes the directory
         {
-            fprintf(stderr, "\nError Unable to remove directory %s\n", aux);
+            fprintf(stderr, "\nError: Unable to remove directory %s\n", aux);
             closedir(d); 
             return false;   
         }
@@ -692,7 +836,7 @@ void get_localhost_info(char* hostname_buffer, char* ip_buffer)
     strcpy(ip_buffer, inet_ntoa(*((struct in_addr*) host_entry->h_addr_list[0])));  // Convert into IP string
 }
 
-Boolean read_user_request_arg(int sockfd, char* dest, int dest_size, Boolean skip_len,  char* delimiter)
+Boolean read_user_request_arg(int sockfd, char* dest, int dest_size, char* delimiter)
 {
     memset(dest, EOS, dest_size);
     char aux[dest_size];
@@ -702,9 +846,9 @@ Boolean read_user_request_arg(int sockfd, char* dest, int dest_size, Boolean ski
         user_connected_flag = false;
         return false;
     }
-    else if (n == ERROR || n < dest_size || (skip_len == true || strlen(aux) < (uint) dest_size))
+    else if (n == ERROR)
     {
-        fprintf(stderr, "\nError Unable to read properly from the user socket. User might have sent invalid argument.\n");
+        fprintf(stderr, "\nError: Unable to read properly from the user socket. User might have sent invalid argument.\n");
         send_user_response(sockfd, PROTOCOL_ERROR, NULL);
         user_connected_flag = false;
         return false;
@@ -714,22 +858,57 @@ Boolean read_user_request_arg(int sockfd, char* dest, int dest_size, Boolean ski
     return true;
 }
 
-Boolean read_as_val_response(int sockfd, struct addrinfo* client, int user_sockfd, char* dest, int dest_size, Boolean skip_len, char* delimiter, char* dest_default, char* special_res_err)
+Boolean read_user_request_dynamic_arg(int sockfd, char* dest, int dest_size, char delimiter)
 {
     memset(dest, EOS, dest_size);
-    char aux[dest_size];
-    int n = recvfrom(sockfd, aux, dest_size, 0, client->ai_addr, client->ai_addrlen);
+    char aux;
+    int counter = 0;
+    while (counter < dest_size)
+    {
+        int n = read(sockfd, &aux, 1);
+        if (n == 0)                                 // Checks if the user disconnected
+        {
+            user_connected_flag = false;
+            return false;
+        }
+        else if (n == ERROR)
+        {
+            fprintf(stderr, "\nError: Unable to read properly from the user socket. User might have sent invalid argument.\n");
+            send_user_response(sockfd, PROTOCOL_ERROR, NULL);
+            user_connected_flag = false;
+            return false;
+        }
+        if (aux == delimiter)
+            return true;
+        else
+            dest[counter] = aux;
+        counter++;
+    }
+    return false;
+}
+
+
+Boolean read_as_val_response(int sockfd, struct addrinfo* client, int user_sockfd, char* command, char* uid, char* tid, char* fop, char* filename, char* default_command, char* default_uid, char* default_tid, char* default_fop, char* default_filename, char* special_res_err)
+{
+    memset(command, EOS, COMMAND_SIZE);
+    memset(uid, EOS, UID_SIZE);
+    memset(tid, EOS, TID_SIZE);
+    memset(fop, EOS, FOP_SIZE);
+    char dest[COMMAND_SIZE+UID_SIZE+TID_SIZE+FOP_SIZE+FILENAME_SIZE+1];
+    memset(dest, EOS, COMMAND_SIZE+UID_SIZE+TID_SIZE+FOP_SIZE+FILENAME_SIZE+1);
+    int n = recvfrom(sockfd, dest, COMMAND_SIZE+UID_SIZE+TID_SIZE+FOP_SIZE+FILENAME_SIZE+1, 0, client->ai_addr, &client->ai_addrlen);
     if (n == 0)                                 // Checks if the user disconnected
     {
+        printf("n==0\n");
         user_connected_flag = false;
         return false;
     }
-    else if (n == ERROR || n < dest_size || (skip_len == true || strlen(aux) < (uint) dest_size))
+    else if (n == ERROR)
     {
-        fprintf(stderr, "\nError Unable to read properly from the as socket. AS might have sent invalid argument.\n");
+        fprintf(stderr, "\nError: Unable to read properly from the as socket. AS might have sent invalid argument.\n");
         if (special_res_err != NULL)
         {
-            send_user_response(user_sockfd, PROTOCOL_ERROR, special_res_err);
+            send_user_response(user_sockfd, special_res_err, AS_VALIDATION_ERROR);
         }
         else
         {
@@ -738,9 +917,35 @@ Boolean read_as_val_response(int sockfd, struct addrinfo* client, int user_sockf
         user_connected_flag = false;
         return false;
     }
-    char* token = strtok(aux, delimiter);
-    strcpy(dest, token);
-    return (strcmp(dest, dest_default) == 0) ? true : false;
+    char* token = strtok(dest, " ");
+    strcpy(command, token);
+    token = strtok(NULL, " ");
+    strcpy(uid, token);
+    token = strtok(NULL, " ");
+    strcpy(tid, token);
+    token = strtok(NULL, "\n");
+    char aux[FOP_SIZE+FILENAME_SIZE+1];
+    strcpy(aux, token);
+    printf("aux=%s\n", aux);
+
+    token = strtok(aux, " ");
+    strcpy(fop, token);
+    printf("fop=%s\n", fop);
+
+    if (strcmp(fop, FOP_ERROR) == 0)
+    {
+        send_user_response(user_sockfd, special_res_err, AS_VALIDATION_ERROR);
+        user_connected_flag = false;
+        return false;
+    }
+    if (filename != NULL)
+    {
+        token = strtok(NULL, " ");
+        strcpy(filename, token);
+        printf("filename=%s\n", filename);
+    }
+
+    return (strcmp(command, default_command) == 0 && strcmp(uid, default_uid) == 0 && strcmp(tid, default_tid) == 0 && strcmp(fop, default_fop) == 0 && (filename == NULL || strcmp(filename, default_filename) == 0)) ? true : false;
 }
 
 
@@ -755,11 +960,7 @@ Boolean send_as_val_request(int sockfd, struct addrinfo* client, int user_sockfd
     strcat(aux, " ");
     strcat(aux, tid);
     strcat(aux, "\n");
-    printf("uid=%s\n", uid);
-    printf("sockfd=%d\n", sockfd);
-    //int n = sendto(sockfd, aux, strlen(aux), 0, addr, sizeof(addr));
-    int n = sendto(sockfd, aux, strlen(aux), 0, client->ai_addr, &client->ai_addrlen);
-    printf("dest_size=%d\nlen(aux)=%d\nn=%d\naux=%s", dest_size, strlen(aux), n, aux);
+    int n = sendto(sockfd, aux, strlen(aux), 0, client->ai_addr, client->ai_addrlen);
     if (n == 0)                                 // Checks if the user disconnected
     {
         user_connected_flag = false;
@@ -784,7 +985,7 @@ Boolean send_user_response(int sockfd, char* protocol, char* status)
         strcat(res_err, "\n");
         if (write(sockfd, res_err, COMMAND_SIZE+1) == ERROR)
         {
-            fprintf(stderr, "\nError Unable to write properly on the user socket.\n");
+            fprintf(stderr, "\nError: Unable to write properly on the user socket.\n");
             user_connected_flag = false;
             return false;
         }
@@ -800,7 +1001,7 @@ Boolean send_user_response(int sockfd, char* protocol, char* status)
         strcat(res_err, "\n");
         if (write(sockfd, res_err, COMMAND_SIZE+STATUS_SIZE+1) == ERROR)
         {
-            fprintf(stderr, "\nError Unable to write properly on the user socket.\n");
+            fprintf(stderr, "\nError: Unable to write properly on the user socket.\n");
             user_connected_flag = false;
             return false;
         }

@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h> 
-#define MAX 80 
+#define MAX 5000
 #define PORT 59038 
 #define SA struct sockaddr 
 void func(int sockfd) 
@@ -14,14 +14,19 @@ void func(int sockfd)
     int n; 
     for (;;) { 
         bzero(buff, sizeof(buff)); 
-        printf("Enter the string : "); 
+        printf("\nEnter the string : "); 
         n = 0; 
         while ((buff[n++] = getchar()) != '\n') 
             ; 
         write(sockfd, buff, sizeof(buff)); 
-        bzero(buff, sizeof(buff)); 
-        read(sockfd, buff, sizeof(buff)); 
-        printf("From Server : %s", buff); 
+        bzero(buff, sizeof(buff));
+        int n = 0;
+        while (n != -1)
+        {
+            n = read(sockfd, buff, sizeof(buff)); 
+            printf("%s", buff); 
+            bzero(buff, sizeof(buff));
+        } 
         if ((strncmp(buff, "exit", 4)) == 0) { 
             printf("Client Exit...\n"); 
             break; 
