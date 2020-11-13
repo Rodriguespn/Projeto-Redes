@@ -554,7 +554,7 @@ void treat_rls(char *buffer)
 
     if (strcmp(token, LIS_RESPONSE) != 0)
     {
-        fprintf(stderr, "Did not receive RLS!\n");
+        fprintf(stderr, "Did not receive %s!\n", LIS_RESPONSE);
         return;
     }
 
@@ -623,7 +623,7 @@ void treat_rrt(char *buffer)
 
     if (strcmp(token, RET_RESPONSE) != 0)
     {
-        fprintf(stderr, "Did not receive RRT!\n");
+        fprintf(stderr, "Did not receive %s!\n", RET_RESPONSE);
         return;
     }
     token = strtok(NULL, " ");
@@ -739,7 +739,7 @@ void treat_rup(char *buffer)
 
     if (strcmp(token, UPL_RESPONSE) != 0)
     {
-        fprintf(stderr, "Did not receive UPL!\n");
+        fprintf(stderr, "Did not receive %s!\n", UPL_RESPONSE);
         return;
     }
     token = strtok(NULL, " ");
@@ -881,7 +881,7 @@ void treat_rrm(char *buffer)
 
     if (strcmp(token, REM_RESPONSE) != 0)
     {
-        fprintf(stderr, "Did not receive REM!\n");
+        fprintf(stderr, "Did not receive %s!\n", REM_RESPONSE);
         return;
     }
     token = strtok(NULL, " ");
