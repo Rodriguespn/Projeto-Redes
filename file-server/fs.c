@@ -328,7 +328,7 @@ int main(int argc, char const *argv[])
                     verbose_message(verbose, "IP = %s | Port = %d | Command = %s | UID = %s | TID = %s | FOP = %s | Filename = %s\n", as_ip, as_port, as_command, as_uid, as_tid, as_fop, as_filename);
 
                     // Tries to find the filename
-                    if (find_user_directory(user_uid))
+                    if (find_user_directory(user_uid) || make_user_directory(user_uid))
                     {
                         if (find_user_filename(user_uid, user_filename))  // return DUP
                         {
@@ -361,7 +361,7 @@ int main(int argc, char const *argv[])
                     }
                     else  // returns NOK
                     {
-                        verbose_message(verbose, "IP = %s | Port = %d | Upload request failed: User not found.\n", fs_ip, fs_port);
+                        verbose_message(verbose, "IP = %s | Port = %d | Upload request failed: Unable to find/create user directory.\n", fs_ip, fs_port);
                         send_user_response(user_sockfd, UPL_RESPONSE, NOT_OK);
                     }
                 }
