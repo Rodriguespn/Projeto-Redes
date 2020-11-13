@@ -20,7 +20,7 @@
 #define MAIN_DIR_NAME_SIZE  6
 
 #define FILENAME_SIZE       25          // Max. filename size
-#define USERS_DIR_SIZE      15          // Max. files per user
+#define USERS_DIR_SIZE      5          // Max. files per user
 #define FILE_SIZE_DIG       11          // Max. digits a file size can have
 
 // Argument Functions
@@ -38,7 +38,8 @@ Boolean find_user_filename(char* uid, char* filename);
 int count_user_filenames(char* uid);
 void list_user_filenames(char* uid, char* res, int res_size);
 Boolean reached_user_file_limit(char* uid, int max);
-Boolean create_user_file(char* uid, char* filename, char* data);
+Boolean upload_user_file(int sockfd, char* uid, char* filename, char* filesize);
+Boolean retrieve_user_file(int sockfd, char* uid, char* filename);
 Boolean delete_user_file(char* uid, char* filename);
 Boolean remove_user_dir(char* uid);
 
@@ -46,6 +47,7 @@ Boolean remove_user_dir(char* uid);
 // Internet Functions
 void get_localhost_info(char* hostname_buffer, char* ip_buffer);
 Boolean read_user_request_arg(int sockfd, char* dest, int dest_size, char* delimiter);
+Boolean read_user_request_dynamic_arg(int sockfd, char* dest, int dest_size, char delimiter);
 Boolean read_as_val_response(int sockfd, struct addrinfo* client, int user_sockfd, char* command, char* uid, char* tid, char* fop, char* filename, char* default_command, char* default_uid, char* default_tid, char* default_fop, char* default_filename, char* special_res_err);
 Boolean send_as_val_request(int sockfd, struct addrinfo* client, int user_sockfd, char* uid, char* tid);
 Boolean send_user_response(int sockfd, char* protocol, char* status);
