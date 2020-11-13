@@ -10,11 +10,6 @@ int main(int argc, char const *argv[])
     ssize_t n;
     struct addrinfo hints_as, *res_as;
 
-    //User-FS variables
-    int fs_fd, errcode_fs;
-    ssize_t m;
-    struct addrinfo hints_fs, *res_fs;
-
     // checks if the number of arguments is correct
     if (wrong_arguments(argc))
     {
@@ -56,28 +51,7 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE);
     }
 
-    //connection to FS
-    fs_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if (fs_fd == ERROR)
-        exit(EXIT_FAILURE);
-
-    memset(&hints_fs, 0, sizeof hints_fs);
-    hints_fs.ai_family = AF_INET;
-    hints_fs.ai_socktype = SOCK_STREAM;
-
-    errcode_fs = getaddrinfo(asip, asport, &hints_fs, &res_fs);
-    if (errcode_fs != 0)
-    {
-        fprintf(stderr, "Error: could not get address info\n");
-        exit(EXIT_FAILURE);
-    }
-
-    m = connect(fs_fd, res_fs->ai_addr, res_fs->ai_addrlen);
-    if (m == ERROR)
-    {
-        fprintf(stderr, "Error: could not connect\n");
-        exit(EXIT_FAILURE);
-    }
+    
 
     //variables
     char buffer[SIZE], command[SIZE], last_command[SIZE], uid[SIZE], password[SIZE], rid[SIZE],
