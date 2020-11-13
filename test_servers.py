@@ -16,7 +16,7 @@ parent_dir = "./"
 directory = "Script-Tests"
 
 sleep = 1
-timeout = 15
+timeout = 30
   
 path = os.path.join(parent_dir, directory) 
 
