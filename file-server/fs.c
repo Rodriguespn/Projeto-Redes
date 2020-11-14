@@ -102,6 +102,18 @@ int main(int argc, char const *argv[])
             fprintf(stderr, "Error: Unable to accept TCP connections.\n");
             exit(EXIT_FAILURE); 
         }
+
+        struct timeval timeout;      
+        timeout.tv_sec = 10;
+        timeout.tv_usec = 0;
+
+        if (setsockopt (user_sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout,
+                    sizeof(timeout)) < 0)
+            perror("setsockopt failed\n");
+
+        if (setsockopt (user_sockfd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout,
+                    sizeof(timeout)) < 0)
+            perror("setsockopt failed\n");
         
         // If the code gets here then a new user connected.
         // Create a new process to handle the conversation with the user
@@ -145,7 +157,7 @@ int main(int argc, char const *argv[])
             tv.tv_sec = 15;
             tv.tv_usec = 0; 
 
-            // sets socket timeout as 5s
+            // sets socket timeout as 15s
             if ((errcode = setsockopt(udp_sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv))) < 0) {
                 fprintf(stderr, "Error: setsockopt returned erro code %d\n", errcode);
                 return false;
@@ -278,6 +290,7 @@ int main(int argc, char const *argv[])
                             {
                                 fprintf(stderr, "\nError Unable to write properly on the user socket.\n");
                                 user_connected_flag = false;
+                                running_flag = false;
                             }
                             verbose_message(verbose, "IP = %s | Port = %d | List request fullfilled.\n", fs_ip, fs_port);
                             free(lst);
@@ -470,6 +483,7 @@ int main(int argc, char const *argv[])
                     verbose_message(verbose, "\nIP = %s | Port = %d | Invalid command.\n", fs_ip, fs_port);
                     send_user_response(user_sockfd, PROTOCOL_ERROR, NULL);
                     user_connected_flag = false;
+                    running_flag = false;
                 }
             }            
             
@@ -478,9 +492,6 @@ int main(int argc, char const *argv[])
             close(udp_sockfd);
             close(user_sockfd);
             
-            // Child process
-            verbose_message(verbose, "IP = %s | Port = %d | User Disconnected.\n", fs_ip, fs_port);
-            exit(EXIT_SUCCESS);
         }
         else    // Parent process
         {
@@ -491,6 +502,11 @@ int main(int argc, char const *argv[])
     close(tcp_sockfd);
 
     // Program terminated
+    if (pid == 0) {
+        // Child process
+        verbose_message(verbose, "IP = %s | Port = %d | User Disconnected.\n", fs_ip, fs_port);
+        exit(EXIT_SUCCESS);
+    }
     verbose_message(verbose, "File-System Terminated.\n");
     exit(EXIT_SUCCESS);
 }
@@ -852,13 +868,16 @@ Boolean read_user_request_arg(int sockfd, char* dest, int dest_size, char* delim
     if (n == 0)                                 // Checks if the user disconnected
     {
         user_connected_flag = false;
+        running_flag = false;
         return false;
     }
     else if (n == ERROR)
     {
         fprintf(stderr, "\nError: Unable to read properly from the user socket. User might have sent invalid argument.\n");
-        send_user_response(sockfd, PROTOCOL_ERROR, NULL);
+        //send_user_response(sockfd, PROTOCOL_ERROR, NULL);
+        printf("Here\n");
         user_connected_flag = false;
+        running_flag = false;
         return false;
     }
     char* token = strtok(aux, delimiter);
@@ -877,13 +896,15 @@ Boolean read_user_request_dynamic_arg(int sockfd, char* dest, int dest_size, cha
         if (n == 0)                                 // Checks if the user disconnected
         {
             user_connected_flag = false;
+            running_flag = false;
             return false;
         }
         else if (n == ERROR)
         {
             fprintf(stderr, "\nError: Unable to read properly from the user socket. User might have sent invalid argument.\n");
-            send_user_response(sockfd, PROTOCOL_ERROR, NULL);
+            //send_user_response(sockfd, PROTOCOL_ERROR, NULL);
             user_connected_flag = false;
+            running_flag = false;
             return false;
         }
         if (aux == delimiter)
@@ -909,6 +930,7 @@ Boolean read_as_val_response(int sockfd, struct addrinfo* client, int user_sockf
     {
         printf("n==0\n");
         user_connected_flag = false;
+        running_flag = false;
         return false;
     }
     else if (n == ERROR)
@@ -923,6 +945,7 @@ Boolean read_as_val_response(int sockfd, struct addrinfo* client, int user_sockf
             send_user_response(user_sockfd, PROTOCOL_ERROR, NULL);
         }
         user_connected_flag = false;
+        running_flag = false;
         return false;
     }
     char* token = strtok(dest, " ");
@@ -944,6 +967,7 @@ Boolean read_as_val_response(int sockfd, struct addrinfo* client, int user_sockf
     {
         send_user_response(user_sockfd, special_res_err, AS_VALIDATION_ERROR);
         user_connected_flag = false;
+        running_flag = false;
         return false;
     }
     if (filename != NULL)
@@ -956,6 +980,7 @@ Boolean read_as_val_response(int sockfd, struct addrinfo* client, int user_sockf
     if  (!(strcmp(command, default_command) == 0 && strcmp(uid, default_uid) == 0 && strcmp(tid, default_tid) == 0 && strcmp(fop, default_fop) == 0 && (filename == NULL || strcmp(filename, default_filename) == 0))) {
         send_user_response(user_sockfd, PROTOCOL_ERROR, NULL);
         user_connected_flag = false;
+        running_flag = false;
         return false;
     }
     return true;
@@ -977,6 +1002,7 @@ Boolean send_as_val_request(int sockfd, struct addrinfo* client, int user_sockfd
     if (n == 0)                                 // Checks if the user disconnected
     {
         user_connected_flag = false;
+        running_flag = false;
         return false;
     }
     else if (n == ERROR || n < (dest_size-1) || (int) strlen(aux) < (dest_size-1))
@@ -1000,6 +1026,7 @@ Boolean send_user_response(int sockfd, char* protocol, char* status)
         {
             fprintf(stderr, "\nError: Unable to write properly on the user socket.\n");
             user_connected_flag = false;
+            running_flag = false;
             return false;
         }
         return true;
@@ -1016,6 +1043,7 @@ Boolean send_user_response(int sockfd, char* protocol, char* status)
         {
             fprintf(stderr, "\nError: Unable to write properly on the user socket.\n");
             user_connected_flag = false;
+            running_flag = false;
             return false;
         }
         return true;

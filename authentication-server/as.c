@@ -947,6 +947,7 @@ Boolean send_vc_to_pd(char* uid, char* fop, char* filename, char** vc) {
         return false;
     }
 
+    free(vc);
     return true;
 }
 
