@@ -4,6 +4,7 @@
 // | Global Variables                         |
 // +------------------------------------------+
 int tcp_sockfd;                     // used by sigint_handler
+int user_sockfd;                    // used by sigint_handler
 Boolean running_flag = true;        // used by sigint_handler. indicates if the process is running
 Boolean user_connected_flag = true; // indicates if the user still has connection or dropped
 struct stat st = {0};
@@ -87,7 +88,6 @@ int main(int argc, char const *argv[])
     while (running_flag == true)
     {
         // Define user socket variables
-        int user_sockfd;    // close
         struct sockaddr_in user_servaddr;
         socklen_t user_servaddr_len = sizeof(user_servaddr);
 
@@ -487,6 +487,7 @@ int main(int argc, char const *argv[])
             continue;
         }
     }
+    close(tcp_sockfd);
 
     // Program terminated
     if (pid == 0)
@@ -719,6 +720,8 @@ Boolean upload_user_file(int sockfd, char* uid, char* filename, char* filesize)
         fwrite(chunk, sizeof(char), len, fp);
         remain_data -= len;
     }
+
+    bzero(chunk, SIZE);
     fclose(fp);
     return true;
 }
@@ -762,6 +765,13 @@ Boolean retrieve_user_file(int sockfd, char* uid, char* filename)
     printf("\nfilesize_int = %d\n", filesize_int);
 
     sendfile(sockfd, fd, NULL, filesize_int);
+
+    n = write(sockfd, "\n", 1);
+    if (n == 0 || n == ERROR)
+    {
+        fprintf(stderr, "\nError: Unable to send the file to the user.\n");
+        return false;
+    }
 
     fclose(fp);
 
@@ -1022,4 +1032,5 @@ void sigint_handler()
 {
     running_flag = false;
     close(tcp_sockfd);      // This will unblock accept()
+    close(user_sockfd);
 }

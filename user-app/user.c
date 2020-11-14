@@ -760,6 +760,14 @@ Boolean upload_user_file(int sockfd, char* filename)
 
     sendfile(sockfd, fd, NULL, filesize_int);
 
+    n = write(sockfd, "\n", 1);
+    if (n == 0 || n == ERROR)
+    {
+        fprintf(stderr, "\nError: Unable to send the file to FS.\n");
+        fclose(fp);
+        return false;
+    }
+
     fclose(fp);
     return true;
 }

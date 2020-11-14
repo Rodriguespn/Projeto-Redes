@@ -3,8 +3,8 @@ import requests
 import time
 
 as_ip = "193.136.128.109"
-as_port = "58038"
-fs_ip = "193.136.128.104"
+as_port = "58039"
+fs_ip = "193.136.128.109"
 fs_port = "59038"
 
 test_host = "tejo.tecnico.ulisboa.pt"
@@ -50,7 +50,7 @@ for script in range(begin_script, end_script+1):
             break
 
         except Exception as e:
-            #print("Exception {}".format(e))
+            print("Exception {}".format(e))
             #print("Something went wrong... skipping script {}".format(script))
             time.sleep(sleep)
 
