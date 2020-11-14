@@ -21,7 +21,7 @@
 #define MAIN_DIR_NAME_SIZE  6
 
 #define FILENAME_SIZE       25          // Max. filename size
-#define USERS_DIR_SIZE      5          // Max. files per user
+#define USERS_DIR_SIZE      15          // Max. files per user
 #define FILE_SIZE_DIG       11          // Max. digits a file size can have
 
 // Argument Functions
