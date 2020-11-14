@@ -306,6 +306,7 @@ int main(int argc, char const *argv[]) {
                             if (!strcmp(command, AUTHENTICATION)) {
                                 process_authentication_request(buffer, uid, rid, vc, operation);
                                 verbose_message(verbose, "INFORM: Processed Command=%s UID=%s, RID=%s, VC=%s authentication\n", command, uid, rid, vc);
+                                free(vc);
                             } else if (!strcmp(command, REQUEST)) {
                                 goto REQUEST_OP;
                             } else {
@@ -947,7 +948,7 @@ Boolean send_vc_to_pd(char* uid, char* fop, char* filename, char** vc) {
         return false;
     }
 
-    free(vc);
+    
     return true;
 }
 
@@ -968,6 +969,7 @@ void get_filename(char* buffer, char* uid, const char* filename, const char* fil
 
 void generate_random_vc(char** vc) {
     int vc_alg, vc_number = 0;
+    
     if (!(*vc = (char *) malloc(sizeof(char)*VC_SIZE))){
         perror("ERROR: allocating \"validation code\" buffer");
         exit(EXIT_FAILURE);

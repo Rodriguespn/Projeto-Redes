@@ -270,7 +270,7 @@ int main(int argc, char const *argv[])
                     // Tries to find the filename
                     if (find_user_directory(user_uid))
                     {
-                        if (find_user_filename(user_uid, NULL))
+                        if (count_user_filenames(user_uid) > 2)
                         {
                             int n = count_user_filenames(user_uid) - 2;
                             memset(user_filesize, EOS, FILE_SIZE_DIG);
@@ -299,7 +299,7 @@ int main(int argc, char const *argv[])
                         else  // No files to list
                         {
                             verbose_message(verbose, "IP = %s | Port = %d | List request fullfilled: User has no files.\n", fs_ip, fs_port);
-                            send_user_response(user_sockfd, LIS_RESPONSE, "0");
+                            send_user_response(user_sockfd, LIS_RESPONSE, EOF_FILE);
                         }
                     }
                     else    // returns NOK
@@ -628,7 +628,7 @@ Boolean find_user_filename(char* uid, char* filename)
     struct dirent *file;
     while ((file=readdir(dir)) != NULL)
     {
-        if (filename == NULL)
+        if (filename == NULL && strcmp(file->d_name, ".") && strcmp(file->d_name, ".."))
             return true;
         if(strcmp(file->d_name, filename) == 0)
         {
@@ -717,7 +717,7 @@ Boolean upload_user_file(int sockfd, char* uid, char* filename, char* filesize)
     strcat(aux, "/");
     strcat(aux, filename);
 
-    if (!(fp = fopen(aux, "ab")))
+    if (!(fp = fopen(aux, "wb")))
     {
         fprintf(stderr, "\nError: Unable to open %s path\n", aux);
         return false;
@@ -729,13 +729,17 @@ Boolean upload_user_file(int sockfd, char* uid, char* filename, char* filesize)
 
     int remain_data = filesize_int;
 
-    while ((remain_data > 0) && ((len = recv(sockfd, chunk, SIZE, 0)) > 0))
+    while ((remain_data >= 0) && ((len = recv(sockfd, chunk, SIZE, 0)) > 0))
     {
         fwrite(chunk, sizeof(char), len, fp);
         remain_data -= len;
+        memset(chunk, EOS, SIZE);
     }
 
-    bzero(chunk, SIZE);
+    fseeko(fp, -1, SEEK_END);
+    int position = ftello(fp);
+    ftruncate(fileno(fp), position);
+
     fclose(fp);
     return true;
 }

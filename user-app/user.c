@@ -648,6 +648,13 @@ void treat_rrt(char *buffer, char *fname, int fs_fd)
             return;
         }
 
+        token = strtok(NULL, " ");
+        if (token)
+        {
+            printf("token = %s\n", token);
+            fwrite(token, sizeof(char), strlen(token), fp);
+        }
+
         char chunk[SIZE];
         memset(chunk, EOS, SIZE);
         int len = 0;
