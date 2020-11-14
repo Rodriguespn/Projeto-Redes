@@ -3,7 +3,7 @@ import requests
 import time
 
 as_ip = "193.136.128.109"
-as_port = "58039"
+as_port = "58038"
 fs_ip = "193.136.128.109"
 fs_port = "59038"
 
