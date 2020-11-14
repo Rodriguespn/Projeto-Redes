@@ -479,7 +479,8 @@ int main(int argc, char const *argv[])
             close(user_sockfd);
             
             // Child process
-            running_flag = false;
+            verbose_message(verbose, "IP = %s | Port = %d | User Disconnected.\n", fs_ip, fs_port);
+            exit(EXIT_SUCCESS);
         }
         else    // Parent process
         {
@@ -490,10 +491,7 @@ int main(int argc, char const *argv[])
     close(tcp_sockfd);
 
     // Program terminated
-    if (pid == 0)
-        verbose_message(verbose, "IP = %s | Port = %d | User Disconnected.\n", fs_ip, fs_port);
-    else
-        verbose_message(verbose, "File-System Terminated.\n");
+    verbose_message(verbose, "File-System Terminated.\n");
     exit(EXIT_SUCCESS);
 }
 
