@@ -4,7 +4,6 @@
 // | Global Variables                         |
 // +------------------------------------------+
 int tcp_sockfd;                     // used by sigint_handler
-int user_sockfd;                    // used by sigint_handler
 Boolean running_flag = true;        // used by sigint_handler. indicates if the process is running
 Boolean user_connected_flag = true; // indicates if the user still has connection or dropped
 struct stat st = {0};
@@ -88,6 +87,7 @@ int main(int argc, char const *argv[])
     while (running_flag == true)
     {
         // Define user socket variables
+        int user_sockfd;    // close
         struct sockaddr_in user_servaddr;
         socklen_t user_servaddr_len = sizeof(user_servaddr);
 
@@ -1032,5 +1032,4 @@ void sigint_handler()
 {
     running_flag = false;
     close(tcp_sockfd);      // This will unblock accept()
-    close(user_sockfd);
 }
