@@ -3,7 +3,7 @@ import requests
 import time
 
 as_ip = "193.136.128.109"
-as_port = "58038"
+as_port = "58039"
 fs_ip = "193.136.128.109"
 fs_port = "59038"
 
@@ -28,9 +28,6 @@ except FileExistsError:
 
 begin_script = int(input("Insira o numero do script onde quer comecar\n"))
 end_script = int(input("Insira o numero do script onde quer acabar\n"))
-
-assert end_script <= 20, "Ta muito alto!\nO ultimo script tem o id 20\n"
-
 count = 0
 for script in range(begin_script, end_script+1):
     url = test_url.format(test_host, test_port, as_ip, as_port, fs_ip, fs_port, script)

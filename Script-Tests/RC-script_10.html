@@ -1,0 +1,84 @@
+<html><head><title>Test report</title></head><body><center><font size="10" color="blue"> --------- TEST RESULTS --------- </font></center><br><br><center><font size="5" color="blue"> SCRIPT: 10 (request from 148.71.40.185) </font></center><br><br>Sat, 14 Nov 2020 17:59:55 GMT<br><center><font size="5" color="blue"> ============ PD REPORT ============ </font></center><br><br><br>Sat, 14 Nov 2020 17:59:57 GMT <----< received from AS: VLC 11111 5508 U one_byte_file.txt
+<br>
+<br>Sat, 14 Nov 2020 17:59:57 GMT  >----> sent to AS: RVC 11111 OK
+<br>
+<br>Sat, 14 Nov 2020 17:59:58 GMT <----< received from AS: VLC 11111 5514 U three_bytes_file.txt
+<br>
+<br>Sat, 14 Nov 2020 17:59:58 GMT  >----> sent to AS: RVC 11111 OK
+<br>
+<br>Sat, 14 Nov 2020 17:59:59 GMT <----< received from AS: VLC 11111 0046 U twenty4_24bytes_file.txt
+<br>
+<br>Sat, 14 Nov 2020 17:59:59 GMT  >----> sent to AS: RVC 11111 OK
+<br>
+<br>PD server started at port 59006
+<br>---------------------------
+<br>
+<br>COMMAND: reg 11111 abcdefgh
+<br>Sat, 14 Nov 2020 17:59:56 GMT ------- Register success
+<br>---------------------------
+<br>
+<br>COMMAND: uexit
+<br>Sat, 14 Nov 2020 17:59:56 GMT ------- Waiting for User termination
+<br>Sat, 14 Nov 2020 18:00:01 GMT ------- User now off
+<br>Sat, 14 Nov 2020 18:00:01 GMT ------- Unregister success
+<br><br><br><br><br><center><font size="5" color="blue"> ============ USER REPORT ============ </font></center><br><br><br>Waiting for PD ready
+<br>PD now ready
+<br>User started Sat, 14 Nov 2020 17:59:57 GMT
+<br>---------------------------
+<br>Sat, 14 Nov 2020 17:59:57 GMT
+<br>
+<br>COMMAND: login 11111 abcdefgh
+<br>Login successful
+<br>---------------------------
+<br>Sat, 14 Nov 2020 17:59:57 GMT
+<br>
+<br>COMMAND: req U one_byte_file.txt
+<br>Successful request - check VC on PD
+<br>---------------------------
+<br>Sat, 14 Nov 2020 17:59:57 GMT
+<br>
+<br>COMMAND: rval
+<br>VC= 5508
+<br>Authentication successful. TID for requested operation is: 0006
+<br>---------------------------
+<br>Sat, 14 Nov 2020 17:59:58 GMT
+<br>
+<br>COMMAND: upload one_byte_file.txt
+<br>File already exists
+<br>---------------------------
+<br>Sat, 14 Nov 2020 17:59:58 GMT
+<br>
+<br>COMMAND: req U three_bytes_file.txt
+<br>Successful request - check VC on PD
+<br>---------------------------
+<br>Sat, 14 Nov 2020 17:59:58 GMT
+<br>
+<br>COMMAND: rval
+<br>VC= 5514
+<br>Authentication successful. TID for requested operation is: 0007
+<br>---------------------------
+<br>Sat, 14 Nov 2020 17:59:59 GMT
+<br>
+<br>COMMAND: upload three_bytes_file.txt
+<br>File uploaded
+<br>---------------------------
+<br>Sat, 14 Nov 2020 17:59:59 GMT
+<br>
+<br>COMMAND: req U twenty4_24bytes_file.txt
+<br>Successful request - check VC on PD
+<br>---------------------------
+<br>Sat, 14 Nov 2020 17:59:59 GMT
+<br>
+<br>COMMAND: rval
+<br>VC= 0046
+<br>Authentication successful. TID for requested operation is: 0008
+<br>---------------------------
+<br>Sat, 14 Nov 2020 18:00:00 GMT
+<br>
+<br>COMMAND: upload twenty4_24bytes_file.txt
+<br>File uploaded
+<br>---------------------------
+<br>Sat, 14 Nov 2020 18:00:00 GMT
+<br>
+<br>COMMAND: exit
+<br><br><br>

@@ -299,7 +299,7 @@ int main(int argc, char const *argv[])
                         else  // No files to list
                         {
                             verbose_message(verbose, "IP = %s | Port = %d | List request fullfilled: User has no files.\n", fs_ip, fs_port);
-                            send_user_response(user_sockfd, LIS_RESPONSE, "0");
+                            send_user_response(user_sockfd, LIS_RESPONSE, EOF_FILE);
                         }
                     }
                     else    // returns NOK
@@ -628,7 +628,7 @@ Boolean find_user_filename(char* uid, char* filename)
     struct dirent *file;
     while ((file=readdir(dir)) != NULL)
     {
-        if (filename == NULL)
+        if (filename == NULL && strcmp(".", file->d_name) && strcmp("..", file->d_name))
             return true;
         if(strcmp(file->d_name, filename) == 0)
         {
